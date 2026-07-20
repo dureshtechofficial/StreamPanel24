@@ -34,6 +34,8 @@ npm run start   # serve the production build
 - `/register` — name/email/password form with client-side validation and field-level errors from the API.
 - `/login` — email/password form; on success redirects to `/dashboard`.
 - `/dashboard` — protected route wrapped in `<ProtectedRoute>`; shows the current user and a logout button.
+- `/dashboard/customers` — full CRUD (search, filter, paginate, add/edit slide-over, delete-confirm) for any logged-in user.
+- `/dashboard/servers` — same CRUD pattern for Flussonic servers, but admin-only: the nav item is hidden for non-admins and the page itself shows an "Access restricted" notice if visited directly, mirroring the backend's `@Roles(UserRole.ADMIN)` guard.
 
 ## How auth state works
 

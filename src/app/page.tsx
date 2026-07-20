@@ -14,8 +14,8 @@ export default function Home() {
   }, [isLoading, user, router]);
 
   return (
-    <div className="flex min-h-screen flex-1 items-center justify-center bg-gray-50">
-      <p className="text-sm text-gray-500">Loading…</p>
+    <div className="flu-hero-gradient flex min-h-screen flex-1 items-center justify-center">
+      <p className="text-sm text-white/80">Loading…</p>
     </div>
   );
 }

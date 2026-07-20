@@ -1,1 +1,25 @@
 @AGENTS.md
+
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Commands
+
+- `npm run dev` — dev server on `http://localhost:3000`
+- `npm run build` / `npm run start` — production build + serve
+- `npm run lint` — eslint
+- No test runner is configured in this app
+
+Requires `.env.local` copied from `.env.example` (`NEXT_PUBLIC_API_URL`, pointing at the backend's `/api/v1`).
+
+## Architecture
+
+- **Access token lives only in memory** — `lib/token-store.ts` is a module-level singleton (not React state) holding the current token plus a registered refresh-handler callback, so the low-level `lib/api-client.ts` (plain `fetch` wrapper) can attach `Authorization` headers and trigger a refresh-and-retry-once on a 401 without importing React/context.
+- **`lib/auth-context.tsx`** (`AuthProvider`) owns the actual React state (`user`, `accessToken`, `isLoading`) and is the only thing that calls `login`/`register`/`logout`/`refresh`. On mount it silently calls `/auth/refresh` (cookie-based) to restore a session; the in-flight refresh promise is de-duped (`refreshInFlight` ref) so a page-load refresh and an API-triggered refresh-on-401 don't race.
+- **`components/protected-route.tsx`** is a client-side gate (redirects to `/login` once `isLoading` is false and there's no user) — there's deliberately no Next.js `proxy.ts`/middleware gate, since the refresh cookie is httpOnly and unreadable by the client, and verifying it requires the backend anyway.
+- **Field-level form errors**: the backend returns `message: string[]` for validation failures; `lib/form-errors.ts#groupFieldErrors` buckets those strings by field name via substring match so the register form can show errors under the right input without the backend needing a structured per-field error shape.
+
+## UI theme
+
+The UI follows a "Flussonic-inspired" visual language: dark navy navbar, blue→violet gradient hero with a dot-grid pattern, pink/magenta pill CTAs. Tokens are CSS custom properties in `src/app/globals.css` (`--flu-navy`, `--flu-blue`, `--flu-violet`, `--flu-pink*`), exposed as Tailwind v4 theme colors (`bg-flu-navy`, `text-flu-pink`, `shadow-flu-pink/30`, etc.) plus a `.flu-hero-gradient` utility class for the gradient + dot pattern. `components/auth-shell.tsx` (login/register wrapper) and `components/dashboard-shell.tsx` (sidebar + topbar) are where this is applied — reuse these tokens/components rather than introducing new one-off colors when adding pages.

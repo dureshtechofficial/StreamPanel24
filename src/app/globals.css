@@ -3,13 +3,71 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* Flussonic-inspired brand palette */
+  --flu-navy: #0a0e1c;
+  --flu-navy-light: #131a2e;
+  --flu-blue: #1531e0;
+  --flu-violet: #6c22d6;
+  --flu-pink: #ee1265;
+  --flu-pink-dark: #c00d52;
+  --flu-pink-light: #ff4d94;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-flu-navy: var(--flu-navy);
+  --color-flu-navy-light: var(--flu-navy-light);
+  --color-flu-blue: var(--flu-blue);
+  --color-flu-violet: var(--flu-violet);
+  --color-flu-pink: var(--flu-pink);
+  --color-flu-pink-dark: var(--flu-pink-dark);
+  --color-flu-pink-light: var(--flu-pink-light);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --animate-fade-in: fade-in 0.3s ease-out both;
+  --animate-fade-in-up: fade-in-up 0.45s ease-out both;
+  --animate-fade-in-down: fade-in-down 0.15s ease-out both;
+}
+
+.flu-hero-gradient {
+  background: linear-gradient(125deg, var(--flu-blue) 0%, #3a1fd0 45%, var(--flu-violet) 100%);
+  background-image:
+    radial-gradient(circle, rgba(255, 255, 255, 0.16) 1px, transparent 1px),
+    linear-gradient(125deg, var(--flu-blue) 0%, #3a1fd0 45%, var(--flu-violet) 100%);
+  background-size: 22px 22px, 100% 100%;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in-down {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 @media (prefers-color-scheme: dark) {

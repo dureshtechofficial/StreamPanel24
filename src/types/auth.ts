@@ -7,8 +7,10 @@ export interface User {
   email: string;
   role: UserRole;
   status: UserStatus;
-  created_at: string;
-  updated_at: string;
+  /** UTC unix timestamp (seconds) */
+  created_at: number;
+  /** UTC unix timestamp (seconds) */
+  updated_at: number;
 }
 
 export interface ApiErrorBody {

@@ -6,8 +6,13 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { ApiError } from '@/lib/api-error';
 import { groupFieldErrors } from '@/lib/form-errors';
+import { AuthShell } from '@/components/auth-shell';
 
 const FIELDS = ['name', 'email', 'password'] as const;
+
+const inputClass =
+  'w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 transition focus:border-flu-pink focus:outline-none focus:ring-2 focus:ring-flu-pink/20';
+const labelClass = 'mb-1 block text-sm font-medium text-gray-700';
 
 function validateClientSide(
   name: string,
@@ -74,115 +79,112 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-sm rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-        <h1 className="mb-6 text-xl font-semibold text-gray-900">Create an account</h1>
-
-        {success && (
-          <p className="mb-4 rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">
-            Account created. Redirecting to login…
-          </p>
-        )}
-
-        {errors.general && errors.general.length > 0 && (
-          <div className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-            {errors.general.map((msg) => (
-              <p key={msg}>{msg}</p>
-            ))}
-          </div>
-        )}
-
-        <form className="space-y-4" onSubmit={handleSubmit} noValidate>
-          <div>
-            <label htmlFor="name" className="mb-1 block text-sm font-medium text-gray-700">
-              Name
-            </label>
-            <input
-              id="name"
-              type="text"
-              autoComplete="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
-            />
-            {errors.name?.map((msg) => (
-              <p key={msg} className="mt-1 text-xs text-red-600">
-                {msg}
-              </p>
-            ))}
-          </div>
-
-          <div>
-            <label htmlFor="email" className="mb-1 block text-sm font-medium text-gray-700">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
-            />
-            {errors.email?.map((msg) => (
-              <p key={msg} className="mt-1 text-xs text-red-600">
-                {msg}
-              </p>
-            ))}
-          </div>
-
-          <div>
-            <label htmlFor="password" className="mb-1 block text-sm font-medium text-gray-700">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              autoComplete="new-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
-            />
-            {errors.password?.map((msg) => (
-              <p key={msg} className="mt-1 text-xs text-red-600">
-                {msg}
-              </p>
-            ))}
-          </div>
-
-          <div>
-            <label
-              htmlFor="confirmPassword"
-              className="mb-1 block text-sm font-medium text-gray-700"
-            >
-              Confirm password
-            </label>
-            <input
-              id="confirmPassword"
-              type="password"
-              autoComplete="new-password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isSubmitting ? 'Creating account…' : 'Create account'}
-          </button>
-        </form>
-
-        <p className="mt-4 text-center text-sm text-gray-600">
+    <AuthShell
+      title="Create an account"
+      subtitle="Everything for those who build, deploy, and grow video services."
+      footer={
+        <>
           Already have an account?{' '}
-          <Link href="/login" className="font-medium text-gray-900 underline">
+          <Link href="/login" className="font-semibold text-flu-pink hover:text-flu-pink-dark">
             Log in
           </Link>
+        </>
+      }
+    >
+      {success && (
+        <p className="mb-4 rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">
+          Account created. Redirecting to login…
         </p>
-      </div>
-    </div>
+      )}
+
+      {errors.general && errors.general.length > 0 && (
+        <div className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+          {errors.general.map((msg) => (
+            <p key={msg}>{msg}</p>
+          ))}
+        </div>
+      )}
+
+      <form className="space-y-4" onSubmit={handleSubmit} noValidate>
+        <div>
+          <label htmlFor="name" className={labelClass}>
+            Name
+          </label>
+          <input
+            id="name"
+            type="text"
+            autoComplete="name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className={inputClass}
+          />
+          {errors.name?.map((msg) => (
+            <p key={msg} className="mt-1 text-xs text-red-600">
+              {msg}
+            </p>
+          ))}
+        </div>
+
+        <div>
+          <label htmlFor="email" className={labelClass}>
+            Email
+          </label>
+          <input
+            id="email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className={inputClass}
+          />
+          {errors.email?.map((msg) => (
+            <p key={msg} className="mt-1 text-xs text-red-600">
+              {msg}
+            </p>
+          ))}
+        </div>
+
+        <div>
+          <label htmlFor="password" className={labelClass}>
+            Password
+          </label>
+          <input
+            id="password"
+            type="password"
+            autoComplete="new-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className={inputClass}
+          />
+          {errors.password?.map((msg) => (
+            <p key={msg} className="mt-1 text-xs text-red-600">
+              {msg}
+            </p>
+          ))}
+        </div>
+
+        <div>
+          <label htmlFor="confirmPassword" className={labelClass}>
+            Confirm password
+          </label>
+          <input
+            id="confirmPassword"
+            type="password"
+            autoComplete="new-password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            className={inputClass}
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="w-full rounded-full bg-flu-pink px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-flu-pink/30 transition hover:bg-flu-pink-dark hover:shadow-flu-pink/50 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isSubmitting ? 'Creating account…' : 'Create account'}
+        </button>
+      </form>
+    </AuthShell>
   );
 }

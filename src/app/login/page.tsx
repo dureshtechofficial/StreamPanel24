@@ -5,6 +5,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { ApiError } from '@/lib/api-error';
+import { AuthShell } from '@/components/auth-shell';
+
+const inputClass =
+  'w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 transition focus:border-flu-pink focus:outline-none focus:ring-2 focus:ring-flu-pink/20';
+const labelClass = 'mb-1 block text-sm font-medium text-gray-700';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -40,63 +45,63 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-sm rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-        <h1 className="mb-6 text-xl font-semibold text-gray-900">Log in</h1>
-
-        {errors.length > 0 && (
-          <div className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-            {errors.map((msg) => (
-              <p key={msg}>{msg}</p>
-            ))}
-          </div>
-        )}
-
-        <form className="space-y-4" onSubmit={handleSubmit} noValidate>
-          <div>
-            <label htmlFor="email" className="mb-1 block text-sm font-medium text-gray-700">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="password" className="mb-1 block text-sm font-medium text-gray-700">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isSubmitting ? 'Logging in…' : 'Log in'}
-          </button>
-        </form>
-
-        <p className="mt-4 text-center text-sm text-gray-600">
+    <AuthShell
+      title="Log in"
+      subtitle="Welcome back — video, the way it should be."
+      footer={
+        <>
           Don&apos;t have an account?{' '}
-          <Link href="/register" className="font-medium text-gray-900 underline">
+          <Link href="/register" className="font-semibold text-flu-pink hover:text-flu-pink-dark">
             Register
           </Link>
-        </p>
-      </div>
-    </div>
+        </>
+      }
+    >
+      {errors.length > 0 && (
+        <div className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+          {errors.map((msg) => (
+            <p key={msg}>{msg}</p>
+          ))}
+        </div>
+      )}
+
+      <form className="space-y-4" onSubmit={handleSubmit} noValidate>
+        <div>
+          <label htmlFor="email" className={labelClass}>
+            Email
+          </label>
+          <input
+            id="email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className={inputClass}
+          />
+        </div>
+
+        <div>
+          <label htmlFor="password" className={labelClass}>
+            Password
+          </label>
+          <input
+            id="password"
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className={inputClass}
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="w-full rounded-full bg-flu-pink px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-flu-pink/30 transition hover:bg-flu-pink-dark hover:shadow-flu-pink/50 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isSubmitting ? 'Logging in…' : 'Log in'}
+        </button>
+      </form>
+    </AuthShell>
   );
 }
