@@ -1,6 +1,9 @@
 import { DataSource, DataSourceOptions } from 'typeorm';
 import { config } from 'dotenv';
 import { User } from '../users/entities/user.entity';
+import { Customer } from '../customers/entities/customer.entity';
+import { FlussonicServer } from '../flussonic-servers/entities/flussonic-server.entity';
+import { FlussonicServerStat } from '../flussonic-servers/entities/flussonic-server-stat.entity';
 
 config();
 
@@ -11,7 +14,7 @@ export const dataSourceOptions: DataSourceOptions = {
   username: process.env.DB_USERNAME ?? 'root',
   password: process.env.DB_PASSWORD ?? '',
   database: process.env.DB_DATABASE ?? 'project7_auth',
-  entities: [User],
+  entities: [User, Customer, FlussonicServer, FlussonicServerStat],
   migrations: [__dirname + '/migrations/*.{ts,js}'],
   synchronize: false,
   logging: process.env.NODE_ENV === 'development',

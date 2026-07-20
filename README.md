@@ -1,6 +1,6 @@
 # Backend — NestJS Auth API
 
-REST API for user registration and login, backed by MySQL via TypeORM. JWT access tokens + httpOnly-cookie refresh tokens.
+REST API for user registration/login plus customer and Flussonic-server management, backed by MySQL via TypeORM. JWT access tokens + httpOnly-cookie refresh tokens.
 
 ## Stack
 
@@ -37,6 +37,7 @@ Edit `.env` with your MySQL credentials and JWT secrets. **Never use the example
 | `JWT_ACCESS_SECRET`, `JWT_ACCESS_EXPIRES_IN` | Access token secret + lifetime (e.g. `15m`) |
 | `JWT_REFRESH_SECRET`, `JWT_REFRESH_EXPIRES_IN` | Refresh token secret + lifetime (e.g. `7d`) — **use a different secret than the access token** |
 | `BCRYPT_SALT_ROUNDS` | 10–14, default `12` |
+| `CREDENTIALS_ENCRYPTION_KEY` | 64-char hex (32 bytes), e.g. `openssl rand -hex 32` — used to reversibly encrypt Flussonic server API passwords/tokens |
 
 ### Database
 
@@ -86,7 +87,11 @@ All under `/api/v1/auth`:
 | POST | `/logout` | — | Clears the `refresh_token` cookie. |
 | GET | `/me` | `Authorization: Bearer <accessToken>` | Returns the current user. |
 
-Errors always come back as `{ statusCode, message, error, path, timestamp }`.
+`/api/v1/customers` — full CRUD (`GET`, `GET /:id`, `POST`, `PATCH /:id`, `DELETE /:id`), any authenticated user. Supports `?search=&status=&page=&limit=` on the list endpoint.
+
+`/api/v1/flussonic-servers` — full CRUD, same shape as customers, but **admin role only** (`@Roles(UserRole.ADMIN)`). `api_password` is required on create (write-only, encrypted at rest); `api_access_token` is optional and write-only. Neither is ever returned by the API.
+
+Errors always come back as `{ statusCode, message, error, path, timestamp }`. Every resource's `created_at`/`updated_at` is a UTC unix timestamp in seconds (a plain number), not an ISO date string.
 
 ## Security notes
 
@@ -96,6 +101,7 @@ Errors always come back as `{ statusCode, message, error, path, timestamp }`.
 - `ValidationPipe` runs globally with `whitelist` + `forbidNonWhitelisted`, so unexpected body fields are rejected rather than silently dropped or mass-assigned.
 - Login/register are throttled per-IP on top of the global throttler to slow brute-force attempts.
 - Roles (`admin` / `user`) are enforced with a `@Roles()` decorator + `RolesGuard` that reads `request.user.role`, set up so more roles can be added to the `UserRole` enum later without changing the guard.
+- Flussonic server API credentials are AES-256-GCM encrypted (`CREDENTIALS_ENCRYPTION_KEY`), not hashed — bcrypt is one-way and unsuitable here since the app needs the plaintext back to authenticate against the real Flussonic API later.
 
 ## Migrations
 

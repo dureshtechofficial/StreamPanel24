@@ -1,14 +1,18 @@
 import { Exclude } from 'class-transformer';
 import {
+  BeforeInsert,
+  BeforeUpdate,
   Column,
-  CreateDateColumn,
   Entity,
   Index,
   PrimaryGeneratedColumn,
-  UpdateDateColumn,
 } from 'typeorm';
 import { UserRole } from '../enums/user-role.enum';
 import { UserStatus } from '../enums/user-status.enum';
+import {
+  nowUnixSeconds,
+  unixTimestampTransformer,
+} from '../../common/utils/unix-timestamp.util';
 
 @Entity('users')
 export class User {
@@ -32,9 +36,30 @@ export class User {
   @Column({ type: 'enum', enum: UserStatus, default: UserStatus.ACTIVE })
   status: UserStatus;
 
-  @CreateDateColumn({ type: 'timestamp' })
-  created_at: Date;
+  /** UTC unix timestamp (seconds). Set by the app, not MySQL — see @BeforeInsert/@BeforeUpdate below. */
+  @Column({
+    type: 'bigint',
+    unsigned: true,
+    transformer: unixTimestampTransformer,
+  })
+  created_at: number;
 
-  @UpdateDateColumn({ type: 'timestamp' })
-  updated_at: Date;
+  @Column({
+    type: 'bigint',
+    unsigned: true,
+    transformer: unixTimestampTransformer,
+  })
+  updated_at: number;
+
+  @BeforeInsert()
+  setTimestampsOnInsert() {
+    const now = nowUnixSeconds();
+    this.created_at = now;
+    this.updated_at = now;
+  }
+
+  @BeforeUpdate()
+  setTimestampOnUpdate() {
+    this.updated_at = nowUnixSeconds();
+  }
 }

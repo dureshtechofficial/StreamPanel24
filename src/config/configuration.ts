@@ -20,4 +20,6 @@ export default () => ({
   },
 
   bcryptSaltRounds: parseInt(process.env.BCRYPT_SALT_ROUNDS ?? '12', 10),
+
+  credentialsEncryptionKey: process.env.CREDENTIALS_ENCRYPTION_KEY,
 });

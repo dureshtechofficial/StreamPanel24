@@ -10,6 +10,11 @@ import { validate } from './config/env.validation';
 import { User } from './users/entities/user.entity';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
+import { Customer } from './customers/entities/customer.entity';
+import { CustomersModule } from './customers/customers.module';
+import { FlussonicServer } from './flussonic-servers/entities/flussonic-server.entity';
+import { FlussonicServerStat } from './flussonic-servers/entities/flussonic-server-stat.entity';
+import { FlussonicServersModule } from './flussonic-servers/flussonic-servers.module';
 
 @Module({
   imports: [
@@ -31,13 +36,15 @@ import { AuthModule } from './auth/auth.module';
         username: configService.get<string>('database.username'),
         password: configService.get<string>('database.password'),
         database: configService.get<string>('database.database'),
-        entities: [User],
+        entities: [User, Customer, FlussonicServer, FlussonicServerStat],
         synchronize: false,
         logging: configService.get<string>('nodeEnv') === 'development',
       }),
     }),
     UsersModule,
     AuthModule,
+    CustomersModule,
+    FlussonicServersModule,
   ],
   controllers: [AppController],
   providers: [

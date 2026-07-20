@@ -3,6 +3,7 @@ import {
   IsEnum,
   IsNumber,
   IsString,
+  Matches,
   Max,
   Min,
   validateSync,
@@ -58,6 +59,12 @@ class EnvironmentVariables {
   @Min(10)
   @Max(14)
   BCRYPT_SALT_ROUNDS: number;
+
+  @Matches(/^[0-9a-fA-F]{64}$/, {
+    message:
+      'CREDENTIALS_ENCRYPTION_KEY must be a 64-character hex string (32 bytes, e.g. from `openssl rand -hex 32`)',
+  })
+  CREDENTIALS_ENCRYPTION_KEY: string;
 }
 
 export function validate(config: Record<string, unknown>) {
