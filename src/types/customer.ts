@@ -5,6 +5,7 @@ export interface Customer {
   name: string;
   email: string | null;
   phone: string;
+  username: string | null;
   company_name: string | null;
   address: string | null;
   city: string | null;
@@ -21,6 +22,9 @@ export interface CustomerInput {
   name: string;
   email?: string;
   phone: string;
+  username: string;
+  /** Only sent when creating, or when changing it on edit (blank = unchanged). */
+  password?: string;
   company_name?: string;
   address?: string;
   city?: string;

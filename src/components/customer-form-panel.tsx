@@ -6,7 +6,7 @@ import { ApiError } from '@/lib/api-error';
 import { groupFieldErrors } from '@/lib/form-errors';
 import { XIcon } from './icons';
 
-const FIELDS = ['name', 'phone', 'email', 'company_name', 'address', 'city', 'state', 'pincode'];
+const FIELDS = ['name', 'phone', 'username', 'password', 'email', 'company_name', 'address', 'city', 'state', 'pincode'];
 
 const inputClass =
   'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 transition focus:border-flu-pink focus:outline-none focus:ring-2 focus:ring-flu-pink/20';
@@ -16,6 +16,8 @@ type FormState = {
   name: string;
   email: string;
   phone: string;
+  username: string;
+  password: string;
   company_name: string;
   address: string;
   city: string;
@@ -28,6 +30,8 @@ const EMPTY_FORM: FormState = {
   name: '',
   email: '',
   phone: '',
+  username: '',
+  password: '',
   company_name: '',
   address: '',
   city: '',
@@ -42,6 +46,8 @@ function toFormState(customer: Customer | null): FormState {
     name: customer.name,
     email: customer.email ?? '',
     phone: customer.phone,
+    username: customer.username ?? '',
+    password: '',
     company_name: customer.company_name ?? '',
     address: customer.address ?? '',
     city: customer.city ?? '',
@@ -55,6 +61,8 @@ function toPayload(form: FormState): CustomerInput {
   return {
     name: form.name.trim(),
     phone: form.phone.trim(),
+    username: form.username.trim(),
+    password: form.password ? form.password : undefined,
     email: form.email.trim() || undefined,
     company_name: form.company_name.trim() || undefined,
     address: form.address.trim() || undefined,
@@ -87,9 +95,11 @@ export function CustomerFormPanel({
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
 
-    const clientErrors: Record<string, string[]> = { name: [], phone: [] };
+    const clientErrors: Record<string, string[]> = { name: [], phone: [], username: [], password: [] };
     if (form.name.trim().length < 2) clientErrors.name.push('Name must be at least 2 characters long');
     if (form.phone.trim().length < 6) clientErrors.phone.push('Enter a valid phone number');
+    if (form.username.trim().length < 3) clientErrors.username.push('Username must be at least 3 characters long');
+    if (!customer && form.password.length < 8) clientErrors.password.push('Password must be at least 8 characters long');
     if (Object.values(clientErrors).some((v) => v.length > 0)) {
       setErrors(clientErrors);
       return;
@@ -183,6 +193,41 @@ export function CustomerFormPanel({
                   className={inputClass}
                 />
                 {errors.email?.map((msg) => (
+                  <p key={msg} className="mt-1 text-xs text-red-600">
+                    {msg}
+                  </p>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelClass}>Username *</label>
+                <input
+                  value={form.username}
+                  onChange={(e) => setField('username', e.target.value)}
+                  className={inputClass}
+                  autoComplete="off"
+                />
+                {errors.username?.map((msg) => (
+                  <p key={msg} className="mt-1 text-xs text-red-600">
+                    {msg}
+                  </p>
+                ))}
+              </div>
+              <div>
+                <label className={labelClass}>
+                  Password {customer ? '' : '*'}
+                </label>
+                <input
+                  type="password"
+                  value={form.password}
+                  onChange={(e) => setField('password', e.target.value)}
+                  className={inputClass}
+                  autoComplete="new-password"
+                  placeholder={customer ? 'Leave blank to keep unchanged' : undefined}
+                />
+                {errors.password?.map((msg) => (
                   <p key={msg} className="mt-1 text-xs text-red-600">
                     {msg}
                   </p>

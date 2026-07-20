@@ -8,7 +8,7 @@ All notable changes to this frontend are documented here. Format loosely follows
 - `/register` and `/login` pages with client-side validation and field-level errors surfaced from the backend.
 - `AuthProvider` (`lib/auth-context.tsx`): in-memory access token + user state, silent session restore via `/auth/refresh` on load, `login()`/`register()`/`logout()`.
 - `/dashboard` protected route, plus a `ProtectedRoute` wrapper and a `DashboardShell` (sidebar + topbar) used by every authenticated page.
-- `/dashboard/customers` — searchable/filterable/paginated table with a slide-over create/edit form and delete confirmation, available to any logged-in user.
+- `/dashboard/customers` — searchable/filterable/paginated table with a slide-over create/edit form and delete confirmation, available to any logged-in user. The form now includes username/password fields (password required on create, optional on edit — blank leaves it unchanged).
 - `/dashboard/servers` — same CRUD pattern for Flussonic servers, gated to admins (nav item hidden, page shows "Access restricted" for non-admins). Full-width table with live status, latest client count, and uptime. "Sync all" button syncs every server and shows a per-server result summary.
 - `/dashboard/servers/[id]/stats` — paginated stats log for one server, with a "Sync" button that triggers the backend's real Flussonic `config/stats` integration.
 - Flussonic-inspired visual theme (dark navy nav, blue→violet gradient auth screens, pink accent) via CSS custom properties in `globals.css`.
