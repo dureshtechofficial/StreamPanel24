@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
+import { APP_NAME } from "@/lib/app-config";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Auth Demo",
-  description: "User registration and login demo",
+  title: APP_NAME,
+  description: "User registration, customer management, and Flussonic server monitoring",
 };
 
 export default function RootLayout({

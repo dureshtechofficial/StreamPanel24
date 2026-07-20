@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/auth-context';
 import { ApiError } from '@/lib/api-error';
 import { groupFieldErrors } from '@/lib/form-errors';
 import { AuthShell } from '@/components/auth-shell';
+import { usePageTitle } from '@/lib/use-page-title';
 
 const FIELDS = ['name', 'email', 'password'] as const;
 
@@ -39,6 +40,7 @@ function validateClientSide(
 }
 
 export default function RegisterPage() {
+  usePageTitle('Register');
   const { register } = useAuth();
   const router = useRouter();
 

@@ -6,12 +6,14 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { ApiError } from '@/lib/api-error';
 import { AuthShell } from '@/components/auth-shell';
+import { usePageTitle } from '@/lib/use-page-title';
 
 const inputClass =
   'w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 transition focus:border-flu-pink focus:outline-none focus:ring-2 focus:ring-flu-pink/20';
 const labelClass = 'mb-1 block text-sm font-medium text-gray-700';
 
 export default function LoginPage() {
+  usePageTitle('Log in');
   const { login } = useAuth();
   const router = useRouter();
 

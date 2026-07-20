@@ -11,7 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run lint` — eslint
 - No test runner is configured in this app
 
-Requires `.env.local` copied from `.env.example` (`NEXT_PUBLIC_API_URL`, pointing at the backend's `/api/v1`).
+Requires `.env.local` copied from `.env.example` (`NEXT_PUBLIC_API_URL` pointing at the backend's `/api/v1`, `NEXT_PUBLIC_APP_NAME` for the product name shown in tab titles).
 
 ## Architecture
 
@@ -19,6 +19,7 @@ Requires `.env.local` copied from `.env.example` (`NEXT_PUBLIC_API_URL`, pointin
 - **`lib/auth-context.tsx`** (`AuthProvider`) owns the actual React state (`user`, `accessToken`, `isLoading`) and is the only thing that calls `login`/`register`/`logout`/`refresh`. On mount it silently calls `/auth/refresh` (cookie-based) to restore a session; the in-flight refresh promise is de-duped (`refreshInFlight` ref) so a page-load refresh and an API-triggered refresh-on-401 don't race.
 - **`components/protected-route.tsx`** is a client-side gate (redirects to `/login` once `isLoading` is false and there's no user) — there's deliberately no Next.js `proxy.ts`/middleware gate, since the refresh cookie is httpOnly and unreadable by the client, and verifying it requires the backend anyway.
 - **Field-level form errors**: the backend returns `message: string[]` for validation failures; `lib/form-errors.ts#groupFieldErrors` buckets those strings by field name via substring match so the register form can show errors under the right input without the backend needing a structured per-field error shape.
+- **Tab titles are set client-side, not via Next's Metadata API**: every page is a Client Component (`'use client'`), and `metadata` exports only work in Server Components, so `lib/use-page-title.ts#usePageTitle('Page Name')` sets `document.title = "{APP_NAME} | {Page Name}"` directly. **Non-obvious gotcha it works around**: Next's root-layout `<title>` is a real React-reconciled element, not static HTML — any re-render of an ancestor (e.g. `AuthProvider`'s initial-mount `isLoading: true → false` flip after the silent `/auth/refresh` settles) resets it back to the layout's static `metadata.title`. Pages behind `ProtectedRoute` are shielded from this by accident (their content doesn't mount until after that flip), but unprotected pages (`/login`, `/register`) mount immediately and lose a plain `document.title = ...` within milliseconds. `usePageTitle` works around it with a `MutationObserver` on the `<title>` element that re-applies the desired text if anything else changes it — don't simplify this back to a bare assignment without re-testing `/login`/`/register` specifically.
 
 ## UI theme
 

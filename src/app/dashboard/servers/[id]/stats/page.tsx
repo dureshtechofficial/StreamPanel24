@@ -17,6 +17,7 @@ import type { FlussonicServer } from '@/types/flussonic-server';
 import type { FlussonicServerStat } from '@/types/flussonic-server-stat';
 import { ApiError } from '@/lib/api-error';
 import { useAuth } from '@/lib/auth-context';
+import { usePageTitle } from '@/lib/use-page-title';
 
 const PAGE_SIZE = 15;
 
@@ -59,6 +60,7 @@ function formatStreams(stat: FlussonicServerStat) {
 
 function ServerStatsContent({ serverId }: { serverId: string }) {
   const [server, setServer] = useState<FlussonicServer | null>(null);
+  usePageTitle(server ? `${server.name} Stats` : 'Server Stats');
   const [items, setItems] = useState<FlussonicServerStat[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);

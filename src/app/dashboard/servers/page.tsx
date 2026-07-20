@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
-import { ProtectedRoute } from '@/components/protected-route';
-import { DashboardShell } from '@/components/dashboard-shell';
-import { ServerFormPanel } from '@/components/server-form-panel';
-import { ConfirmDialog } from '@/components/confirm-dialog';
+import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import { ProtectedRoute } from "@/components/protected-route";
+import { DashboardShell } from "@/components/dashboard-shell";
+import { ServerFormPanel } from "@/components/server-form-panel";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import {
   ArrowPathIcon,
   ChartBarIcon,
@@ -15,7 +15,7 @@ import {
   PlusIcon,
   SearchIcon,
   TrashIcon,
-} from '@/components/icons';
+} from "@/components/icons";
 import {
   createServer,
   deleteServer,
@@ -23,40 +23,46 @@ import {
   syncAllServers,
   updateServer,
   type SyncAllSummary,
-} from '@/lib/flussonic-servers-api';
+} from "@/lib/flussonic-servers-api";
 import type {
   FlussonicServer,
   FlussonicServerInput,
   FlussonicServerStatus,
-} from '@/types/flussonic-server';
-import { ApiError } from '@/lib/api-error';
-import { formatUptime } from '@/lib/format';
-import { useAuth } from '@/lib/auth-context';
+} from "@/types/flussonic-server";
+import { ApiError } from "@/lib/api-error";
+import { formatUptime } from "@/lib/format";
+import { useAuth } from "@/lib/auth-context";
+import { usePageTitle } from "@/lib/use-page-title";
 
 const PAGE_SIZE = 10;
 
 const STATUS_STYLES: Record<FlussonicServerStatus, string> = {
-  active: 'bg-green-50 text-green-700',
-  inactive: 'bg-gray-100 text-gray-600',
-  maintenance: 'bg-amber-50 text-amber-700',
-  unreachable: 'bg-red-50 text-red-700',
+  active: "bg-green-50 text-green-700",
+  inactive: "bg-gray-100 text-gray-600",
+  maintenance: "bg-amber-50 text-amber-700",
+  unreachable: "bg-red-50 text-red-700",
 };
 
 function ServersContent() {
+  usePageTitle("Servers");
   const [items, setItems] = useState<FlussonicServer[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [status, setStatus] = useState<FlussonicServerStatus | ''>('');
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [status, setStatus] = useState<FlussonicServerStatus | "">("");
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [panelOpen, setPanelOpen] = useState(false);
   const [panelKey, setPanelKey] = useState(0);
-  const [editingServer, setEditingServer] = useState<FlussonicServer | null>(null);
-  const [pendingDelete, setPendingDelete] = useState<FlussonicServer | null>(null);
+  const [editingServer, setEditingServer] = useState<FlussonicServer | null>(
+    null,
+  );
+  const [pendingDelete, setPendingDelete] = useState<FlussonicServer | null>(
+    null,
+  );
   const [isDeleting, setIsDeleting] = useState(false);
 
   const [isSyncingAll, setIsSyncingAll] = useState(false);
@@ -85,7 +91,9 @@ function ServersContent() {
       setTotal(result.total);
       setTotalPages(result.totalPages);
     } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : 'Failed to load servers.');
+      setLoadError(
+        err instanceof ApiError ? err.message : "Failed to load servers.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -129,7 +137,9 @@ function ServersContent() {
       setSyncSummary(summary);
       await load();
     } catch (err) {
-      setSyncError(err instanceof ApiError ? err.message : 'Failed to sync servers.');
+      setSyncError(
+        err instanceof ApiError ? err.message : "Failed to sync servers.",
+      );
     } finally {
       setIsSyncingAll(false);
     }
@@ -143,7 +153,7 @@ function ServersContent() {
       setPendingDelete(null);
       await load();
     } catch {
-      setLoadError('Failed to delete server.');
+      setLoadError("Failed to delete server.");
     } finally {
       setIsDeleting(false);
     }
@@ -157,9 +167,11 @@ function ServersContent() {
       <div className="animate-fade-in-up mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
-            Flussonic servers
+            Servers
           </h1>
-          <p className="mt-1 text-sm text-gray-500">Manage registered media servers.</p>
+          <p className="mt-1 text-sm text-gray-500">
+            Manage registered media servers.
+          </p>
         </div>
         <div className="flex gap-2">
           <button
@@ -167,8 +179,10 @@ function ServersContent() {
             disabled={isSyncingAll}
             className="flex items-center justify-center gap-1.5 rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <ArrowPathIcon className={`h-4 w-4 ${isSyncingAll ? 'animate-spin' : ''}`} />
-            {isSyncingAll ? 'Syncing…' : 'Sync all'}
+            <ArrowPathIcon
+              className={`h-4 w-4 ${isSyncingAll ? "animate-spin" : ""}`}
+            />
+            {isSyncingAll ? "Syncing…" : "Sync all"}
           </button>
           <button
             onClick={openCreate}
@@ -189,13 +203,15 @@ function ServersContent() {
       {syncSummary && (
         <div
           className={`animate-fade-in-up mb-4 rounded-md px-4 py-3 text-sm ${
-            syncSummary.failed === 0 ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'
+            syncSummary.failed === 0
+              ? "bg-green-50 text-green-700"
+              : "bg-amber-50 text-amber-700"
           }`}
         >
           <p>
             Synced {syncSummary.succeeded} of {syncSummary.total} server
-            {syncSummary.total === 1 ? '' : 's'}
-            {syncSummary.failed > 0 ? `, ${syncSummary.failed} failed` : ''}.
+            {syncSummary.total === 1 ? "" : "s"}
+            {syncSummary.failed > 0 ? `, ${syncSummary.failed} failed` : ""}.
           </p>
           {syncSummary.failed > 0 && (
             <ul className="mt-1 list-inside list-disc">
@@ -213,7 +229,7 @@ function ServersContent() {
 
       <div
         className="animate-fade-in-up mb-4 flex flex-col gap-3 sm:flex-row"
-        style={{ animationDelay: '60ms' }}
+        style={{ animationDelay: "60ms" }}
       >
         <div className="relative flex-1">
           <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -227,7 +243,7 @@ function ServersContent() {
         <select
           value={status}
           onChange={(e) => {
-            setStatus(e.target.value as FlussonicServerStatus | '');
+            setStatus(e.target.value as FlussonicServerStatus | "");
             setPage(1);
           }}
           className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 transition focus:border-flu-pink focus:outline-none focus:ring-2 focus:ring-flu-pink/20"
@@ -242,7 +258,7 @@ function ServersContent() {
 
       <div
         className="animate-fade-in-up overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"
-        style={{ animationDelay: '120ms' }}
+        style={{ animationDelay: "120ms" }}
       >
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
@@ -261,7 +277,10 @@ function ServersContent() {
             <tbody className="divide-y divide-gray-100">
               {isLoading && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-sm text-gray-400">
+                  <td
+                    colSpan={8}
+                    className="px-4 py-10 text-center text-sm text-gray-400"
+                  >
                     Loading servers…
                   </td>
                 </tr>
@@ -269,7 +288,10 @@ function ServersContent() {
 
               {!isLoading && loadError && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-sm text-red-600">
+                  <td
+                    colSpan={8}
+                    className="px-4 py-10 text-center text-sm text-red-600"
+                  >
                     {loadError}
                   </td>
                 </tr>
@@ -277,7 +299,10 @@ function ServersContent() {
 
               {!isLoading && !loadError && items.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-sm text-gray-400">
+                  <td
+                    colSpan={8}
+                    className="px-4 py-10 text-center text-sm text-gray-400"
+                  >
                     No servers found.
                   </td>
                 </tr>
@@ -286,18 +311,27 @@ function ServersContent() {
               {!isLoading &&
                 !loadError &&
                 items.map((server) => (
-                  <tr key={server.id} className="transition-colors hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium text-gray-900">{server.name}</td>
+                  <tr
+                    key={server.id}
+                    className="transition-colors hover:bg-gray-50"
+                  >
+                    <td className="px-4 py-3 font-medium text-gray-900">
+                      {server.name}
+                    </td>
                     <td className="px-4 py-3 text-gray-600">
                       <div>
                         {server.hostname}:{server.port}
                       </div>
                       <div className="text-xs text-gray-400">
-                        {server.use_ssl ? 'SSL enabled' : 'No SSL'}
+                        {server.use_ssl ? "SSL enabled" : "No SSL"}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-gray-600">{server.domain ?? '—'}</td>
-                    <td className="px-4 py-3 text-gray-600 uppercase">{server.api_version_tag}</td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {server.domain ?? "—"}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600 uppercase">
+                      {server.api_version_tag}
+                    </td>
                     <td className="px-4 py-3">
                       <span
                         className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium capitalize ${STATUS_STYLES[server.status]}`}
@@ -305,7 +339,9 @@ function ServersContent() {
                         {server.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-gray-600">{server.last_total_clients ?? '—'}</td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {server.last_total_clients ?? "—"}
+                    </td>
                     <td className="px-4 py-3 text-gray-600">
                       {formatUptime(server.last_uptime_seconds)}
                     </td>
@@ -341,7 +377,9 @@ function ServersContent() {
         </div>
 
         <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3 text-sm text-gray-500">
-          <span>{total === 0 ? 'No results' : `Showing ${from}–${to} of ${total}`}</span>
+          <span>
+            {total === 0 ? "No results" : `Showing ${from}–${to} of ${total}`}
+          </span>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -392,8 +430,8 @@ function RestrictedNotice() {
     <div className="mx-auto max-w-lg rounded-xl border border-gray-200 bg-white p-8 text-center shadow-sm">
       <h1 className="text-lg font-semibold text-gray-900">Access restricted</h1>
       <p className="mt-2 text-sm text-gray-500">
-        Managing Flussonic servers requires an admin account. Contact an administrator if you
-        need access.
+        Managing Flussonic servers requires an admin account. Contact an
+        administrator if you need access.
       </p>
     </div>
   );
@@ -404,7 +442,9 @@ export default function ServersPage() {
 
   return (
     <ProtectedRoute>
-      <DashboardShell>{user?.role === 'admin' ? <ServersContent /> : <RestrictedNotice />}</DashboardShell>
+      <DashboardShell>
+        {user?.role === "admin" ? <ServersContent /> : <RestrictedNotice />}
+      </DashboardShell>
     </ProtectedRoute>
   );
 }

@@ -18,6 +18,8 @@ All notable changes to this frontend are documented here. Format loosely follows
 - `User`/`Customer`/`FlussonicServer` timestamp fields (`created_at`/`updated_at`) changed from ISO date strings to unix-seconds numbers, matching the backend's move to unix timestamps; date formatting updated accordingly.
 - Removed the manual "API access token" field from the server form — it's derived automatically by the backend from username/password now.
 - The server stats page's "Add sample" button was replaced with "Sync", once the real Flussonic integration landed; the stats table gained Memory/Clients/Scheduler load/Status/Version columns to match.
+- Added `NEXT_PUBLIC_APP_NAME` env var and `lib/use-page-title.ts#usePageTitle()`, called on every page to set the browser tab title to `"{APP_NAME} | {page name}"`; the root layout's static `metadata.title` now defaults to `APP_NAME` instead of a hardcoded string.
 
 ### Fixed
 - A `react-hooks/set-state-in-effect` lint violation in list-fetching effects, resolved via key-based remounting for form resets rather than reset-on-open effects (and a justified inline disable for the one genuine fetch-on-filter-change effect).
+- `/login`/`/register` tab titles were getting silently reset back to the bare app name a few milliseconds after mount — Next's root-layout `<title>` is React-reconciled, and `AuthProvider`'s initial `isLoading` flip (once the silent `/auth/refresh` settles) re-renders and stomps a plain `document.title` assignment made before that. `usePageTitle` now uses a `MutationObserver` on the `<title>` element to re-apply the desired title whenever anything else changes it.

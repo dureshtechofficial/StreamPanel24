@@ -19,6 +19,7 @@ cp .env.example .env.local
 | Variable | Description |
 | --- | --- |
 | `NEXT_PUBLIC_API_URL` | Base URL of the backend API, e.g. `http://localhost:3001/api/v1` |
+| `NEXT_PUBLIC_APP_NAME` | Product name shown in browser tab titles, e.g. `Flus24 Manager` (must be `NEXT_PUBLIC_`-prefixed since tab titles are set client-side — see `lib/use-page-title.ts`) |
 
 ## Running
 

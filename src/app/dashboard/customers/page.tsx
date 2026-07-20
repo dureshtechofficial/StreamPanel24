@@ -21,6 +21,7 @@ import {
 } from "@/lib/customers-api";
 import type { Customer, CustomerInput, CustomerStatus } from "@/types/customer";
 import { ApiError } from "@/lib/api-error";
+import { usePageTitle } from "@/lib/use-page-title";
 
 const PAGE_SIZE = 10;
 
@@ -31,6 +32,7 @@ const STATUS_STYLES: Record<CustomerStatus, string> = {
 };
 
 function CustomersContent() {
+  usePageTitle("Customers");
   const [items, setItems] = useState<Customer[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
