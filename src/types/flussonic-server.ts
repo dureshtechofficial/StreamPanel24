@@ -13,6 +13,10 @@ export interface FlussonicServer {
   flussonic_version: string | null;
   api_version_tag: ApiVersionTag;
   status: FlussonicServerStatus;
+  /** Cached from the most recent successful sync */
+  last_total_clients: number | null;
+  /** Cached from the most recent successful sync, in seconds */
+  last_uptime_seconds: number | null;
   /** UTC unix timestamp (seconds) */
   created_at: number;
   /** UTC unix timestamp (seconds) */
@@ -29,8 +33,6 @@ export interface FlussonicServerInput {
   /** Write-only: only sent when set/changed, never returned by the API */
   api_password?: string;
   api_base_path?: string;
-  /** Write-only: only sent when set/changed, never returned by the API */
-  api_access_token?: string;
   flussonic_version?: string;
   api_version_tag?: ApiVersionTag;
   status?: FlussonicServerStatus;

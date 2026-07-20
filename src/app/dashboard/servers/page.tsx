@@ -1,11 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { ProtectedRoute } from '@/components/protected-route';
 import { DashboardShell } from '@/components/dashboard-shell';
 import { ServerFormPanel } from '@/components/server-form-panel';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import {
+  ArrowPathIcon,
+  ChartBarIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   PencilIcon,
@@ -17,7 +20,9 @@ import {
   createServer,
   deleteServer,
   listServers,
+  syncAllServers,
   updateServer,
+  type SyncAllSummary,
 } from '@/lib/flussonic-servers-api';
 import type {
   FlussonicServer,
@@ -25,6 +30,7 @@ import type {
   FlussonicServerStatus,
 } from '@/types/flussonic-server';
 import { ApiError } from '@/lib/api-error';
+import { formatUptime } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
 const PAGE_SIZE = 10;
@@ -52,6 +58,10 @@ function ServersContent() {
   const [editingServer, setEditingServer] = useState<FlussonicServer | null>(null);
   const [pendingDelete, setPendingDelete] = useState<FlussonicServer | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const [isSyncingAll, setIsSyncingAll] = useState(false);
+  const [syncSummary, setSyncSummary] = useState<SyncAllSummary | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -110,6 +120,21 @@ function ServersContent() {
     await load();
   }
 
+  async function handleSyncAll() {
+    setSyncError(null);
+    setSyncSummary(null);
+    setIsSyncingAll(true);
+    try {
+      const summary = await syncAllServers();
+      setSyncSummary(summary);
+      await load();
+    } catch (err) {
+      setSyncError(err instanceof ApiError ? err.message : 'Failed to sync servers.');
+    } finally {
+      setIsSyncingAll(false);
+    }
+  }
+
   async function handleDelete() {
     if (!pendingDelete) return;
     setIsDeleting(true);
@@ -128,7 +153,7 @@ function ServersContent() {
   const to = Math.min(page * PAGE_SIZE, total);
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div className="w-full">
       <div className="animate-fade-in-up mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
@@ -136,14 +161,55 @@ function ServersContent() {
           </h1>
           <p className="mt-1 text-sm text-gray-500">Manage registered media servers.</p>
         </div>
-        <button
-          onClick={openCreate}
-          className="flex items-center justify-center gap-1.5 rounded-full bg-flu-pink px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-flu-pink/30 transition hover:bg-flu-pink-dark"
-        >
-          <PlusIcon className="h-4 w-4" />
-          Add server
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={handleSyncAll}
+            disabled={isSyncingAll}
+            className="flex items-center justify-center gap-1.5 rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <ArrowPathIcon className={`h-4 w-4 ${isSyncingAll ? 'animate-spin' : ''}`} />
+            {isSyncingAll ? 'Syncing…' : 'Sync all'}
+          </button>
+          <button
+            onClick={openCreate}
+            className="flex items-center justify-center gap-1.5 rounded-full bg-flu-pink px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-flu-pink/30 transition hover:bg-flu-pink-dark"
+          >
+            <PlusIcon className="h-4 w-4" />
+            Add server
+          </button>
+        </div>
       </div>
+
+      {syncError && (
+        <div className="animate-fade-in-up mb-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
+          {syncError}
+        </div>
+      )}
+
+      {syncSummary && (
+        <div
+          className={`animate-fade-in-up mb-4 rounded-md px-4 py-3 text-sm ${
+            syncSummary.failed === 0 ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'
+          }`}
+        >
+          <p>
+            Synced {syncSummary.succeeded} of {syncSummary.total} server
+            {syncSummary.total === 1 ? '' : 's'}
+            {syncSummary.failed > 0 ? `, ${syncSummary.failed} failed` : ''}.
+          </p>
+          {syncSummary.failed > 0 && (
+            <ul className="mt-1 list-inside list-disc">
+              {syncSummary.results
+                .filter((r) => !r.ok)
+                .map((r) => (
+                  <li key={r.serverId}>
+                    {r.name}: {r.error}
+                  </li>
+                ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       <div
         className="animate-fade-in-up mb-4 flex flex-col gap-3 sm:flex-row"
@@ -187,13 +253,15 @@ function ServersContent() {
                 <th className="px-4 py-3 font-medium">Domain</th>
                 <th className="px-4 py-3 font-medium">API version</th>
                 <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3 font-medium">Clients</th>
+                <th className="px-4 py-3 font-medium">Uptime</th>
                 <th className="px-4 py-3 font-medium text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {isLoading && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-sm text-gray-400">
+                  <td colSpan={8} className="px-4 py-10 text-center text-sm text-gray-400">
                     Loading servers…
                   </td>
                 </tr>
@@ -201,7 +269,7 @@ function ServersContent() {
 
               {!isLoading && loadError && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-sm text-red-600">
+                  <td colSpan={8} className="px-4 py-10 text-center text-sm text-red-600">
                     {loadError}
                   </td>
                 </tr>
@@ -209,7 +277,7 @@ function ServersContent() {
 
               {!isLoading && !loadError && items.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-sm text-gray-400">
+                  <td colSpan={8} className="px-4 py-10 text-center text-sm text-gray-400">
                     No servers found.
                   </td>
                 </tr>
@@ -237,8 +305,19 @@ function ServersContent() {
                         {server.status}
                       </span>
                     </td>
+                    <td className="px-4 py-3 text-gray-600">{server.last_total_clients ?? '—'}</td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {formatUptime(server.last_uptime_seconds)}
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-1">
+                        <Link
+                          href={`/dashboard/servers/${server.id}/stats`}
+                          className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
+                          aria-label={`View stats for ${server.name}`}
+                        >
+                          <ChartBarIcon className="h-4 w-4" />
+                        </Link>
                         <button
                           onClick={() => openEdit(server)}
                           className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"

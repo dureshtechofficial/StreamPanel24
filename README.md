@@ -1,11 +1,11 @@
-# Frontend — Next.js Auth Demo
+# Frontend — Next.js Auth + Admin Demo
 
-Registration/login UI for the [backend](../backend) auth API, built with Next.js App Router, TypeScript, and Tailwind CSS.
+Auth, customer management, and Flussonic server management/monitoring UI for the [backend](../backend) API, built with Next.js App Router, TypeScript, and Tailwind CSS. Flussonic-inspired theme (dark navy nav, blue→violet gradient auth screens, pink accent).
 
 ## Prerequisites
 
 - Node.js 20+
-- The backend running (see `../backend/README.md`) — this app only talks to it over HTTP, it never touches the database directly.
+- The backend running (see `../backend/README.md`) — this app only talks to it over HTTP, it never touches the database directly. Its interactive API docs (Swagger UI) are at `http://localhost:3001/docs` if you want to explore the endpoints this app calls.
 
 ## Setup
 
@@ -35,7 +35,8 @@ npm run start   # serve the production build
 - `/login` — email/password form; on success redirects to `/dashboard`.
 - `/dashboard` — protected route wrapped in `<ProtectedRoute>`; shows the current user and a logout button.
 - `/dashboard/customers` — full CRUD (search, filter, paginate, add/edit slide-over, delete-confirm) for any logged-in user.
-- `/dashboard/servers` — same CRUD pattern for Flussonic servers, but admin-only: the nav item is hidden for non-admins and the page itself shows an "Access restricted" notice if visited directly, mirroring the backend's `@Roles(UserRole.ADMIN)` guard.
+- `/dashboard/servers` — same CRUD pattern for Flussonic servers, but admin-only: the nav item is hidden for non-admins and the page itself shows an "Access restricted" notice if visited directly, mirroring the backend's `@Roles(UserRole.ADMIN)` guard. There's no API access token field in the form — it's derived automatically from the username/password. Full-width table showing live status, latest client count, and uptime (cached from the last sync). The "Sync all" button syncs every server in one click and shows a per-server success/failure summary.
+- `/dashboard/servers/[id]/stats` — paginated stats log for one server (reached via the chart icon on its row). The "Sync" button calls the backend's real Flussonic `config/stats` integration and appends the result as a new row; the server's status badge/version in the header reflect what the last sync found.
 
 ## How auth state works
 

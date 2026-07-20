@@ -1,31 +1,30 @@
-'use client';
+"use client";
 
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from "react";
 import type {
   ApiVersionTag,
   FlussonicServer,
   FlussonicServerInput,
   FlussonicServerStatus,
-} from '@/types/flussonic-server';
-import { ApiError } from '@/lib/api-error';
-import { groupFieldErrors } from '@/lib/form-errors';
-import { XIcon } from './icons';
+} from "@/types/flussonic-server";
+import { ApiError } from "@/lib/api-error";
+import { groupFieldErrors } from "@/lib/form-errors";
+import { XIcon } from "./icons";
 
 const FIELDS = [
-  'name',
-  'hostname',
-  'domain',
-  'port',
-  'api_username',
-  'api_password',
-  'api_base_path',
-  'api_access_token',
-  'flussonic_version',
+  "name",
+  "hostname",
+  "domain",
+  "port",
+  "api_username",
+  "api_password",
+  "api_base_path",
+  "flussonic_version",
 ];
 
 const inputClass =
-  'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 transition focus:border-flu-pink focus:outline-none focus:ring-2 focus:ring-flu-pink/20';
-const labelClass = 'mb-1 block text-xs font-medium text-gray-700';
+  "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 transition focus:border-flu-pink focus:outline-none focus:ring-2 focus:ring-flu-pink/20";
+const labelClass = "mb-1 block text-xs font-medium text-gray-700";
 
 type FormState = {
   name: string;
@@ -36,25 +35,23 @@ type FormState = {
   api_username: string;
   api_password: string;
   api_base_path: string;
-  api_access_token: string;
   flussonic_version: string;
   api_version_tag: ApiVersionTag;
   status: FlussonicServerStatus;
 };
 
 const EMPTY_FORM: FormState = {
-  name: '',
-  hostname: '',
-  domain: '',
-  port: '80',
+  name: "",
+  hostname: "",
+  domain: "",
+  port: "80",
   use_ssl: false,
-  api_username: '',
-  api_password: '',
-  api_base_path: '/streamer/api',
-  api_access_token: '',
-  flussonic_version: '',
-  api_version_tag: 'v3',
-  status: 'active',
+  api_username: "",
+  api_password: "",
+  api_base_path: "/streamer/api",
+  flussonic_version: "",
+  api_version_tag: "v3",
+  status: "active",
 };
 
 function toFormState(server: FlussonicServer | null): FormState {
@@ -62,14 +59,13 @@ function toFormState(server: FlussonicServer | null): FormState {
   return {
     name: server.name,
     hostname: server.hostname,
-    domain: server.domain ?? '',
+    domain: server.domain ?? "",
     port: String(server.port),
     use_ssl: server.use_ssl,
     api_username: server.api_username,
-    api_password: '',
+    api_password: "",
     api_base_path: server.api_base_path,
-    api_access_token: '',
-    flussonic_version: server.flussonic_version ?? '',
+    flussonic_version: server.flussonic_version ?? "",
     api_version_tag: server.api_version_tag,
     status: server.status,
   };
@@ -85,7 +81,6 @@ function toPayload(form: FormState): FlussonicServerInput {
     api_username: form.api_username.trim(),
     api_password: form.api_password || undefined,
     api_base_path: form.api_base_path.trim() || undefined,
-    api_access_token: form.api_access_token || undefined,
     flussonic_version: form.flussonic_version.trim() || undefined,
     api_version_tag: form.api_version_tag,
     status: form.status,
@@ -114,12 +109,20 @@ export function ServerFormPanel({
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
 
-    const clientErrors: Record<string, string[]> = { name: [], hostname: [], api_username: [], api_password: [] };
-    if (form.name.trim().length < 2) clientErrors.name.push('Name must be at least 2 characters long');
-    if (form.hostname.trim().length < 1) clientErrors.hostname.push('Hostname is required');
-    if (form.api_username.trim().length < 1) clientErrors.api_username.push('API username is required');
+    const clientErrors: Record<string, string[]> = {
+      name: [],
+      hostname: [],
+      api_username: [],
+      api_password: [],
+    };
+    if (form.name.trim().length < 2)
+      clientErrors.name.push("Name must be at least 2 characters long");
+    if (form.hostname.trim().length < 1)
+      clientErrors.hostname.push("Hostname is required");
+    if (form.api_username.trim().length < 1)
+      clientErrors.api_username.push("API username is required");
     if (!server && form.api_password.trim().length < 1) {
-      clientErrors.api_password.push('API password is required');
+      clientErrors.api_password.push("API password is required");
     }
     if (Object.values(clientErrors).some((v) => v.length > 0)) {
       setErrors(clientErrors);
@@ -134,7 +137,7 @@ export function ServerFormPanel({
       if (err instanceof ApiError) {
         setErrors(groupFieldErrors(err.messages, FIELDS));
       } else {
-        setErrors({ general: ['Something went wrong. Please try again.'] });
+        setErrors({ general: ["Something went wrong. Please try again."] });
       }
     } finally {
       setIsSubmitting(false);
@@ -142,22 +145,22 @@ export function ServerFormPanel({
   }
 
   return (
-    <div className={`fixed inset-0 z-50 ${open ? '' : 'pointer-events-none'}`}>
+    <div className={`fixed inset-0 z-50 ${open ? "" : "pointer-events-none"}`}>
       <div
         onClick={onClose}
         className={`absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity duration-300 ${
-          open ? 'opacity-100' : 'opacity-0'
+          open ? "opacity-100" : "opacity-0"
         }`}
       />
 
       <div
         className={`absolute inset-y-0 right-0 flex w-full max-w-md flex-col bg-white shadow-2xl transition-transform duration-300 ease-in-out ${
-          open ? 'translate-x-0' : 'translate-x-full'
+          open ? "translate-x-0" : "translate-x-full"
         }`}
       >
         <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
           <h2 className="text-base font-semibold text-gray-900">
-            {server ? 'Edit server' : 'Add server'}
+            {server ? "Edit server" : "Add server"}
           </h2>
           <button
             onClick={onClose}
@@ -168,7 +171,10 @@ export function ServerFormPanel({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-y-auto">
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-1 flex-col overflow-y-auto"
+        >
           <div className="flex-1 space-y-4 px-6 py-5">
             {errors.general && errors.general.length > 0 && (
               <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -182,8 +188,8 @@ export function ServerFormPanel({
               <label className={labelClass}>Name *</label>
               <input
                 value={form.name}
-                onChange={(e) => setField('name', e.target.value)}
-                placeholder="Nellai-Core-01"
+                onChange={(e) => setField("name", e.target.value)}
+                placeholder="SRV-01"
                 className={inputClass}
               />
               {errors.name?.map((msg) => (
@@ -198,7 +204,7 @@ export function ServerFormPanel({
                 <label className={labelClass}>Hostname *</label>
                 <input
                   value={form.hostname}
-                  onChange={(e) => setField('hostname', e.target.value)}
+                  onChange={(e) => setField("hostname", e.target.value)}
                   placeholder="10.0.1.15 or fqdn"
                   className={inputClass}
                 />
@@ -213,7 +219,7 @@ export function ServerFormPanel({
                 <input
                   type="number"
                   value={form.port}
-                  onChange={(e) => setField('port', e.target.value)}
+                  onChange={(e) => setField("port", e.target.value)}
                   className={inputClass}
                 />
               </div>
@@ -223,7 +229,7 @@ export function ServerFormPanel({
               <label className={labelClass}>Domain</label>
               <input
                 value={form.domain}
-                onChange={(e) => setField('domain', e.target.value)}
+                onChange={(e) => setField("domain", e.target.value)}
                 placeholder="cdn.example.com"
                 className={inputClass}
               />
@@ -233,7 +239,7 @@ export function ServerFormPanel({
               <input
                 type="checkbox"
                 checked={form.use_ssl}
-                onChange={(e) => setField('use_ssl', e.target.checked)}
+                onChange={(e) => setField("use_ssl", e.target.checked)}
                 className="h-4 w-4 rounded border-gray-300 text-flu-pink focus:ring-flu-pink"
               />
               Use SSL
@@ -249,7 +255,7 @@ export function ServerFormPanel({
                   <label className={labelClass}>API username *</label>
                   <input
                     value={form.api_username}
-                    onChange={(e) => setField('api_username', e.target.value)}
+                    onChange={(e) => setField("api_username", e.target.value)}
                     className={inputClass}
                   />
                   {errors.api_username?.map((msg) => (
@@ -261,13 +267,15 @@ export function ServerFormPanel({
 
                 <div>
                   <label className={labelClass}>
-                    API password {server ? '' : '*'}
+                    API password {server ? "" : "*"}
                   </label>
                   <input
                     type="password"
                     value={form.api_password}
-                    onChange={(e) => setField('api_password', e.target.value)}
-                    placeholder={server ? 'Leave blank to keep existing' : undefined}
+                    onChange={(e) => setField("api_password", e.target.value)}
+                    placeholder={
+                      server ? "Leave blank to keep existing" : undefined
+                    }
                     className={inputClass}
                   />
                   {errors.api_password?.map((msg) => (
@@ -281,21 +289,15 @@ export function ServerFormPanel({
                   <label className={labelClass}>API base path</label>
                   <input
                     value={form.api_base_path}
-                    onChange={(e) => setField('api_base_path', e.target.value)}
+                    onChange={(e) => setField("api_base_path", e.target.value)}
                     className={inputClass}
                   />
                 </div>
 
-                <div>
-                  <label className={labelClass}>API access token</label>
-                  <input
-                    type="password"
-                    value={form.api_access_token}
-                    onChange={(e) => setField('api_access_token', e.target.value)}
-                    placeholder={server ? 'Leave blank to keep existing' : 'Optional'}
-                    className={inputClass}
-                  />
-                </div>
+                <p className="text-xs text-gray-400">
+                  The Flussonic API access token is derived automatically from
+                  the username and password above.
+                </p>
               </div>
             </div>
 
@@ -304,7 +306,9 @@ export function ServerFormPanel({
                 <label className={labelClass}>API version</label>
                 <select
                   value={form.api_version_tag}
-                  onChange={(e) => setField('api_version_tag', e.target.value as ApiVersionTag)}
+                  onChange={(e) =>
+                    setField("api_version_tag", e.target.value as ApiVersionTag)
+                  }
                   className={inputClass}
                 >
                   <option value="v3">v3</option>
@@ -317,7 +321,9 @@ export function ServerFormPanel({
                 <label className={labelClass}>Status</label>
                 <select
                   value={form.status}
-                  onChange={(e) => setField('status', e.target.value as FlussonicServerStatus)}
+                  onChange={(e) =>
+                    setField("status", e.target.value as FlussonicServerStatus)
+                  }
                   className={inputClass}
                 >
                   <option value="active">Active</option>
@@ -332,7 +338,7 @@ export function ServerFormPanel({
               <label className={labelClass}>Flussonic version</label>
               <input
                 value={form.flussonic_version}
-                onChange={(e) => setField('flussonic_version', e.target.value)}
+                onChange={(e) => setField("flussonic_version", e.target.value)}
                 placeholder="e.g. 23.09 (filled after first sync)"
                 className={inputClass}
               />
@@ -352,7 +358,7 @@ export function ServerFormPanel({
               disabled={isSubmitting}
               className="rounded-full bg-flu-pink px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-flu-pink/30 transition hover:bg-flu-pink-dark disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isSubmitting ? 'Saving…' : 'Save server'}
+              {isSubmitting ? "Saving…" : "Save server"}
             </button>
           </div>
         </form>

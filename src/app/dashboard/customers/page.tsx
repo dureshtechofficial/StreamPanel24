@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect, useState } from 'react';
-import { ProtectedRoute } from '@/components/protected-route';
-import { DashboardShell } from '@/components/dashboard-shell';
-import { CustomerFormPanel } from '@/components/customer-form-panel';
-import { ConfirmDialog } from '@/components/confirm-dialog';
+import { useCallback, useEffect, useState } from "react";
+import { ProtectedRoute } from "@/components/protected-route";
+import { DashboardShell } from "@/components/dashboard-shell";
+import { CustomerFormPanel } from "@/components/customer-form-panel";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -12,17 +12,22 @@ import {
   PlusIcon,
   SearchIcon,
   TrashIcon,
-} from '@/components/icons';
-import { createCustomer, deleteCustomer, listCustomers, updateCustomer } from '@/lib/customers-api';
-import type { Customer, CustomerInput, CustomerStatus } from '@/types/customer';
-import { ApiError } from '@/lib/api-error';
+} from "@/components/icons";
+import {
+  createCustomer,
+  deleteCustomer,
+  listCustomers,
+  updateCustomer,
+} from "@/lib/customers-api";
+import type { Customer, CustomerInput, CustomerStatus } from "@/types/customer";
+import { ApiError } from "@/lib/api-error";
 
 const PAGE_SIZE = 10;
 
 const STATUS_STYLES: Record<CustomerStatus, string> = {
-  active: 'bg-green-50 text-green-700',
-  suspended: 'bg-amber-50 text-amber-700',
-  closed: 'bg-gray-100 text-gray-600',
+  active: "bg-green-50 text-green-700",
+  suspended: "bg-amber-50 text-amber-700",
+  closed: "bg-gray-100 text-gray-600",
 };
 
 function CustomersContent() {
@@ -30,9 +35,9 @@ function CustomersContent() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [status, setStatus] = useState<CustomerStatus | ''>('');
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [status, setStatus] = useState<CustomerStatus | "">("");
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -64,7 +69,9 @@ function CustomersContent() {
       setTotal(result.total);
       setTotalPages(result.totalPages);
     } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : 'Failed to load customers.');
+      setLoadError(
+        err instanceof ApiError ? err.message : "Failed to load customers.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -107,7 +114,7 @@ function CustomersContent() {
       setPendingDelete(null);
       await load();
     } catch {
-      setLoadError('Failed to delete customer.');
+      setLoadError("Failed to delete customer.");
     } finally {
       setIsDeleting(false);
     }
@@ -117,11 +124,15 @@ function CustomersContent() {
   const to = Math.min(page * PAGE_SIZE, total);
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div className="w-full">
       <div className="animate-fade-in-up mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Customers</h1>
-          <p className="mt-1 text-sm text-gray-500">Manage your customer accounts.</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
+            Customers
+          </h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Manage your customer accounts.
+          </p>
         </div>
         <button
           onClick={openCreate}
@@ -132,7 +143,10 @@ function CustomersContent() {
         </button>
       </div>
 
-      <div className="animate-fade-in-up mb-4 flex flex-col gap-3 sm:flex-row" style={{ animationDelay: '60ms' }}>
+      <div
+        className="animate-fade-in-up mb-4 flex flex-col gap-3 sm:flex-row"
+        style={{ animationDelay: "60ms" }}
+      >
         <div className="relative flex-1">
           <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input
@@ -145,7 +159,7 @@ function CustomersContent() {
         <select
           value={status}
           onChange={(e) => {
-            setStatus(e.target.value as CustomerStatus | '');
+            setStatus(e.target.value as CustomerStatus | "");
             setPage(1);
           }}
           className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 transition focus:border-flu-pink focus:outline-none focus:ring-2 focus:ring-flu-pink/20"
@@ -159,7 +173,7 @@ function CustomersContent() {
 
       <div
         className="animate-fade-in-up overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"
-        style={{ animationDelay: '120ms' }}
+        style={{ animationDelay: "120ms" }}
       >
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
@@ -176,7 +190,10 @@ function CustomersContent() {
             <tbody className="divide-y divide-gray-100">
               {isLoading && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-sm text-gray-400">
+                  <td
+                    colSpan={6}
+                    className="px-4 py-10 text-center text-sm text-gray-400"
+                  >
                     Loading customers…
                   </td>
                 </tr>
@@ -184,7 +201,10 @@ function CustomersContent() {
 
               {!isLoading && loadError && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-sm text-red-600">
+                  <td
+                    colSpan={6}
+                    className="px-4 py-10 text-center text-sm text-red-600"
+                  >
                     {loadError}
                   </td>
                 </tr>
@@ -192,7 +212,10 @@ function CustomersContent() {
 
               {!isLoading && !loadError && items.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-sm text-gray-400">
+                  <td
+                    colSpan={6}
+                    className="px-4 py-10 text-center text-sm text-gray-400"
+                  >
                     No customers found.
                   </td>
                 </tr>
@@ -201,17 +224,28 @@ function CustomersContent() {
               {!isLoading &&
                 !loadError &&
                 items.map((customer) => (
-                  <tr key={customer.id} className="transition-colors hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium text-gray-900">{customer.name}</td>
+                  <tr
+                    key={customer.id}
+                    className="transition-colors hover:bg-gray-50"
+                  >
+                    <td className="px-4 py-3 font-medium text-gray-900">
+                      {customer.name}
+                    </td>
                     <td className="px-4 py-3 text-gray-600">
                       <div>{customer.phone}</div>
                       {customer.email && (
-                        <div className="text-xs text-gray-400">{customer.email}</div>
+                        <div className="text-xs text-gray-400">
+                          {customer.email}
+                        </div>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-gray-600">{customer.company_name ?? '—'}</td>
                     <td className="px-4 py-3 text-gray-600">
-                      {[customer.city, customer.state].filter(Boolean).join(', ') || '—'}
+                      {customer.company_name ?? "—"}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {[customer.city, customer.state]
+                        .filter(Boolean)
+                        .join(", ") || "—"}
                     </td>
                     <td className="px-4 py-3">
                       <span
@@ -246,7 +280,7 @@ function CustomersContent() {
 
         <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3 text-sm text-gray-500">
           <span>
-            {total === 0 ? 'No results' : `Showing ${from}–${to} of ${total}`}
+            {total === 0 ? "No results" : `Showing ${from}–${to} of ${total}`}
           </span>
           <div className="flex items-center gap-2">
             <button
