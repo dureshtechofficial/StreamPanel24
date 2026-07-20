@@ -1,5 +1,6 @@
 export default () => ({
-  nodeEnv: process.env.NODE_ENV ?? 'development',
+  appEnv: process.env.APP_ENV ?? 'development',
+  appName: process.env.APP_NAME ?? 'Project 7',
   port: parseInt(process.env.PORT ?? '3001', 10),
   apiPrefix: process.env.API_PREFIX ?? 'api/v1',
   frontendOrigin: process.env.FRONTEND_ORIGIN ?? 'http://localhost:3000',

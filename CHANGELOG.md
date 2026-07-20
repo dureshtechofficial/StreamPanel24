@@ -14,6 +14,7 @@ All notable changes to this backend are documented here. Format loosely follows 
 - Seed script (`npm run seed`) for local test accounts.
 
 ### Changed
+- Renamed the `NODE_ENV` env var to `APP_ENV` (kept distinct from the Node-ecosystem-standard variable other tooling may read); added `APP_NAME` (used in the Swagger doc title, matches the frontend's `NEXT_PUBLIC_APP_NAME`).
 - `created_at`/`updated_at` (and other timestamp-like columns) moved from MySQL `DATETIME`/`TIMESTAMP` to `BIGINT UNSIGNED` UTC unix seconds across every table, maintained by the app via `@BeforeInsert`/`@BeforeUpdate` hooks (`common/utils/unix-timestamp.util.ts`) since MySQL can't auto-populate a plain bigint.
 - `flussonic_servers.api_access_token` is now derived automatically from `api_username`/`api_password` (`base64("username:password")`, Flussonic's own bearer-token scheme) on every create/update, rather than being a client-supplied field.
 - `flussonic_servers` now caches `last_total_clients`/`last_uptime_seconds` from the most recent successful sync, so the list endpoint can surface them without querying `flussonic_server_stats`.

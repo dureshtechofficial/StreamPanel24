@@ -17,7 +17,10 @@ enum Environment {
 
 class EnvironmentVariables {
   @IsEnum(Environment)
-  NODE_ENV: Environment;
+  APP_ENV: Environment;
+
+  @IsString()
+  APP_NAME: string;
 
   @IsNumber()
   PORT: number;

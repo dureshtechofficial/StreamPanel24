@@ -29,7 +29,8 @@ Edit `.env` with your MySQL credentials and JWT secrets. **Never use the example
 
 | Variable | Description |
 | --- | --- |
-| `NODE_ENV` | `development` / `production` / `test` |
+| `APP_ENV` | `development` / `production` / `test` — controls TypeORM query logging and the refresh cookie's `secure` flag. **Not** `NODE_ENV` (kept distinct from the Node-ecosystem-standard variable other tools may read). |
+| `APP_NAME` | Product name, e.g. `Flus24 Manager` — used in the Swagger doc title |
 | `PORT` | Port the API listens on (default `3001`) |
 | `API_PREFIX` | Global route prefix (default `api/v1`) |
 | `FRONTEND_ORIGIN` | Exact origin allowed by CORS, e.g. `http://localhost:3000` |

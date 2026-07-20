@@ -11,7 +11,7 @@ export function setRefreshTokenCookie(
 ): void {
   const expiresIn = configService.get<string>('jwt.refreshExpiresIn')!;
   const maxAge = ms(expiresIn as ms.StringValue);
-  const isProduction = configService.get<string>('nodeEnv') === 'production';
+  const isProduction = configService.get<string>('appEnv') === 'production';
 
   res.cookie(REFRESH_TOKEN_COOKIE, token, {
     httpOnly: true,
@@ -26,7 +26,7 @@ export function clearRefreshTokenCookie(
   res: Response,
   configService: ConfigService,
 ): void {
-  const isProduction = configService.get<string>('nodeEnv') === 'production';
+  const isProduction = configService.get<string>('appEnv') === 'production';
 
   res.clearCookie(REFRESH_TOKEN_COOKIE, {
     httpOnly: true,

@@ -38,7 +38,7 @@ import { FlussonicServersModule } from './flussonic-servers/flussonic-servers.mo
         database: configService.get<string>('database.database'),
         entities: [User, Customer, FlussonicServer, FlussonicServerStat],
         synchronize: false,
-        logging: configService.get<string>('nodeEnv') === 'development',
+        logging: configService.get<string>('appEnv') === 'development',
       }),
     }),
     UsersModule,

@@ -17,7 +17,7 @@ export const dataSourceOptions: DataSourceOptions = {
   entities: [User, Customer, FlussonicServer, FlussonicServerStat],
   migrations: [__dirname + '/migrations/*.{ts,js}'],
   synchronize: false,
-  logging: process.env.NODE_ENV === 'development',
+  logging: process.env.APP_ENV === 'development',
 };
 
 const dataSource = new DataSource(dataSourceOptions);

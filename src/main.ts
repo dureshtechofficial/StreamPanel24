@@ -34,8 +34,9 @@ async function bootstrap() {
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
   app.useGlobalFilters(new HttpExceptionFilter());
 
+  const appName = configService.get<string>('appName') ?? 'Project 7';
   const swaggerConfig = new DocumentBuilder()
-    .setTitle('Project 7 API')
+    .setTitle(`${appName} API`)
     .setDescription(
       'Auth (JWT access/refresh), customer CRUD, and Flussonic server management + stats sync.',
     )
