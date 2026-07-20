@@ -1,36 +1,48 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Frontend — Next.js Auth Demo
 
-## Getting Started
+Registration/login UI for the [backend](../backend) auth API, built with Next.js App Router, TypeScript, and Tailwind CSS.
 
-First, run the development server:
+## Prerequisites
+
+- Node.js 20+
+- The backend running (see `../backend/README.md`) — this app only talks to it over HTTP, it never touches the database directly.
+
+## Setup
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env.local
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Environment variables
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Variable | Description |
+| --- | --- |
+| `NEXT_PUBLIC_API_URL` | Base URL of the backend API, e.g. `http://localhost:3001/api/v1` |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Running
 
-## Learn More
+```bash
+npm run dev     # dev server on http://localhost:3000
+npm run build
+npm run start   # serve the production build
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Pages
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `/` — redirects to `/dashboard` or `/login` depending on session state.
+- `/register` — name/email/password form with client-side validation and field-level errors from the API.
+- `/login` — email/password form; on success redirects to `/dashboard`.
+- `/dashboard` — protected route wrapped in `<ProtectedRoute>`; shows the current user and a logout button.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## How auth state works
 
-## Deploy on Vercel
+- `src/lib/auth-context.tsx` — `AuthProvider` holds `user` and `accessToken` in React state (never in `localStorage`/`sessionStorage`). On mount it silently calls `POST /auth/refresh` (which relies on the httpOnly refresh cookie) to restore a session across page reloads. Exposes `login()`, `register()`, and `logout()`.
+- `src/lib/token-store.ts` — a small in-memory singleton the low-level API client reads the current access token from, so `api-client.ts` doesn't need to import React.
+- `src/lib/api-client.ts` — wraps `fetch`, always sends `credentials: 'include'` so the refresh cookie travels with requests, attaches `Authorization: Bearer <accessToken>`, and on a `401` transparently calls the refresh handler and retries the request once.
+- `src/components/protected-route.tsx` — client-side wrapper that redirects to `/login` once the initial silent refresh has finished and there's still no user. (There's no Next.js `proxy`/middleware gate: the refresh token is an httpOnly cookie the client can't read, and verifying it needs the backend anyway, so the real check happens through `AuthProvider`.)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Notes
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Field-level errors on the register form are derived from the backend's `{ statusCode, message, error }` shape — `message` is an array of validation strings, bucketed by field name in `src/lib/form-errors.ts`.
+- CORS/cookies mean this app must be served from the exact origin the backend's `FRONTEND_ORIGIN` env var allows.
