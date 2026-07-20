@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -23,6 +24,7 @@ import {
   clearRefreshTokenCookie,
 } from './utils/cookie.util';
 
+@ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -30,6 +32,7 @@ export class AuthController {
     private readonly configService: ConfigService,
   ) {}
 
+  @ApiOperation({ summary: 'Create a new user account (does not log in)' })
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
@@ -38,6 +41,9 @@ export class AuthController {
     return { user };
   }
 
+  @ApiOperation({
+    summary: 'Log in, returns an access token and sets the refresh cookie',
+  })
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('login')
   @HttpCode(HttpStatus.OK)
@@ -54,6 +60,9 @@ export class AuthController {
     return { user, accessToken };
   }
 
+  @ApiOperation({
+    summary: 'Exchange the refresh cookie for a new access token',
+  })
   @UseGuards(JwtRefreshGuard)
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
@@ -69,6 +78,7 @@ export class AuthController {
     return { user, accessToken };
   }
 
+  @ApiOperation({ summary: 'Clear the refresh cookie' })
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   logout(@Res({ passthrough: true }) res: Response) {
@@ -76,6 +86,8 @@ export class AuthController {
     return { message: 'Logged out successfully' };
   }
 
+  @ApiOperation({ summary: 'Return the currently authenticated user' })
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAccessGuard)
   @Get('me')
   me(@CurrentUser() user: User) {

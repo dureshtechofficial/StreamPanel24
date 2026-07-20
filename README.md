@@ -47,7 +47,7 @@ Create the database (schema is managed by migrations, not `synchronize`):
 CREATE DATABASE project7_auth CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-Run the migration to create the `users` table:
+Run all migrations (creates `users`, `customers`, `flussonic_servers`, `flussonic_server_stats`, and applies the unix-timestamp/soft-delete/access-token schema changes that came later):
 
 ```bash
 npm run migration:run
@@ -75,6 +75,12 @@ npm run build && npm run start:prod
 
 The API is served under `http://localhost:<PORT>/<API_PREFIX>`, e.g. `http://localhost:3001/api/v1`.
 
+## API docs (Swagger)
+
+Interactive docs (Swagger UI) are served at `http://localhost:<PORT>/docs` (outside the `API_PREFIX`, e.g. `http://localhost:3001/docs`), with the raw OpenAPI JSON at `/docs-json`. Click **Authorize** and paste an access token (from `POST /auth/login`) to try protected endpoints from the UI.
+
+Request/response schemas are generated automatically at compile time by the `@nestjs/swagger` CLI plugin (`nest-cli.json` → `compilerOptions.plugins`) — it reads DTO property types and `class-validator` decorators (`@IsEmail`, `@MinLength`, etc.) directly, so schemas stay in sync with the DTOs without hand-written `@ApiProperty()` decorators. Only `@ApiTags`/`@ApiOperation`/`@ApiBearerAuth` are added manually, on controllers, for grouping and the auth padlock.
+
 ## Endpoints
 
 All under `/api/v1/auth`:
@@ -89,7 +95,15 @@ All under `/api/v1/auth`:
 
 `/api/v1/customers` — full CRUD (`GET`, `GET /:id`, `POST`, `PATCH /:id`, `DELETE /:id`), any authenticated user. Supports `?search=&status=&page=&limit=` on the list endpoint.
 
-`/api/v1/flussonic-servers` — full CRUD, same shape as customers, but **admin role only** (`@Roles(UserRole.ADMIN)`). `api_password` is required on create (write-only, encrypted at rest); `api_access_token` is optional and write-only. Neither is ever returned by the API.
+`/api/v1/flussonic-servers` — full CRUD, same shape as customers, but **admin role only** (`@Roles(UserRole.ADMIN)`). `api_password` is required on create (write-only, encrypted at rest). `api_access_token` is **not** a request field — it's derived automatically from `api_username`/`api_password` (`base64("username:password")`, Flussonic's own bearer-token scheme) and recomputed on every create/update. Never returned by the API.
+
+`/api/v1/flussonic-servers/:serverId/stats` — `GET` (paginated, newest first) and `POST` to record a metrics sample manually. Admin-only, 404s if the server doesn't exist.
+
+`/api/v1/flussonic-servers/:serverId/stats/sync` — `POST`, no body. Fetches the server's real `config/stats` endpoint (`https://{domain}:443/...` if `use_ssl`, else `http://{hostname}:{port}/...`, path `{api_base_path}/{api_version_tag}/config/stats`), authenticating with `Authorization: Bearer <api_access_token>`. Stores the result as a new sample (full raw JSON kept in `raw_response` for fields we don't have dedicated columns for), and updates the server's `flussonic_version`/`status`. Returns 502 (and marks the server `unreachable`) if the fetch fails.
+
+`/api/v1/flussonic-servers/sync-all` — `POST`, no body. Syncs every non-deleted server one at a time; one server failing doesn't stop the rest. Returns `{ total, succeeded, failed, results: [{ serverId, name, ok, error? }] }`.
+
+`DELETE` on `customers`/`flussonic-servers` never removes a row — it's a soft delete that sets `status: 'deleted'`. Deleted rows are excluded from every list/get, and you can't set `status: 'deleted'` directly through create/update (400).
 
 Errors always come back as `{ statusCode, message, error, path, timestamp }`. Every resource's `created_at`/`updated_at` is a UTC unix timestamp in seconds (a plain number), not an ISO date string.
 

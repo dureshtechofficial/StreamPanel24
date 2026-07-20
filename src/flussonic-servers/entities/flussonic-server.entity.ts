@@ -66,6 +66,18 @@ export class FlussonicServer {
   })
   status: FlussonicServerStatus;
 
+  /** Cached from the most recent successful sync (config/stats' total_clients/uptime). */
+  @Column({ type: 'int', unsigned: true, nullable: true })
+  last_total_clients: number | null;
+
+  @Column({
+    type: 'bigint',
+    unsigned: true,
+    nullable: true,
+    transformer: unixTimestampTransformer,
+  })
+  last_uptime_seconds: number | null;
+
   /** UTC unix timestamp (seconds). Set by the app, not MySQL — see @BeforeInsert/@BeforeUpdate below. */
   @Column({
     type: 'bigint',

@@ -1,14 +1,16 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Not, Repository } from 'typeorm';
 import { Customer } from './entities/customer.entity';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { QueryCustomerDto } from './dto/query-customer.dto';
+import { CustomerStatus } from './enums/customer-status.enum';
 import type { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 
 @Injectable()
@@ -22,7 +24,11 @@ export class CustomersService {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
 
-    const qb = this.customersRepository.createQueryBuilder('customer');
+    const qb = this.customersRepository
+      .createQueryBuilder('customer')
+      .where('customer.status != :deleted', {
+        deleted: CustomerStatus.DELETED,
+      });
 
     if (query.search) {
       qb.andWhere(
@@ -51,7 +57,9 @@ export class CustomersService {
   }
 
   async findOne(id: string): Promise<Customer> {
-    const customer = await this.customersRepository.findOne({ where: { id } });
+    const customer = await this.customersRepository.findOne({
+      where: { id, status: Not(CustomerStatus.DELETED) },
+    });
     if (!customer) {
       throw new NotFoundException('Customer not found');
     }
@@ -59,12 +67,14 @@ export class CustomersService {
   }
 
   async create(dto: CreateCustomerDto): Promise<Customer> {
+    this.assertSettableStatus(dto.status);
     await this.assertPhoneAvailable(dto.phone);
     const customer = this.customersRepository.create(dto);
     return this.customersRepository.save(customer);
   }
 
   async update(id: string, dto: UpdateCustomerDto): Promise<Customer> {
+    this.assertSettableStatus(dto.status);
     const customer = await this.findOne(id);
 
     if (dto.phone && dto.phone !== customer.phone) {
@@ -75,9 +85,19 @@ export class CustomersService {
     return this.customersRepository.save(customer);
   }
 
+  /** Soft delete: the row is never physically removed, only marked as deleted. */
   async remove(id: string): Promise<void> {
     const customer = await this.findOne(id);
-    await this.customersRepository.remove(customer);
+    customer.status = CustomerStatus.DELETED;
+    await this.customersRepository.save(customer);
+  }
+
+  private assertSettableStatus(status: CustomerStatus | undefined): void {
+    if (status === CustomerStatus.DELETED) {
+      throw new BadRequestException(
+        'status cannot be set to "deleted" directly; use DELETE /customers/:id instead',
+      );
+    }
   }
 
   private async assertPhoneAvailable(phone: string): Promise<void> {

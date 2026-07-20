@@ -3,4 +3,6 @@ export enum FlussonicServerStatus {
   INACTIVE = 'inactive',
   MAINTENANCE = 'maintenance',
   UNREACHABLE = 'unreachable',
+  /** Soft-delete marker. Rows are never physically removed — see FlussonicServersService.remove(). */
+  DELETED = 'deleted',
 }

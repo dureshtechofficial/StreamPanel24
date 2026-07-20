@@ -57,11 +57,6 @@ export class CreateFlussonicServerDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(500)
-  api_access_token?: string;
-
-  @IsOptional()
-  @IsString()
   @MaxLength(20)
   flussonic_version?: string;
 
