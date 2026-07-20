@@ -4,7 +4,9 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
+import * as bcrypt from 'bcrypt';
 import { Not, Repository } from 'typeorm';
 import { Customer } from './entities/customer.entity';
 import { CreateCustomerDto } from './dto/create-customer.dto';
@@ -18,6 +20,7 @@ export class CustomersService {
   constructor(
     @InjectRepository(Customer)
     private readonly customersRepository: Repository<Customer>,
+    private readonly configService: ConfigService,
   ) {}
 
   async findAll(query: QueryCustomerDto): Promise<PaginatedResult<Customer>> {
@@ -69,7 +72,13 @@ export class CustomersService {
   async create(dto: CreateCustomerDto): Promise<Customer> {
     this.assertSettableStatus(dto.status);
     await this.assertPhoneAvailable(dto.phone);
-    const customer = this.customersRepository.create(dto);
+    await this.assertUsernameAvailable(dto.username);
+
+    const { password, ...rest } = dto;
+    const customer = this.customersRepository.create({
+      ...rest,
+      password_hash: await this.hashPassword(password),
+    });
     return this.customersRepository.save(customer);
   }
 
@@ -80,8 +89,15 @@ export class CustomersService {
     if (dto.phone && dto.phone !== customer.phone) {
       await this.assertPhoneAvailable(dto.phone);
     }
+    if (dto.username && dto.username !== customer.username) {
+      await this.assertUsernameAvailable(dto.username);
+    }
 
-    Object.assign(customer, dto);
+    const { password, ...rest } = dto;
+    Object.assign(customer, rest);
+    if (password) {
+      customer.password_hash = await this.hashPassword(password);
+    }
     return this.customersRepository.save(customer);
   }
 
@@ -109,5 +125,21 @@ export class CustomersService {
         'A customer with this phone number already exists',
       );
     }
+  }
+
+  private async assertUsernameAvailable(username: string): Promise<void> {
+    const existing = await this.customersRepository.findOne({
+      where: { username },
+    });
+    if (existing) {
+      throw new ConflictException(
+        'A customer with this username already exists',
+      );
+    }
+  }
+
+  private async hashPassword(password: string): Promise<string> {
+    const saltRounds = this.configService.get<number>('bcryptSaltRounds')!;
+    return bcrypt.hash(password, saltRounds);
   }
 }

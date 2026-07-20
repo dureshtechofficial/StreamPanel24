@@ -1,3 +1,4 @@
+import { Exclude } from 'class-transformer';
 import {
   BeforeInsert,
   BeforeUpdate,
@@ -26,6 +27,14 @@ export class Customer {
   @Index({ unique: true })
   @Column({ type: 'varchar', length: 20, unique: true })
   phone: string;
+
+  @Index({ unique: true })
+  @Column({ type: 'varchar', length: 100, unique: true, nullable: true })
+  username: string | null;
+
+  @Exclude()
+  @Column({ type: 'varchar', length: 255, nullable: true, select: false })
+  password_hash: string | null;
 
   @Column({ type: 'varchar', length: 150, nullable: true })
   company_name: string | null;

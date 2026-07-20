@@ -6,7 +6,8 @@ All notable changes to this backend are documented here. Format loosely follows 
 
 ### Added
 - Auth API: `POST /auth/register`, `/login`, `/refresh`, `/logout`, `GET /auth/me`. JWT access tokens + httpOnly `refresh_token` cookie, bcrypt password hashing, role-based access control (`admin`/`user`) via `@Roles()` + `RolesGuard`.
-- Customers CRUD (`/api/v1/customers`) — any authenticated user. Search/status filter/pagination on the list endpoint; phone uniqueness enforced.
+- Customers CRUD (`/api/v1/customers`) — any authenticated user. Search/status filter/pagination on the list endpoint; phone and username uniqueness enforced.
+- `customers.username`/`customers.password_hash`: required on create, optional on update (blank password leaves it unchanged). Password is bcrypt-hashed the same way as `users.password_hash` (`select: false` + `@Exclude()`, never returned by the API) — unlike Flussonic server credentials, nothing needs the plaintext back.
 - Flussonic servers CRUD (`/api/v1/flussonic-servers`) — admin only. API credentials (`api_password`, derived `api_access_token`) encrypted at rest with AES-256-GCM.
 - Flussonic server stats (`/api/v1/flussonic-servers/:id/stats`): manual sample recording, plus a real integration (`POST .../stats/sync`) that polls the server's actual `config/stats` endpoint and records the result. `POST /flussonic-servers/sync-all` syncs every server in one call, tolerating individual failures.
 - Soft delete for `customers` and `flussonic_servers` — `DELETE` sets `status: 'deleted'` instead of removing the row; every list/get excludes deleted rows, and `status: 'deleted'` can't be set directly through create/update.
