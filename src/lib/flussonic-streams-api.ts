@@ -60,3 +60,15 @@ export function deleteStream(serverId: string, id: string) {
     method: 'DELETE',
   });
 }
+
+export interface SyncStreamsSummary {
+  total: number;
+  created: number;
+  updated: number;
+}
+
+export function syncStreams(serverId: string) {
+  return apiFetch<SyncStreamsSummary>(`/flussonic-servers/${serverId}/streams/sync`, {
+    method: 'POST',
+  });
+}

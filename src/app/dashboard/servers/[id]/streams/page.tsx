@@ -5,11 +5,14 @@ import Link from 'next/link';
 import { ProtectedRoute } from '@/components/protected-route';
 import { DashboardShell } from '@/components/dashboard-shell';
 import { StreamFormPanel } from '@/components/stream-form-panel';
+import { StreamDetailsPanel } from '@/components/stream-details-panel';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import {
   ArrowLeftIcon,
+  ArrowPathIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  EyeIcon,
   PencilIcon,
   PlusIcon,
   SearchIcon,
@@ -20,7 +23,9 @@ import {
   createStream,
   deleteStream,
   listStreams,
+  syncStreams,
   updateStream,
+  type SyncStreamsSummary,
 } from '@/lib/flussonic-streams-api';
 import type { FlussonicServer } from '@/types/flussonic-server';
 import type {
@@ -58,6 +63,13 @@ function StreamsContent({ serverId }: { serverId: string }) {
   const [editingStream, setEditingStream] = useState<FlussonicStream | null>(null);
   const [pendingDelete, setPendingDelete] = useState<FlussonicStream | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [detailsStream, setDetailsStream] = useState<FlussonicStream | null>(null);
+
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncSummary, setSyncSummary] = useState<SyncStreamsSummary | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -120,6 +132,21 @@ function StreamsContent({ serverId }: { serverId: string }) {
     await load();
   }
 
+  async function handleSync() {
+    setSyncError(null);
+    setSyncSummary(null);
+    setIsSyncing(true);
+    try {
+      const summary = await syncStreams(serverId);
+      setSyncSummary(summary);
+      await load();
+    } catch (err) {
+      setSyncError(err instanceof ApiError ? err.message : 'Failed to sync streams.');
+    } finally {
+      setIsSyncing(false);
+    }
+  }
+
   async function handleDelete() {
     if (!pendingDelete) return;
     setIsDeleting(true);
@@ -158,14 +185,38 @@ function StreamsContent({ serverId }: { serverId: string }) {
               : 'Loading server…'}
           </p>
         </div>
-        <button
-          onClick={openCreate}
-          className="flex items-center justify-center gap-1.5 rounded-full bg-flu-pink px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-flu-pink/30 transition hover:bg-flu-pink-dark"
-        >
-          <PlusIcon className="h-4 w-4" />
-          Add stream
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={handleSync}
+            disabled={isSyncing}
+            className="flex items-center justify-center gap-1.5 rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <ArrowPathIcon className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+            {isSyncing ? 'Syncing…' : 'Sync'}
+          </button>
+          <button
+            onClick={openCreate}
+            className="flex items-center justify-center gap-1.5 rounded-full bg-flu-pink px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-flu-pink/30 transition hover:bg-flu-pink-dark"
+          >
+            <PlusIcon className="h-4 w-4" />
+            Add stream
+          </button>
+        </div>
       </div>
+
+      {syncError && (
+        <div className="animate-fade-in-up mb-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
+          {syncError}
+        </div>
+      )}
+
+      {syncSummary && (
+        <div className="animate-fade-in-up mb-4 rounded-md bg-green-50 px-4 py-3 text-sm text-green-700">
+          Synced {syncSummary.total} stream{syncSummary.total === 1 ? '' : 's'} from the server
+          {syncSummary.created > 0 ? ` — ${syncSummary.created} newly imported` : ''}
+          {syncSummary.updated > 0 ? `, ${syncSummary.updated} refreshed` : ''}.
+        </div>
+      )}
 
       <div
         className="animate-fade-in-up mb-4 flex flex-col gap-3 sm:flex-row"
@@ -262,6 +313,16 @@ function StreamsContent({ serverId }: { serverId: string }) {
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-1">
                         <button
+                          onClick={() => {
+                            setDetailsStream(stream);
+                            setDetailsOpen(true);
+                          }}
+                          className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
+                          aria-label={`View details for ${stream.config_json.name}`}
+                        >
+                          <EyeIcon className="h-4 w-4" />
+                        </button>
+                        <button
                           onClick={() => openEdit(stream)}
                           className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
                           aria-label={`Edit ${stream.config_json.name}`}
@@ -316,6 +377,12 @@ function StreamsContent({ serverId }: { serverId: string }) {
         stream={editingStream}
         onClose={() => setPanelOpen(false)}
         onSubmit={handleSubmit}
+      />
+
+      <StreamDetailsPanel
+        open={detailsOpen}
+        stream={detailsStream}
+        onClose={() => setDetailsOpen(false)}
       />
 
       <ConfirmDialog

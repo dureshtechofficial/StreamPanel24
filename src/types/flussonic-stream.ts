@@ -52,11 +52,53 @@ export interface FlussonicStreamConfig {
   on_publish?: StreamAuthHook;
 }
 
+export interface StreamMediaTrack {
+  content?: string;
+  codec?: string;
+  bitrate?: number;
+  width?: number;
+  height?: number;
+  fps?: number;
+  channels?: number;
+  sample_rate?: number;
+  [key: string]: unknown;
+}
+
+export interface StreamLiveStats {
+  status?: string;
+  alive?: boolean;
+  running?: boolean;
+  client_count?: number;
+  online_clients?: number;
+  bitrate?: number;
+  input_bitrate?: number;
+  output_bitrate?: number;
+  lifetime?: number;
+  url?: string;
+  media_info?: { tracks?: StreamMediaTrack[]; [key: string]: unknown };
+  [key: string]: unknown;
+}
+
+/** Raw per-stream object from Flussonic's real `GET streams` — see StreamsDetailsPanel for the fields we surface. */
+export interface FlussonicLiveStream {
+  name: string;
+  position?: number;
+  title?: string;
+  static?: boolean;
+  stats?: StreamLiveStats;
+  inputs?: Record<string, unknown>[];
+  pushes?: Record<string, unknown>[];
+  config_on_disk?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
 export interface FlussonicStream {
   id: string;
   flussonic_server_id: string;
   ingest_domain: string | null;
   config_json: FlussonicStreamConfig;
+  /** Set once the stream has been synced from the live Flussonic server; null until then. */
+  live_stats_json: FlussonicLiveStream | null;
   status: FlussonicStreamStatus;
   /** UTC unix timestamp (seconds) */
   created_at: number;
