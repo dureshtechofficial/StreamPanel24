@@ -5,22 +5,44 @@ import {
   assignCustomerStreams,
   listCustomerStreams,
   searchAvailableStreams,
+  type SearchAvailableStreamsParams,
 } from '@/lib/customer-streams-api';
 import type { FlussonicStreamDirectoryEntry } from '@/types/flussonic-stream-directory';
 import type { Customer } from '@/types/customer';
+import type { PaginatedResult } from '@/types/pagination';
 import { ApiError } from '@/lib/api-error';
 import { ArrowPathIcon, ChevronLeftIcon, ChevronRightIcon, SearchIcon, XIcon } from './icons';
 
 const PAGE_SIZE = 20;
 
+const DEFAULT_API = {
+  listCustomerStreams,
+  assignCustomerStreams,
+  searchAvailableStreams,
+};
+
+export interface CustomerStreamsPanelApi {
+  listCustomerStreams: (customerId: string) => Promise<FlussonicStreamDirectoryEntry[]>;
+  assignCustomerStreams: (
+    customerId: string,
+    streamIds: string[],
+  ) => Promise<FlussonicStreamDirectoryEntry[]>;
+  searchAvailableStreams: (
+    params: SearchAvailableStreamsParams,
+  ) => Promise<PaginatedResult<FlussonicStreamDirectoryEntry>>;
+}
+
 export function CustomerStreamsPanel({
   open,
   customer,
   onClose,
+  api = DEFAULT_API,
 }: {
   open: boolean;
   customer: Customer | null;
   onClose: () => void;
+  /** Defaults to the admin-scoped API (/customers/:id/streams, /flussonic-streams) — pass the reseller-scoped equivalents to reuse this panel in the reseller portal. */
+  api?: CustomerStreamsPanelApi;
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [items, setItems] = useState<FlussonicStreamDirectoryEntry[]>([]);
@@ -60,7 +82,7 @@ export function CustomerStreamsPanel({
     setIsLoading(true);
     setLoadError(null);
     try {
-      const result = await searchAvailableStreams({
+      const result = await api.searchAvailableStreams({
         search: debouncedSearch || undefined,
         availableForCustomerId: customer.id,
         page,
@@ -73,7 +95,7 @@ export function CustomerStreamsPanel({
     } finally {
       setIsLoading(false);
     }
-  }, [customer, debouncedSearch, page]);
+  }, [customer, debouncedSearch, page, api]);
 
   useEffect(() => {
     if (!open || !customer) return;
@@ -84,7 +106,8 @@ export function CustomerStreamsPanel({
   useEffect(() => {
     if (!open || !customer) return;
     let cancelled = false;
-    listCustomerStreams(customer.id)
+    api
+      .listCustomerStreams(customer.id)
       .then((assigned) => {
         if (!cancelled) setSelected(new Set(assigned.map((s) => s.id)));
       })
@@ -94,7 +117,7 @@ export function CustomerStreamsPanel({
     return () => {
       cancelled = true;
     };
-  }, [open, customer]);
+  }, [open, customer, api]);
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -114,7 +137,7 @@ export function CustomerStreamsPanel({
     setSaveError(null);
     setSaved(false);
     try {
-      await assignCustomerStreams(customer.id, Array.from(selected));
+      await api.assignCustomerStreams(customer.id, Array.from(selected));
       setSaved(true);
     } catch (err) {
       setSaveError(

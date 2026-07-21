@@ -11,6 +11,7 @@ import {
   MenuIcon,
   ServerIcon,
   SettingsIcon,
+  ShieldIcon,
   UserIcon,
   UsersIcon,
   XIcon,
@@ -21,7 +22,10 @@ const BASE_NAV_ITEMS = [
   { label: 'Customers', icon: UsersIcon, href: '/dashboard/customers' },
 ];
 
-const ADMIN_NAV_ITEMS = [{ label: 'Servers', icon: ServerIcon, href: '/dashboard/servers' }];
+const ADMIN_NAV_ITEMS = [
+  { label: 'Resellers', icon: ShieldIcon, href: '/dashboard/resellers' },
+  { label: 'Servers', icon: ServerIcon, href: '/dashboard/servers' },
+];
 
 const PROFILE_NAV_ITEM = { label: 'Profile', icon: UserIcon, href: null };
 const SETTINGS_NAV_ITEM_DISABLED = { label: 'Settings', icon: SettingsIcon, href: null };
