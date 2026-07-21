@@ -4,8 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import { ProtectedRoute } from "@/components/protected-route";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { CustomerFormPanel } from "@/components/customer-form-panel";
+import { CustomerStreamsPanel } from "@/components/customer-streams-panel";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import {
+  BroadcastIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   PencilIcon,
@@ -48,6 +50,7 @@ function CustomersContent() {
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [pendingDelete, setPendingDelete] = useState<Customer | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [streamsCustomer, setStreamsCustomer] = useState<Customer | null>(null);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -239,6 +242,13 @@ function CustomersContent() {
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-1">
                           <button
+                            onClick={() => setStreamsCustomer(customer)}
+                            className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
+                            aria-label={`Assign streams to ${customer.name}`}
+                          >
+                            <BroadcastIcon className="h-4 w-4" />
+                          </button>
+                          <button
                             onClick={() => openEdit(customer)}
                             className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
                             aria-label={`Edit ${customer.name}`}
@@ -273,6 +283,13 @@ function CustomersContent() {
                       )}
                     </div>
                     <div className="flex shrink-0 gap-1">
+                      <button
+                        onClick={() => setStreamsCustomer(customer)}
+                        className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
+                        aria-label={`Assign streams to ${customer.name}`}
+                      >
+                        <BroadcastIcon className="h-4 w-4" />
+                      </button>
                       <button
                         onClick={() => openEdit(customer)}
                         className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
@@ -351,6 +368,12 @@ function CustomersContent() {
         isBusy={isDeleting}
         onConfirm={handleDelete}
         onCancel={() => setPendingDelete(null)}
+      />
+
+      <CustomerStreamsPanel
+        open={streamsCustomer !== null}
+        customer={streamsCustomer}
+        onClose={() => setStreamsCustomer(null)}
       />
     </div>
   );
