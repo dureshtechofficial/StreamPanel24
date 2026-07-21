@@ -160,7 +160,7 @@ function toFormState(stream: FlussonicStream | null): FormState {
     retry_limit: config.retry_limit !== undefined ? String(config.retry_limit) : '',
     ingest_domain: stream.ingest_domain ?? '',
     inputs:
-      config.inputs.length > 0
+      config.inputs && config.inputs.length > 0
         ? config.inputs.map((i) => {
             const isKnownPreset = i.url === 'publish://' || i.url === 'fake://fake';
             return {
