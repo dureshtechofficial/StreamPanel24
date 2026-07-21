@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import {
+  ChartBarIcon,
   ChevronDownIcon,
   HomeIcon,
   LogOutIcon,
@@ -26,6 +27,7 @@ const BASE_NAV_ITEMS = [
 const ADMIN_NAV_ITEMS = [
   { label: 'Resellers', icon: ShieldIcon, href: '/dashboard/resellers' },
   { label: 'Plans', icon: TagIcon, href: '/dashboard/plans' },
+  { label: 'Reports', icon: ChartBarIcon, href: '/dashboard/reports' },
   { label: 'Servers', icon: ServerIcon, href: '/dashboard/servers' },
 ];
 

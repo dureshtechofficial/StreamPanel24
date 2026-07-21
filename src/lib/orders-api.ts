@@ -2,7 +2,9 @@ import { apiFetch } from './api-client';
 import type {
   CreateOrderInput,
   Order,
+  OrderReportEntry,
   OrderStatus,
+  OrdersSummary,
   PaymentStatus,
   UpdateOrderStatusInput,
 } from '@/types/order';
@@ -46,4 +48,20 @@ export function updateOrderStatus(orderId: string, input: UpdateOrderStatusInput
 
 export function cancelOrder(orderId: string) {
   return updateOrderStatus(orderId, { status: 'cancelled' });
+}
+
+export type OrderReportsResult = PaginatedResult<OrderReportEntry> & {
+  summary: OrdersSummary;
+};
+
+/** Admin reports view: paginated orders with readable customer/plan/stream/reseller names, plus aggregate totals. */
+export function listOrderReports(params: ListOrdersParams = {}) {
+  const query = new URLSearchParams();
+  if (params.customerId) query.set('customerId', params.customerId);
+  if (params.status) query.set('status', params.status);
+  if (params.paymentStatus) query.set('paymentStatus', params.paymentStatus);
+  query.set('page', String(params.page ?? 1));
+  query.set('limit', String(params.limit ?? 20));
+
+  return apiFetch<OrderReportsResult>(`/orders/reports?${query.toString()}`);
 }

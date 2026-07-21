@@ -45,3 +45,20 @@ export interface UpdateOrderStatusInput {
   payment_status?: PaymentStatus;
   remark?: string;
 }
+
+/** Order enriched with readable labels — returned by the admin reports endpoint only. */
+export interface OrderReportEntry extends Order {
+  customer_name: string;
+  plan_name: string;
+  stream_name: string;
+  server_name: string;
+  reseller_name: string | null;
+}
+
+export interface OrdersSummary {
+  totalOrders: number;
+  /** Sum of `price` across every order matching the filter, regardless of payment_status. */
+  totalValue: string;
+  /** Sum of `price` across only payment_status = 'paid' orders — actual realized revenue. */
+  paidRevenue: string;
+}
