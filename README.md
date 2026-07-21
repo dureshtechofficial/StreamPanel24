@@ -48,7 +48,7 @@ Create the database (schema is managed by migrations, not `synchronize`):
 CREATE DATABASE project7_auth CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-Run all migrations (creates `users`, `customers`, `flussonic_servers`, `flussonic_server_stats`, and applies the unix-timestamp/soft-delete/access-token schema changes that came later):
+Run all migrations (creates `users`, `customers`, `flussonic_servers`, `flussonic_server_stats`, `flussonic_streams`, and applies the unix-timestamp/soft-delete/access-token/username-password schema changes that came later):
 
 ```bash
 npm run migration:run
@@ -103,6 +103,8 @@ All under `/api/v1/auth`:
 `/api/v1/flussonic-servers/:serverId/stats/sync` — `POST`, no body. Fetches the server's real `config/stats` endpoint (`https://{domain}:443/...` if `use_ssl`, else `http://{hostname}:{port}/...`, path `{api_base_path}/{api_version_tag}/config/stats`), authenticating with `Authorization: Bearer <api_access_token>`. Stores the result as a new sample (full raw JSON kept in `raw_response` for fields we don't have dedicated columns for), and updates the server's `flussonic_version`/`status`. Returns 502 (and marks the server `unreachable`) if the fetch fails.
 
 `/api/v1/flussonic-servers/sync-all` — `POST`, no body. Syncs every non-deleted server one at a time; one server failing doesn't stop the rest. Returns `{ total, succeeded, failed, results: [{ serverId, name, ok, error? }] }`.
+
+`/api/v1/flussonic-servers/:serverId/streams` — full CRUD, admin-only, nested under a server. `POST`/`PATCH` build the exact Flussonic stream config (`name`, `comment`, `title`, `static`, `disabled`, `inputs`, `retry_limit`, `protocols`, optional `on_play`/`on_publish`) and `PUT` it to that server's real `{api_base_path}/{api_version_tag}/streams/urlencode(name)` endpoint (same SSL/domain/port rule as stats sync) before caching the result locally in `flussonic_streams`. `name` is required and unique per server, and immutable after creation (renaming would require deleting and recreating, since it's part of the upstream URL) — `PATCH` merges provided fields onto the existing config and re-`PUT`s the whole thing (Flussonic's API replaces the full config on every `PUT`). `DELETE` calls the real Flussonic `DELETE` endpoint (tolerating an already-404 upstream) before soft-deleting locally.
 
 `DELETE` on `customers`/`flussonic-servers` never removes a row — it's a soft delete that sets `status: 'deleted'`. Deleted rows are excluded from every list/get, and you can't set `status: 'deleted'` directly through create/update (400).
 

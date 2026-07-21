@@ -14,6 +14,7 @@ import { Customer } from './customers/entities/customer.entity';
 import { CustomersModule } from './customers/customers.module';
 import { FlussonicServer } from './flussonic-servers/entities/flussonic-server.entity';
 import { FlussonicServerStat } from './flussonic-servers/entities/flussonic-server-stat.entity';
+import { FlussonicStream } from './flussonic-servers/entities/flussonic-stream.entity';
 import { FlussonicServersModule } from './flussonic-servers/flussonic-servers.module';
 
 @Module({
@@ -36,7 +37,13 @@ import { FlussonicServersModule } from './flussonic-servers/flussonic-servers.mo
         username: configService.get<string>('database.username'),
         password: configService.get<string>('database.password'),
         database: configService.get<string>('database.database'),
-        entities: [User, Customer, FlussonicServer, FlussonicServerStat],
+        entities: [
+          User,
+          Customer,
+          FlussonicServer,
+          FlussonicServerStat,
+          FlussonicStream,
+        ],
         synchronize: false,
         logging: configService.get<string>('appEnv') === 'development',
       }),

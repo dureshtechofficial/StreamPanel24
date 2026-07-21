@@ -7,6 +7,7 @@ import { CreateFlussonicServerStatDto } from './dto/create-flussonic-server-stat
 import { QueryFlussonicServerStatDto } from './dto/query-flussonic-server-stat.dto';
 import { FlussonicServersService } from './flussonic-servers.service';
 import { FlussonicServerStatus } from './enums/flussonic-server-status.enum';
+import { buildFlussonicApiUrl } from './utils/flussonic-api-url.util';
 import type { FlussonicStatsResponse } from './interfaces/flussonic-stats-response.interface';
 import type { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 
@@ -161,14 +162,7 @@ export class FlussonicServerStatsService {
   }
 
   private buildStatsUrl(server: FlussonicServer): string {
-    const basePath = server.api_base_path.replace(/^\/+|\/+$/g, '');
-    const path = `${basePath}/${server.api_version_tag}/config/stats`;
-
-    if (server.use_ssl) {
-      const host = server.domain || server.hostname;
-      return `https://${host}:443/${path}`;
-    }
-    return `http://${server.hostname}:${server.port}/${path}`;
+    return buildFlussonicApiUrl(server, 'config/stats');
   }
 
   private mapResponseToStat(
