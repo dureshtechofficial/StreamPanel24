@@ -32,6 +32,22 @@ export interface SyncStreamsSummary {
   updated: number;
 }
 
+export interface SyncAllServersResult {
+  serverId: string;
+  name: string;
+  ok: boolean;
+  error?: string;
+  created?: number;
+  updated?: number;
+}
+
+export interface SyncAllServersSummary {
+  total: number;
+  succeeded: number;
+  failed: number;
+  results: SyncAllServersResult[];
+}
+
 @Injectable()
 export class FlussonicStreamsService {
   constructor(
@@ -141,6 +157,40 @@ export class FlussonicStreamsService {
     }
 
     return { total: liveStreams.length, created, updated };
+  }
+
+  /** Syncs every non-deleted server's streams, one at a time; a single failure doesn't abort the rest. */
+  async syncAllServers(): Promise<SyncAllServersSummary> {
+    const servers = await this.serversService.findAllActive();
+
+    const results: SyncAllServersResult[] = [];
+    for (const server of servers) {
+      try {
+        const summary = await this.syncFromFlussonic(server.id);
+        results.push({
+          serverId: server.id,
+          name: server.name,
+          ok: true,
+          created: summary.created,
+          updated: summary.updated,
+        });
+      } catch (err) {
+        results.push({
+          serverId: server.id,
+          name: server.name,
+          ok: false,
+          error: err instanceof Error ? err.message : 'unknown error',
+        });
+      }
+    }
+
+    const succeeded = results.filter((r) => r.ok).length;
+    return {
+      total: results.length,
+      succeeded,
+      failed: results.length - succeeded,
+      results,
+    };
   }
 
   async create(

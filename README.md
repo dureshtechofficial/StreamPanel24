@@ -10,6 +10,7 @@ REST API for user registration/login plus customer and Flussonic-server manageme
 - bcrypt for password hashing
 - `@nestjs/throttler` for rate limiting
 - `@nestjs/config` with `class-validator`-backed env validation
+- `@nestjs/schedule` for admin-configurable cron jobs (sync scheduling)
 
 ## Prerequisites
 
@@ -112,6 +113,8 @@ All under `/api/v1/auth`:
 `/api/v1/flussonic-servers/:serverId/streams/sync` — `POST`, no body. Pulls the server's real `GET streams` list (cursor-paginated via `next`, followed to exhaustion) and stores each stream's raw entry in `live_stats_json` (live bitrate, client count, media tracks, per-input health, etc. — kept verbatim, not modeled column-by-column). A stream found upstream with no matching local row is imported using its `config_on_disk` as the seed config. Returns `{ total, created, updated }`.
 
 `/api/v1/flussonic-servers/:serverId/sessions` — `GET` (paginated, newest-updated first, `?search=` matches stream name/IP/country, `?latestOnly=true` filters to sessions touched by the server's most recent sync) and `POST .../sessions/sync` (no body). Sync pulls the server's real `GET sessions` (cursor-paginated, one flat list covering every stream on the server) and upserts each by its Flussonic session id into `flussonic_stream_sessions` — one row per real session, matched to a local stream by name. A brand-new session's IP is looked up via `IPWHOIS_API_URL` and the full response stored in `ipwhois_json` (best-effort; a failed lookup doesn't fail the sync). Sessions have no server id of their own, so listing attributes them to a server via the matched stream's `flussonic_server_id`. Every sync stamps one `synced_at` timestamp onto every row it touches — `latestOnly` compares against `MAX(synced_at)` to distinguish still-live sessions from stale rows for sessions that have since ended (rows are never deleted).
+
+`/api/v1/settings/sync-schedules` — `GET` lists one schedule per sync type (`server_stats`/`streams`/`sessions`), `PATCH /:type` (body: `{ enabled?, cron_expression? }`) updates one. Admin-only. An invalid `cron_expression` is rejected with 400 before saving. Enabling/changing a schedule takes effect immediately (no restart needed) — it's backed by `@nestjs/schedule`'s `SchedulerRegistry`, rebuilt from the DB on boot and whenever a schedule is updated. Each schedule applies to every non-deleted server when it fires, not one server at a time; `last_run_at`/`last_run_summary` on the row reflect the most recent firing.
 
 `DELETE` on `customers`/`flussonic-servers` never removes a row — it's a soft delete that sets `status: 'deleted'`. Deleted rows are excluded from every list/get, and you can't set `status: 'deleted'` directly through create/update (400).
 

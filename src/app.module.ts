@@ -3,6 +3,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import configuration from './config/configuration';
@@ -17,6 +18,8 @@ import { FlussonicServerStat } from './flussonic-servers/entities/flussonic-serv
 import { FlussonicStream } from './flussonic-servers/entities/flussonic-stream.entity';
 import { FlussonicStreamSession } from './flussonic-servers/entities/flussonic-stream-session.entity';
 import { FlussonicServersModule } from './flussonic-servers/flussonic-servers.module';
+import { SyncSchedule } from './settings/entities/sync-schedule.entity';
+import { SettingsModule } from './settings/settings.module';
 
 @Module({
   imports: [
@@ -28,6 +31,7 @@ import { FlussonicServersModule } from './flussonic-servers/flussonic-servers.mo
     ThrottlerModule.forRoot({
       throttlers: [{ name: 'default', ttl: 60_000, limit: 60 }],
     }),
+    ScheduleModule.forRoot(),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -45,6 +49,7 @@ import { FlussonicServersModule } from './flussonic-servers/flussonic-servers.mo
           FlussonicServerStat,
           FlussonicStream,
           FlussonicStreamSession,
+          SyncSchedule,
         ],
         synchronize: false,
         logging: configService.get<string>('appEnv') === 'development',
@@ -54,6 +59,7 @@ import { FlussonicServersModule } from './flussonic-servers/flussonic-servers.mo
     AuthModule,
     CustomersModule,
     FlussonicServersModule,
+    SettingsModule,
   ],
   controllers: [AppController],
   providers: [
