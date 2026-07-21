@@ -17,6 +17,7 @@ import {
   PlusIcon,
   SearchIcon,
   TrashIcon,
+  UsersIcon,
 } from '@/components/icons';
 import { getServer } from '@/lib/flussonic-servers-api';
 import {
@@ -193,6 +194,13 @@ function StreamsContent({ serverId }: { serverId: string }) {
           </p>
         </div>
         <div className="flex gap-2">
+          <Link
+            href={`/dashboard/servers/${serverId}/sessions`}
+            className="flex items-center justify-center gap-1.5 rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+          >
+            <UsersIcon className="h-4 w-4" />
+            Sessions
+          </Link>
           <button
             onClick={handleSync}
             disabled={isSyncing}
