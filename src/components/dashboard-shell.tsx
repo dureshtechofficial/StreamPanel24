@@ -23,10 +23,13 @@ const BASE_NAV_ITEMS = [
 
 const ADMIN_NAV_ITEMS = [{ label: 'Servers', icon: ServerIcon, href: '/dashboard/servers' }];
 
-const TRAILING_NAV_ITEMS = [
-  { label: 'Profile', icon: UserIcon, href: null },
-  { label: 'Settings', icon: SettingsIcon, href: null },
-];
+const PROFILE_NAV_ITEM = { label: 'Profile', icon: UserIcon, href: null };
+const SETTINGS_NAV_ITEM_DISABLED = { label: 'Settings', icon: SettingsIcon, href: null };
+const SETTINGS_NAV_ITEM_ADMIN = {
+  label: 'Settings',
+  icon: SettingsIcon,
+  href: '/dashboard/settings',
+};
 
 function getInitials(name: string | undefined) {
   if (!name) return '?';
@@ -46,7 +49,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const navItems = [
     ...BASE_NAV_ITEMS,
     ...(user?.role === 'admin' ? ADMIN_NAV_ITEMS : []),
-    ...TRAILING_NAV_ITEMS,
+    PROFILE_NAV_ITEM,
+    user?.role === 'admin' ? SETTINGS_NAV_ITEM_ADMIN : SETTINGS_NAV_ITEM_DISABLED,
   ];
 
   useEffect(() => {
