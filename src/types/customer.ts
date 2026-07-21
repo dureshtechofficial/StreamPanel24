@@ -11,6 +11,8 @@ export interface Customer {
   city: string | null;
   state: string | null;
   pincode: string | null;
+  /** Which reseller manages this customer, if any — admin-only field. */
+  reseller_id: string | null;
   status: CustomerStatus;
   /** UTC unix timestamp (seconds) */
   created_at: number;
@@ -31,4 +33,6 @@ export interface CustomerInput {
   state?: string;
   pincode?: string;
   status?: CustomerStatus;
+  /** Admin-only: null explicitly unassigns the reseller, undefined leaves it untouched. */
+  reseller_id?: string | null;
 }

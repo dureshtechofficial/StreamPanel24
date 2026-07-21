@@ -375,6 +375,7 @@ function CustomersContent() {
         customer={editingCustomer}
         onClose={() => setPanelOpen(false)}
         onSubmit={handleSubmit}
+        showResellerField
       />
 
       <ConfirmDialog

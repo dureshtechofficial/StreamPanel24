@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import type { Customer, CustomerInput, CustomerStatus } from '@/types/customer';
+import type { Reseller } from '@/types/reseller';
+import { listResellers } from '@/lib/resellers-api';
 import { ApiError } from '@/lib/api-error';
 import { groupFieldErrors } from '@/lib/form-errors';
 import { XIcon } from './icons';
@@ -24,6 +26,8 @@ type FormState = {
   state: string;
   pincode: string;
   status: CustomerStatus;
+  /** Empty string = no reseller. */
+  reseller_id: string;
 };
 
 const EMPTY_FORM: FormState = {
@@ -38,6 +42,7 @@ const EMPTY_FORM: FormState = {
   state: '',
   pincode: '',
   status: 'active',
+  reseller_id: '',
 };
 
 function toFormState(customer: Customer | null): FormState {
@@ -54,6 +59,7 @@ function toFormState(customer: Customer | null): FormState {
     state: customer.state ?? '',
     pincode: customer.pincode ?? '',
     status: customer.status,
+    reseller_id: customer.reseller_id ?? '',
   };
 }
 
@@ -70,6 +76,7 @@ function toPayload(form: FormState): CustomerInput {
     state: form.state.trim() || undefined,
     pincode: form.pincode.trim() || undefined,
     status: form.status,
+    reseller_id: form.reseller_id || null,
   };
 }
 
@@ -78,19 +85,32 @@ export function CustomerFormPanel({
   customer,
   onClose,
   onSubmit,
+  showResellerField = false,
 }: {
   open: boolean;
   customer: Customer | null;
   onClose: () => void;
   onSubmit: (payload: CustomerInput) => Promise<void>;
+  /** Admin-only: shows an optional reseller-mapping select. Off by default (e.g. the reseller portal forces its own id server-side and has no reason to see this). */
+  showResellerField?: boolean;
 }) {
   const [form, setForm] = useState<FormState>(() => toFormState(customer));
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [resellers, setResellers] = useState<Reseller[]>([]);
 
   function setField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
+
+  useEffect(() => {
+    if (!open || !showResellerField) return;
+    listResellers({ status: 'active', limit: 100 })
+      .then((result) => setResellers(result.items))
+      .catch(() => {
+        // best-effort; the field still works, just starts with an empty list
+      });
+  }, [open, showResellerField]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -297,6 +317,24 @@ export function CustomerFormPanel({
                 <option value="closed">Closed</option>
               </select>
             </div>
+
+            {showResellerField && (
+              <div>
+                <label className={labelClass}>Reseller (optional)</label>
+                <select
+                  value={form.reseller_id}
+                  onChange={(e) => setField('reseller_id', e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">No reseller</option>
+                  {resellers.map((reseller) => (
+                    <option key={reseller.id} value={reseller.id}>
+                      {reseller.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end gap-2 border-t border-gray-200 px-6 py-4">
