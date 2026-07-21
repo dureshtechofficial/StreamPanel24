@@ -7,6 +7,7 @@ import { FlussonicServerStat } from '../flussonic-servers/entities/flussonic-ser
 import { FlussonicStream } from '../flussonic-servers/entities/flussonic-stream.entity';
 import { FlussonicStreamSession } from '../flussonic-servers/entities/flussonic-stream-session.entity';
 import { SyncSchedule } from '../settings/entities/sync-schedule.entity';
+import { SyncScheduleRun } from '../settings/entities/sync-schedule-run.entity';
 
 config();
 
@@ -25,6 +26,7 @@ export const dataSourceOptions: DataSourceOptions = {
     FlussonicStream,
     FlussonicStreamSession,
     SyncSchedule,
+    SyncScheduleRun,
   ],
   migrations: [__dirname + '/migrations/*.{ts,js}'],
   synchronize: false,

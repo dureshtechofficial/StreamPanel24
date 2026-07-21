@@ -9,12 +9,15 @@ import { SchedulerRegistry } from '@nestjs/schedule';
 import { CronJob } from 'cron';
 import { Repository } from 'typeorm';
 import { SyncSchedule } from './entities/sync-schedule.entity';
+import { SyncScheduleRun } from './entities/sync-schedule-run.entity';
 import { SyncType } from './enums/sync-type.enum';
 import { UpdateSyncScheduleDto } from './dto/update-sync-schedule.dto';
+import { QuerySyncScheduleRunDto } from './dto/query-sync-schedule-run.dto';
 import { FlussonicServerStatsService } from '../flussonic-servers/flussonic-server-stats.service';
 import { FlussonicStreamsService } from '../flussonic-servers/flussonic-streams.service';
 import { FlussonicStreamSessionsService } from '../flussonic-servers/flussonic-stream-sessions.service';
 import { nowUnixSeconds } from '../common/utils/unix-timestamp.util';
+import type { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 
 const JOB_PREFIX = 'sync-schedule-';
 
@@ -29,6 +32,8 @@ export class SyncScheduleService implements OnModuleInit {
   constructor(
     @InjectRepository(SyncSchedule)
     private readonly scheduleRepository: Repository<SyncSchedule>,
+    @InjectRepository(SyncScheduleRun)
+    private readonly runRepository: Repository<SyncScheduleRun>,
     private readonly schedulerRegistry: SchedulerRegistry,
     private readonly statsService: FlussonicServerStatsService,
     private readonly streamsService: FlussonicStreamsService,
@@ -44,6 +49,29 @@ export class SyncScheduleService implements OnModuleInit {
 
   async findAll(): Promise<SyncSchedule[]> {
     return this.scheduleRepository.find({ order: { sync_type: 'ASC' } });
+  }
+
+  async findRuns(
+    type: SyncType,
+    query: QuerySyncScheduleRunDto,
+  ): Promise<PaginatedResult<SyncScheduleRun>> {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+
+    const [items, total] = await this.runRepository.findAndCount({
+      where: { sync_type: type },
+      order: { ran_at: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    };
   }
 
   async update(
@@ -97,6 +125,7 @@ export class SyncScheduleService implements OnModuleInit {
 
   private async runJob(type: SyncType): Promise<void> {
     let summary: unknown;
+    let success = true;
     try {
       if (type === SyncType.SERVER_STATS) {
         summary = await this.statsService.syncAll();
@@ -106,15 +135,26 @@ export class SyncScheduleService implements OnModuleInit {
         summary = await this.sessionsService.syncAllServers();
       }
     } catch (err) {
+      success = false;
       summary = { error: err instanceof Error ? err.message : 'unknown error' };
     }
+
+    const ranAt = nowUnixSeconds();
+
+    const run = this.runRepository.create({
+      sync_type: type,
+      ran_at: ranAt,
+      success,
+      summary: summary as Record<string, unknown>,
+    });
+    await this.runRepository.save(run);
 
     const schedule = await this.scheduleRepository.findOne({
       where: { sync_type: type },
     });
     if (!schedule) return;
 
-    schedule.last_run_at = nowUnixSeconds();
+    schedule.last_run_at = ranAt;
     schedule.last_run_summary = summary as Record<string, unknown>;
     await this.scheduleRepository.save(schedule);
   }

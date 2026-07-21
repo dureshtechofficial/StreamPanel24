@@ -19,6 +19,7 @@ import { FlussonicStream } from './flussonic-servers/entities/flussonic-stream.e
 import { FlussonicStreamSession } from './flussonic-servers/entities/flussonic-stream-session.entity';
 import { FlussonicServersModule } from './flussonic-servers/flussonic-servers.module';
 import { SyncSchedule } from './settings/entities/sync-schedule.entity';
+import { SyncScheduleRun } from './settings/entities/sync-schedule-run.entity';
 import { SettingsModule } from './settings/settings.module';
 
 @Module({
@@ -50,6 +51,7 @@ import { SettingsModule } from './settings/settings.module';
           FlussonicStream,
           FlussonicStreamSession,
           SyncSchedule,
+          SyncScheduleRun,
         ],
         synchronize: false,
         logging: configService.get<string>('appEnv') === 'development',
