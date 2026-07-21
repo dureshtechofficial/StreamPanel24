@@ -39,20 +39,27 @@ export function deleteServer(id: string) {
   return apiFetch<void>(`/flussonic-servers/${id}`, { method: 'DELETE' });
 }
 
-export interface SyncAllResult {
-  serverId: string;
-  name: string;
+export interface SyncOutcome {
   ok: boolean;
   error?: string;
+  created?: number;
+  updated?: number;
+}
+
+export interface SyncAllServersResult {
+  serverId: string;
+  name: string;
+  stats: SyncOutcome;
+  streams: SyncOutcome;
+  sessions: SyncOutcome;
 }
 
 export interface SyncAllSummary {
   total: number;
-  succeeded: number;
-  failed: number;
-  results: SyncAllResult[];
+  results: SyncAllServersResult[];
 }
 
+/** Runs stats, streams, and sessions sync for every non-deleted server. */
 export function syncAllServers() {
   return apiFetch<SyncAllSummary>('/flussonic-servers/sync-all', { method: 'POST' });
 }

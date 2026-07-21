@@ -201,32 +201,39 @@ function ServersContent() {
         </div>
       )}
 
-      {syncSummary && (
-        <div
-          className={`animate-fade-in-up mb-4 rounded-md px-4 py-3 text-sm ${
-            syncSummary.failed === 0
-              ? "bg-green-50 text-green-700"
-              : "bg-amber-50 text-amber-700"
-          }`}
-        >
-          <p>
-            Synced {syncSummary.succeeded} of {syncSummary.total} server
-            {syncSummary.total === 1 ? "" : "s"}
-            {syncSummary.failed > 0 ? `, ${syncSummary.failed} failed` : ""}.
-          </p>
-          {syncSummary.failed > 0 && (
-            <ul className="mt-1 list-inside list-disc">
-              {syncSummary.results
-                .filter((r) => !r.ok)
-                .map((r) => (
-                  <li key={r.serverId}>
-                    {r.name}: {r.error}
+      {syncSummary && (() => {
+        const failures = syncSummary.results.flatMap((r) => {
+          const items: { serverId: string; name: string; type: string; error?: string }[] = [];
+          if (!r.stats.ok) items.push({ serverId: r.serverId, name: r.name, type: "stats", error: r.stats.error });
+          if (!r.streams.ok) items.push({ serverId: r.serverId, name: r.name, type: "streams", error: r.streams.error });
+          if (!r.sessions.ok) items.push({ serverId: r.serverId, name: r.name, type: "sessions", error: r.sessions.error });
+          return items;
+        });
+        return (
+          <div
+            className={`animate-fade-in-up mb-4 rounded-md px-4 py-3 text-sm ${
+              failures.length === 0
+                ? "bg-green-50 text-green-700"
+                : "bg-amber-50 text-amber-700"
+            }`}
+          >
+            <p>
+              Synced stats, streams, and sessions for {syncSummary.total} server
+              {syncSummary.total === 1 ? "" : "s"}
+              {failures.length > 0 ? `, ${failures.length} issue${failures.length === 1 ? "" : "s"}` : ""}.
+            </p>
+            {failures.length > 0 && (
+              <ul className="mt-1 list-inside list-disc">
+                {failures.map((f, i) => (
+                  <li key={`${f.serverId}-${f.type}-${i}`}>
+                    {f.name} ({f.type}): {f.error}
                   </li>
                 ))}
-            </ul>
-          )}
-        </div>
-      )}
+              </ul>
+            )}
+          </div>
+        );
+      })()}
 
       <div
         className="animate-fade-in-up mb-4 flex flex-col gap-3 sm:flex-row"
