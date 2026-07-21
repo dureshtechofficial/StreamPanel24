@@ -6,10 +6,14 @@ import type { StringValue } from 'ms';
 import { ResellersModule } from '../resellers/resellers.module';
 import { CustomersModule } from '../customers/customers.module';
 import { FlussonicServersModule } from '../flussonic-servers/flussonic-servers.module';
+import { PlansModule } from '../plans/plans.module';
+import { OrdersModule } from '../orders/orders.module';
 import { ResellerAuthService } from './reseller-auth.service';
 import { ResellerAuthController } from './reseller-auth.controller';
 import { ResellerCustomersController } from './reseller-customers.controller';
 import { ResellerCustomerStreamsController } from './reseller-customer-streams.controller';
+import { ResellerPlansController } from './reseller-plans.controller';
+import { ResellerOrdersController } from './reseller-orders.controller';
 import { ResellerJwtAccessStrategy } from './strategies/reseller-jwt-access.strategy';
 import { ResellerJwtRefreshStrategy } from './strategies/reseller-jwt-refresh.strategy';
 
@@ -18,6 +22,8 @@ import { ResellerJwtRefreshStrategy } from './strategies/reseller-jwt-refresh.st
     ResellersModule,
     CustomersModule,
     FlussonicServersModule,
+    PlansModule,
+    OrdersModule,
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -36,6 +42,8 @@ import { ResellerJwtRefreshStrategy } from './strategies/reseller-jwt-refresh.st
     ResellerAuthController,
     ResellerCustomersController,
     ResellerCustomerStreamsController,
+    ResellerPlansController,
+    ResellerOrdersController,
   ],
   providers: [
     ResellerAuthService,

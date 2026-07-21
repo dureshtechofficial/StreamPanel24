@@ -25,6 +25,10 @@ import { FlussonicServersModule } from './flussonic-servers/flussonic-servers.mo
 import { SyncSchedule } from './settings/entities/sync-schedule.entity';
 import { SyncScheduleRun } from './settings/entities/sync-schedule-run.entity';
 import { SettingsModule } from './settings/settings.module';
+import { Plan } from './plans/entities/plan.entity';
+import { PlansModule } from './plans/plans.module';
+import { Order } from './orders/entities/order.entity';
+import { OrdersModule } from './orders/orders.module';
 
 @Module({
   imports: [
@@ -57,6 +61,8 @@ import { SettingsModule } from './settings/settings.module';
           SyncSchedule,
           SyncScheduleRun,
           Reseller,
+          Plan,
+          Order,
         ],
         synchronize: false,
         logging: configService.get<string>('appEnv') === 'development',
@@ -70,6 +76,8 @@ import { SettingsModule } from './settings/settings.module';
     ResellerAuthModule,
     FlussonicServersModule,
     SettingsModule,
+    PlansModule,
+    OrdersModule,
   ],
   controllers: [AppController],
   providers: [

@@ -9,6 +9,8 @@ import { FlussonicStreamSession } from '../flussonic-servers/entities/flussonic-
 import { SyncSchedule } from '../settings/entities/sync-schedule.entity';
 import { SyncScheduleRun } from '../settings/entities/sync-schedule-run.entity';
 import { Reseller } from '../resellers/entities/reseller.entity';
+import { Plan } from '../plans/entities/plan.entity';
+import { Order } from '../orders/entities/order.entity';
 
 config();
 
@@ -29,6 +31,8 @@ export const dataSourceOptions: DataSourceOptions = {
     SyncSchedule,
     SyncScheduleRun,
     Reseller,
+    Plan,
+    Order,
   ],
   migrations: [__dirname + '/migrations/*.{ts,js}'],
   synchronize: false,

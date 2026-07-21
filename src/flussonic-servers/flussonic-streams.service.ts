@@ -218,6 +218,55 @@ export class FlussonicStreamsService {
     return this.findAllForCustomer(customerId);
   }
 
+  /** Non-throwing, server-agnostic lookup — used by OrdersService, which only has a stream id. */
+  findOneById(id: string): Promise<FlussonicStream | null> {
+    return this.streamsRepository.findOne({
+      where: { id, status: Not(FlussonicStreamStatus.DELETED) },
+    });
+  }
+
+  /**
+   * Assigns exactly one stream to a customer without touching any of their
+   * other assignments — unlike assignToCustomer, which replaces the whole
+   * set. Used by OrdersService so buying one more stream never unassigns
+   * the customer's existing ones. Still rejects if the stream already
+   * belongs to a different customer.
+   */
+  async assignSingleStreamToCustomer(
+    customerId: string,
+    streamId: string,
+  ): Promise<void> {
+    const stream = await this.findOneById(streamId);
+    if (!stream) {
+      throw new NotFoundException('Stream not found');
+    }
+    if (stream.customer_id && stream.customer_id !== customerId) {
+      throw new ConflictException(
+        `Stream "${stream.config_json.name}" is already assigned to another customer`,
+      );
+    }
+
+    stream.customer_id = customerId;
+    await this.streamsRepository.save(stream);
+  }
+
+  /**
+   * Unassigns one stream, but only if it's still assigned to `expectedCustomerId`
+   * — if it was already reassigned elsewhere (e.g. manually, by an admin) this
+   * is a no-op rather than stealing it back to "unassigned".
+   */
+  async unassignSingleStreamFromCustomer(
+    streamId: string,
+    expectedCustomerId: string,
+  ): Promise<void> {
+    const stream = await this.findOneById(streamId);
+    if (!stream || stream.customer_id !== expectedCustomerId) {
+      return;
+    }
+    stream.customer_id = null;
+    await this.streamsRepository.save(stream);
+  }
+
   private async toDirectoryEntries(
     streams: FlussonicStream[],
   ): Promise<FlussonicStreamDirectoryEntry[]> {
