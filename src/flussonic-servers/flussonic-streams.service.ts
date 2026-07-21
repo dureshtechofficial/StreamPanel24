@@ -84,6 +84,18 @@ export class FlussonicStreamsService {
     return stream;
   }
 
+  async checkNameExists(
+    serverId: string,
+    name: string,
+  ): Promise<{ existsInDb: boolean; existsOnServer: boolean }> {
+    const server = await this.serversService.findOne(serverId);
+    const [existsInDb, existsOnServer] = await Promise.all([
+      this.nameExistsInDb(serverId, name),
+      this.nameExistsOnFlussonic(server, name),
+    ]);
+    return { existsInDb, existsOnServer };
+  }
+
   async create(
     serverId: string,
     dto: CreateFlussonicStreamDto,
@@ -91,6 +103,15 @@ export class FlussonicStreamsService {
     this.assertSettableStatus(dto.status);
     const server = await this.serversService.findOne(serverId);
     await this.assertNameAvailable(serverId, dto.name);
+
+    if (!dto.confirmOverwrite) {
+      const existsOnServer = await this.nameExistsOnFlussonic(server, dto.name);
+      if (existsOnServer) {
+        throw new ConflictException(
+          `A stream named "${dto.name}" already exists on the Flussonic server (created outside this app) — confirm to overwrite it`,
+        );
+      }
+    }
 
     const config = this.stripUndefined<FlussonicStreamConfig>({
       name: dto.name,
@@ -177,6 +198,17 @@ export class FlussonicStreamsService {
     serverId: string,
     name: string,
   ): Promise<void> {
+    if (await this.nameExistsInDb(serverId, name)) {
+      throw new ConflictException(
+        `A stream named "${name}" already exists on this server`,
+      );
+    }
+  }
+
+  private async nameExistsInDb(
+    serverId: string,
+    name: string,
+  ): Promise<boolean> {
     const existing = await this.streamsRepository
       .createQueryBuilder('stream')
       .where('stream.flussonic_server_id = :serverId', { serverId })
@@ -188,10 +220,47 @@ export class FlussonicStreamsService {
         { name },
       )
       .getOne();
+    return Boolean(existing);
+  }
 
-    if (existing) {
-      throw new ConflictException(
-        `A stream named "${name}" already exists on this server`,
+  /**
+   * Checks the real Flussonic server directly (not just our local cache) —
+   * a stream can exist there without a matching row here if it was created
+   * outside this app, or if our cache ever drifted from upstream.
+   */
+  private async nameExistsOnFlussonic(
+    server: FlussonicServer,
+    name: string,
+  ): Promise<boolean> {
+    const accessToken = await this.serversService.ensureAccessToken(server);
+    const url = buildFlussonicApiUrl(
+      server,
+      `streams/${encodeURIComponent(name)}`,
+    );
+
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+      let res: Response;
+      try {
+        res = await fetch(url, {
+          method: 'GET',
+          headers: {
+            Accept: 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeout);
+      }
+      if (res.status === 404) return false;
+      if (res.ok) return true;
+      throw new Error(`upstream responded with HTTP ${res.status}`);
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : 'unknown error';
+      throw new BadGatewayException(
+        `Failed to verify whether stream "${name}" already exists on "${server.name}" (${url}): ${reason}`,
       );
     }
   }

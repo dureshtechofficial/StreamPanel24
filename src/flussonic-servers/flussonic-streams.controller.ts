@@ -41,6 +41,15 @@ export class FlussonicStreamsController {
     return this.streamsService.findAllForServer(serverId, query);
   }
 
+  @ApiOperation({
+    summary:
+      'Check whether a stream name is already taken, in our DB or on the live Flussonic server',
+  })
+  @Get('check-name')
+  checkName(@Param('serverId') serverId: string, @Query('name') name: string) {
+    return this.streamsService.checkNameExists(serverId, name);
+  }
+
   @ApiOperation({ summary: 'Get one stream' })
   @Get(':id')
   findOne(@Param('serverId') serverId: string, @Param('id') id: string) {

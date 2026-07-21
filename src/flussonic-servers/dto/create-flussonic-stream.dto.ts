@@ -83,4 +83,9 @@ export class CreateFlussonicStreamDto {
   @IsOptional()
   @IsEnum(FlussonicStreamStatus)
   status?: FlussonicStreamStatus;
+
+  /** Skips the "already exists on the live Flussonic server" check — set after the client has shown a confirm prompt. */
+  @IsOptional()
+  @IsBoolean()
+  confirmOverwrite?: boolean;
 }
