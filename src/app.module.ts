@@ -14,6 +14,9 @@ import { AuthModule } from './auth/auth.module';
 import { Customer } from './customers/entities/customer.entity';
 import { CustomersModule } from './customers/customers.module';
 import { CustomerAuthModule } from './customer-auth/customer-auth.module';
+import { Reseller } from './resellers/entities/reseller.entity';
+import { ResellersModule } from './resellers/resellers.module';
+import { ResellerAuthModule } from './reseller-auth/reseller-auth.module';
 import { FlussonicServer } from './flussonic-servers/entities/flussonic-server.entity';
 import { FlussonicServerStat } from './flussonic-servers/entities/flussonic-server-stat.entity';
 import { FlussonicStream } from './flussonic-servers/entities/flussonic-stream.entity';
@@ -53,6 +56,7 @@ import { SettingsModule } from './settings/settings.module';
           FlussonicStreamSession,
           SyncSchedule,
           SyncScheduleRun,
+          Reseller,
         ],
         synchronize: false,
         logging: configService.get<string>('appEnv') === 'development',
@@ -62,6 +66,8 @@ import { SettingsModule } from './settings/settings.module';
     AuthModule,
     CustomersModule,
     CustomerAuthModule,
+    ResellersModule,
+    ResellerAuthModule,
     FlussonicServersModule,
     SettingsModule,
   ],

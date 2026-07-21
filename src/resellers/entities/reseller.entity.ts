@@ -7,14 +7,14 @@ import {
   Index,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { CustomerStatus } from '../enums/customer-status.enum';
+import { ResellerStatus } from '../enums/reseller-status.enum';
 import {
   nowUnixSeconds,
   unixTimestampTransformer,
 } from '../../common/utils/unix-timestamp.util';
 
-@Entity('customers')
-export class Customer {
+@Entity('resellers')
+export class Reseller {
   @PrimaryGeneratedColumn({ type: 'bigint', unsigned: true })
   id: string;
 
@@ -51,18 +51,13 @@ export class Customer {
   @Column({ type: 'varchar', length: 10, nullable: true })
   pincode: string | null;
 
-  /** Which reseller manages this customer, if any — a reseller has many customers, a customer at most one reseller. */
-  @Index()
-  @Column({ type: 'bigint', unsigned: true, nullable: true })
-  reseller_id: string | null;
-
   @Index()
   @Column({
     type: 'enum',
-    enum: CustomerStatus,
-    default: CustomerStatus.ACTIVE,
+    enum: ResellerStatus,
+    default: ResellerStatus.ACTIVE,
   })
-  status: CustomerStatus;
+  status: ResellerStatus;
 
   /** UTC unix timestamp (seconds). Set by the app, not MySQL — see @BeforeInsert/@BeforeUpdate below. */
   @Column({

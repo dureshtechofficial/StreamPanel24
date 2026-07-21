@@ -69,6 +69,113 @@ export class CustomersService {
     return customer;
   }
 
+  /** Reseller-portal equivalent of findAll — scoped to only that reseller's own customers. */
+  async findAllForReseller(
+    resellerId: string,
+    query: QueryCustomerDto,
+  ): Promise<PaginatedResult<Customer>> {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+
+    const qb = this.customersRepository
+      .createQueryBuilder('customer')
+      .where('customer.reseller_id = :resellerId', { resellerId })
+      .andWhere('customer.status != :deleted', {
+        deleted: CustomerStatus.DELETED,
+      });
+
+    if (query.search) {
+      qb.andWhere(
+        '(customer.name LIKE :search OR customer.phone LIKE :search OR customer.email LIKE :search OR customer.company_name LIKE :search)',
+        { search: `%${query.search}%` },
+      );
+    }
+
+    if (query.status) {
+      qb.andWhere('customer.status = :status', { status: query.status });
+    }
+
+    qb.orderBy('customer.created_at', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    const [items, total] = await qb.getManyAndCount();
+
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    };
+  }
+
+  /** 404s if the customer doesn't exist, is soft-deleted, or belongs to a different reseller. */
+  async findOneForReseller(resellerId: string, id: string): Promise<Customer> {
+    const customer = await this.customersRepository.findOne({
+      where: {
+        id,
+        reseller_id: resellerId,
+        status: Not(CustomerStatus.DELETED),
+      },
+    });
+    if (!customer) {
+      throw new NotFoundException('Customer not found');
+    }
+    return customer;
+  }
+
+  /** Like create(), but always forces reseller_id to the authenticated reseller — a reseller-supplied reseller_id (if any) is ignored. */
+  async createForReseller(
+    resellerId: string,
+    dto: CreateCustomerDto,
+  ): Promise<Customer> {
+    this.assertSettableStatus(dto.status);
+    await this.assertPhoneAvailable(dto.phone);
+    await this.assertUsernameAvailable(dto.username);
+
+    const { password, reseller_id, ...rest } = dto;
+    void reseller_id; // always forced from the authenticated reseller below, never from the request body
+    const customer = this.customersRepository.create({
+      ...rest,
+      reseller_id: resellerId,
+      password_hash: await this.hashPassword(password),
+    });
+    return this.customersRepository.save(customer);
+  }
+
+  /** Like update(), but scoped to the reseller's own customers and never lets reseller_id be reassigned. */
+  async updateForReseller(
+    resellerId: string,
+    id: string,
+    dto: UpdateCustomerDto,
+  ): Promise<Customer> {
+    this.assertSettableStatus(dto.status);
+    const customer = await this.findOneForReseller(resellerId, id);
+
+    if (dto.phone && dto.phone !== customer.phone) {
+      await this.assertPhoneAvailable(dto.phone);
+    }
+    if (dto.username && dto.username !== customer.username) {
+      await this.assertUsernameAvailable(dto.username);
+    }
+
+    const { password, reseller_id, ...rest } = dto;
+    void reseller_id; // never reassigned via this path — reseller_id stays whatever it already was
+    Object.assign(customer, rest);
+    if (password) {
+      customer.password_hash = await this.hashPassword(password);
+    }
+    return this.customersRepository.save(customer);
+  }
+
+  /** Soft delete scoped to the reseller's own customers. */
+  async removeForReseller(resellerId: string, id: string): Promise<void> {
+    const customer = await this.findOneForReseller(resellerId, id);
+    customer.status = CustomerStatus.DELETED;
+    await this.customersRepository.save(customer);
+  }
+
   /** Non-throwing lookup for the customer-auth JWT strategies (an invalid/deleted id should 401, not 404). */
   findActiveById(id: string): Promise<Customer | null> {
     return this.customersRepository.findOne({

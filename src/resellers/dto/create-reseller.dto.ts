@@ -7,9 +7,9 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
-import { CustomerStatus } from '../enums/customer-status.enum';
+import { ResellerStatus } from '../enums/reseller-status.enum';
 
-export class CreateCustomerDto {
+export class CreateResellerDto {
   @IsString()
   @MinLength(2, { message: 'Name must be at least 2 characters long' })
   @MaxLength(150)
@@ -68,11 +68,6 @@ export class CreateCustomerDto {
   pincode?: string;
 
   @IsOptional()
-  @IsEnum(CustomerStatus)
-  status?: CustomerStatus;
-
-  /** Admin-only: assigns this customer to a reseller. Never accepted from reseller-scoped requests (those force it from the token instead). */
-  @IsOptional()
-  @IsString()
-  reseller_id?: string;
+  @IsEnum(ResellerStatus)
+  status?: ResellerStatus;
 }
