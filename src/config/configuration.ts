@@ -23,4 +23,6 @@ export default () => ({
   bcryptSaltRounds: parseInt(process.env.BCRYPT_SALT_ROUNDS ?? '12', 10),
 
   credentialsEncryptionKey: process.env.CREDENTIALS_ENCRYPTION_KEY,
+
+  ipWhoIsApiUrl: process.env.IPWHOIS_API_URL ?? 'https://ipwho.is',
 });

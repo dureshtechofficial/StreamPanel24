@@ -2,6 +2,7 @@ import { plainToInstance } from 'class-transformer';
 import {
   IsEnum,
   IsNumber,
+  IsOptional,
   IsString,
   Matches,
   Max,
@@ -68,6 +69,11 @@ class EnvironmentVariables {
       'CREDENTIALS_ENCRYPTION_KEY must be a 64-character hex string (32 bytes, e.g. from `openssl rand -hex 32`)',
   })
   CREDENTIALS_ENCRYPTION_KEY: string;
+
+  /** Optional — defaults to https://ipwho.is in configuration.ts. Only used for best-effort session IP enrichment. */
+  @IsOptional()
+  @IsString()
+  IPWHOIS_API_URL?: string;
 }
 
 export function validate(config: Record<string, unknown>) {

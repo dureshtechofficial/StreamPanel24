@@ -5,6 +5,7 @@ import { Customer } from '../customers/entities/customer.entity';
 import { FlussonicServer } from '../flussonic-servers/entities/flussonic-server.entity';
 import { FlussonicServerStat } from '../flussonic-servers/entities/flussonic-server-stat.entity';
 import { FlussonicStream } from '../flussonic-servers/entities/flussonic-stream.entity';
+import { FlussonicStreamSession } from '../flussonic-servers/entities/flussonic-stream-session.entity';
 
 config();
 
@@ -21,6 +22,7 @@ export const dataSourceOptions: DataSourceOptions = {
     FlussonicServer,
     FlussonicServerStat,
     FlussonicStream,
+    FlussonicStreamSession,
   ],
   migrations: [__dirname + '/migrations/*.{ts,js}'],
   synchronize: false,

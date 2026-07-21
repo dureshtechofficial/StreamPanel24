@@ -283,7 +283,8 @@ export class FlussonicStreamsService {
     return Boolean(await this.findByNameInDb(serverId, name));
   }
 
-  private async findByNameInDb(
+  /** Public so other services (e.g. session sync) can map a Flussonic-side name to our local row. */
+  async findByNameInDb(
     serverId: string,
     name: string,
   ): Promise<FlussonicStream | null> {

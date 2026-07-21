@@ -39,6 +39,7 @@ Edit `.env` with your MySQL credentials and JWT secrets. **Never use the example
 | `JWT_REFRESH_SECRET`, `JWT_REFRESH_EXPIRES_IN` | Refresh token secret + lifetime (e.g. `7d`) — **use a different secret than the access token** |
 | `BCRYPT_SALT_ROUNDS` | 10–14, default `12` |
 | `CREDENTIALS_ENCRYPTION_KEY` | 64-char hex (32 bytes), e.g. `openssl rand -hex 32` — used to reversibly encrypt Flussonic server API passwords/tokens |
+| `IPWHOIS_API_URL` | Optional, defaults to `https://ipwho.is` — IP geolocation/ISP lookup used to enrich stream session records |
 
 ### Database
 
@@ -109,6 +110,8 @@ All under `/api/v1/auth`:
 `/api/v1/flussonic-servers/:serverId/streams/check-name?name=...` — `GET`, returns `{ existsInDb, existsOnServer }`. `existsOnServer` is a live check against the real Flussonic server, since a stream can exist there without a local row (created outside this app, or the cache drifted). `POST`/`PATCH` reject an `existsInDb` name outright (409, no override); an `existsOnServer`-only name also 409s unless the request sets `confirmOverwrite: true`.
 
 `/api/v1/flussonic-servers/:serverId/streams/sync` — `POST`, no body. Pulls the server's real `GET streams` list (cursor-paginated via `next`, followed to exhaustion) and stores each stream's raw entry in `live_stats_json` (live bitrate, client count, media tracks, per-input health, etc. — kept verbatim, not modeled column-by-column). A stream found upstream with no matching local row is imported using its `config_on_disk` as the seed config. Returns `{ total, created, updated }`.
+
+`/api/v1/flussonic-servers/:serverId/sessions` — `GET` (paginated, newest-updated first, `?search=` matches stream name/IP/country) and `POST .../sessions/sync` (no body). Sync pulls the server's real `GET sessions` (cursor-paginated, one flat list covering every stream on the server) and upserts each by its Flussonic session id into `flussonic_stream_sessions` — one row per real session, matched to a local stream by name. A brand-new session's IP is looked up via `IPWHOIS_API_URL` and the full response stored in `ipwhois_json` (best-effort; a failed lookup doesn't fail the sync). Sessions have no server id of their own, so listing attributes them to a server via the matched stream's `flussonic_server_id`.
 
 `DELETE` on `customers`/`flussonic-servers` never removes a row — it's a soft delete that sets `status: 'deleted'`. Deleted rows are excluded from every list/get, and you can't set `status: 'deleted'` directly through create/update (400).
 
