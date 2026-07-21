@@ -263,3 +263,28 @@ export function BroadcastIcon(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+export function ReceiptIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.8} stroke="currentColor" {...props}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M9 14.25h6m-6-3.75h6m-7.5 9-1.5-1.5-1.5 1.5V5.25a2.25 2.25 0 0 1 2.25-2.25h10.5a2.25 2.25 0 0 1 2.25 2.25v14.25l-1.5-1.5-1.5 1.5-1.5-1.5-1.5 1.5-1.5-1.5-1.5 1.5Z"
+      />
+    </svg>
+  );
+}
+
+export function TagIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.8} stroke="currentColor" {...props}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.169.659 1.591l9.581 9.581c.699.699 1.83.699 2.528 0l4.318-4.318a1.79 1.79 0 0 0 0-2.528l-9.581-9.581A2.25 2.25 0 0 0 9.568 3Z"
+      />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6Z" />
+    </svg>
+  );
+}

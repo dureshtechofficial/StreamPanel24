@@ -5,6 +5,7 @@ import { ResellerProtectedRoute } from '@/components/reseller-protected-route';
 import { ResellerShell } from '@/components/reseller-shell';
 import { CustomerFormPanel } from '@/components/customer-form-panel';
 import { CustomerStreamsPanel, type CustomerStreamsPanelApi } from '@/components/customer-streams-panel';
+import { OrdersPanel, type OrdersPanelApi } from '@/components/orders-panel';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import {
   BroadcastIcon,
@@ -12,6 +13,7 @@ import {
   ChevronRightIcon,
   PencilIcon,
   PlusIcon,
+  ReceiptIcon,
   SearchIcon,
   TrashIcon,
 } from '@/components/icons';
@@ -26,6 +28,12 @@ import {
   listMyCustomerStreams,
   searchMyAvailableStreams,
 } from '@/lib/reseller-customer-streams-api';
+import {
+  createMyCustomerOrder,
+  cancelMyCustomerOrder,
+  listMyCustomerOrders,
+} from '@/lib/reseller-orders-api';
+import { listMyVisiblePlans } from '@/lib/reseller-plans-api';
 import type { Customer, CustomerInput, CustomerStatus } from '@/types/customer';
 import { ApiError } from '@/lib/api-error';
 import { useResellerAuth } from '@/lib/reseller-auth-context';
@@ -39,11 +47,19 @@ const STATUS_STYLES: Record<CustomerStatus, string> = {
   closed: 'bg-gray-100 text-gray-600',
 };
 
-// Stable module-level reference so CustomerStreamsPanel's effects don't refire every render.
+// Stable module-level references so the panels' effects don't refire every render.
 const STREAMS_API: CustomerStreamsPanelApi = {
   listCustomerStreams: listMyCustomerStreams,
   assignCustomerStreams: assignMyCustomerStreams,
   searchAvailableStreams: searchMyAvailableStreams,
+};
+
+const ORDERS_API: OrdersPanelApi = {
+  listOrders: listMyCustomerOrders,
+  createOrder: createMyCustomerOrder,
+  cancelOrder: cancelMyCustomerOrder,
+  listPlans: listMyVisiblePlans,
+  searchStreams: searchMyAvailableStreams,
 };
 
 function ResellerDashboardContent() {
@@ -66,6 +82,7 @@ function ResellerDashboardContent() {
   const [pendingDelete, setPendingDelete] = useState<Customer | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [streamsCustomer, setStreamsCustomer] = useState<Customer | null>(null);
+  const [ordersCustomer, setOrdersCustomer] = useState<Customer | null>(null);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -231,6 +248,13 @@ function ResellerDashboardContent() {
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-1">
                           <button
+                            onClick={() => setOrdersCustomer(customer)}
+                            className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
+                            aria-label={`View orders for ${customer.name}`}
+                          >
+                            <ReceiptIcon className="h-4 w-4" />
+                          </button>
+                          <button
                             onClick={() => setStreamsCustomer(customer)}
                             className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
                             aria-label={`Assign streams to ${customer.name}`}
@@ -270,6 +294,13 @@ function ResellerDashboardContent() {
                       {customer.email && <p className="truncate text-xs text-gray-400">{customer.email}</p>}
                     </div>
                     <div className="flex shrink-0 gap-1">
+                      <button
+                        onClick={() => setOrdersCustomer(customer)}
+                        className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
+                        aria-label={`View orders for ${customer.name}`}
+                      >
+                        <ReceiptIcon className="h-4 w-4" />
+                      </button>
                       <button
                         onClick={() => setStreamsCustomer(customer)}
                         className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
@@ -357,6 +388,14 @@ function ResellerDashboardContent() {
         customer={streamsCustomer}
         onClose={() => setStreamsCustomer(null)}
         api={STREAMS_API}
+      />
+
+      <OrdersPanel
+        open={ordersCustomer !== null}
+        customer={ordersCustomer}
+        onClose={() => setOrdersCustomer(null)}
+        api={ORDERS_API}
+        priceField="reseller_price"
       />
     </div>
   );

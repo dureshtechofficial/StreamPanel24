@@ -12,6 +12,7 @@ import {
   ServerIcon,
   SettingsIcon,
   ShieldIcon,
+  TagIcon,
   UserIcon,
   UsersIcon,
   XIcon,
@@ -24,6 +25,7 @@ const BASE_NAV_ITEMS = [
 
 const ADMIN_NAV_ITEMS = [
   { label: 'Resellers', icon: ShieldIcon, href: '/dashboard/resellers' },
+  { label: 'Plans', icon: TagIcon, href: '/dashboard/plans' },
   { label: 'Servers', icon: ServerIcon, href: '/dashboard/servers' },
 ];
 

@@ -5,7 +5,9 @@ import { CustomerProtectedRoute } from '@/components/customer-protected-route';
 import { CustomerShell } from '@/components/customer-shell';
 import { ArrowPathIcon, BroadcastIcon } from '@/components/icons';
 import { listMyStreams } from '@/lib/customer-portal-api';
+import { listMyOrders } from '@/lib/customer-orders-api';
 import type { FlussonicStreamDirectoryEntry } from '@/types/flussonic-stream-directory';
+import type { Order } from '@/types/order';
 import { ApiError } from '@/lib/api-error';
 import { useCustomerAuth } from '@/lib/customer-auth-context';
 import { usePageTitle } from '@/lib/use-page-title';
@@ -15,10 +17,22 @@ const STATUS_STYLES: Record<string, string> = {
   disabled: 'bg-gray-100 text-gray-600',
 };
 
+const ORDER_STATUS_STYLES: Record<string, string> = {
+  active: 'bg-green-50 text-green-700',
+  expired: 'bg-gray-100 text-gray-600',
+  cancelled: 'bg-red-50 text-red-700',
+  suspended: 'bg-amber-50 text-amber-700',
+};
+
+function formatDate(unixSeconds: number): string {
+  return new Date(unixSeconds * 1000).toLocaleDateString(undefined, { dateStyle: 'medium' });
+}
+
 function CustomerDashboardContent() {
   usePageTitle('My Streams');
   const { customer } = useCustomerAuth();
   const [streams, setStreams] = useState<FlussonicStreamDirectoryEntry[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -26,10 +40,11 @@ function CustomerDashboardContent() {
     setIsLoading(true);
     setLoadError(null);
     try {
-      const result = await listMyStreams();
-      setStreams(result);
+      const [streamsResult, ordersResult] = await Promise.all([listMyStreams(), listMyOrders()]);
+      setStreams(streamsResult);
+      setOrders(ordersResult);
     } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : 'Failed to load your streams.');
+      setLoadError(err instanceof ApiError ? err.message : 'Failed to load your account.');
     } finally {
       setIsLoading(false);
     }
@@ -89,6 +104,38 @@ function CustomerDashboardContent() {
             ))}
           </ul>
         )}
+      </div>
+
+      <div className="animate-fade-in-up mt-6">
+        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">
+          My orders
+        </h2>
+        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+          {!isLoading && !loadError && orders.length === 0 && (
+            <p className="px-4 py-6 text-center text-sm text-gray-400">No orders yet.</p>
+          )}
+          {!isLoading && !loadError && orders.length > 0 && (
+            <ul className="divide-y divide-gray-100">
+              {orders.map((order) => (
+                <li key={order.id} className="px-4 py-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium text-gray-900">{order.order_number}</span>
+                    <span
+                      className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium capitalize ${
+                        ORDER_STATUS_STYLES[order.status] ?? 'bg-gray-100 text-gray-600'
+                      }`}
+                    >
+                      {order.status}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">
+                    {formatDate(order.effective_from)} – {formatDate(order.effective_to)}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
     </div>
   );
