@@ -1,9 +1,23 @@
-import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { Transform } from 'class-transformer';
+import {
+  IsBoolean,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
 
 export class QueryFlussonicStreamSessionDto {
   @IsOptional()
   @IsString()
   search?: string;
+
+  /** When true, only returns sessions touched by the server's most recent sync (i.e. still live as of last check). */
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
+  latestOnly?: boolean;
 
   @IsOptional()
   @IsInt()

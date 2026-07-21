@@ -9,6 +9,7 @@ import { FlussonicServersService } from './flussonic-servers.service';
 import { FlussonicStreamsService } from './flussonic-streams.service';
 import { buildFlussonicApiUrl } from './utils/flussonic-api-url.util';
 import { fetchIpWhoIs } from '../common/utils/ipwhois.util';
+import { nowUnixSeconds } from '../common/utils/unix-timestamp.util';
 import type {
   FlussonicSessionEntry,
   FlussonicSessionsListResponse,
@@ -61,6 +62,20 @@ export class FlussonicStreamSessionsService {
       );
     }
 
+    if (query.latestOnly) {
+      // A row not touched by the most recent sync means Flussonic no longer
+      // reported it — the session has effectively ended.
+      qb.andWhere(
+        `session.synced_at = (
+          SELECT MAX(s2.synced_at)
+          FROM flussonic_stream_sessions s2
+          INNER JOIN flussonic_streams st2 ON st2.id = s2.flussonic_stream_id
+          WHERE st2.flussonic_server_id = :serverId
+        )`,
+        { serverId },
+      );
+    }
+
     qb.orderBy('session.updated_at', 'DESC')
       .skip((page - 1) * limit)
       .take(limit);
@@ -87,6 +102,11 @@ export class FlussonicStreamSessionsService {
     const server = await this.serversService.findOne(serverId);
     const sessions = await this.fetchAllSessions(server);
 
+    // Captured once and stamped on every row this run touches, so "latest
+    // synced" can be identified later via MAX(synced_at) instead of needing
+    // a separate sync-run table.
+    const syncTimestamp = nowUnixSeconds();
+
     let created = 0;
     let updated = 0;
     for (const entry of sessions) {
@@ -108,6 +128,7 @@ export class FlussonicStreamSessionsService {
         existing.proto = entry.proto ?? null;
         existing.updated_at = toUnixSeconds(entry.updated_at);
         existing.country = entry.country ?? null;
+        existing.synced_at = syncTimestamp;
         await this.sessionsRepository.save(existing);
         updated++;
         continue;
@@ -131,6 +152,7 @@ export class FlussonicStreamSessionsService {
         updated_at: toUnixSeconds(entry.updated_at),
         country: entry.country ?? null,
         ipwhois_json: ipwhoisJson,
+        synced_at: syncTimestamp,
       });
       await this.sessionsRepository.save(session);
       created++;

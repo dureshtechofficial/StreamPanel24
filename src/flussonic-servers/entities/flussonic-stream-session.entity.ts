@@ -58,4 +58,18 @@ export class FlussonicStreamSession {
   /** Full response from the ipwho.is lookup for `ip`, fetched once when the session is first seen. */
   @Column({ type: 'json', nullable: true })
   ipwhois_json: Record<string, unknown> | null;
+
+  /**
+   * UTC unix timestamp (seconds) of the sync run that last touched this row —
+   * one value captured per `syncFromFlussonic` call, stamped on every session
+   * it creates/updates. A row whose `synced_at` is older than a server's most
+   * recent sync means Flussonic no longer reported it (the session ended).
+   */
+  @Index()
+  @Column({
+    type: 'bigint',
+    unsigned: true,
+    transformer: unixTimestampTransformer,
+  })
+  synced_at: number;
 }
