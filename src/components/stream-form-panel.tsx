@@ -9,9 +9,11 @@ import type {
 import { ApiError } from '@/lib/api-error';
 import { groupFieldErrors } from '@/lib/form-errors';
 import { ToggleField } from './toggle';
-import { PlusIcon, TrashIcon, XIcon } from './icons';
+import { ChevronDownIcon, PlusIcon, TrashIcon, XIcon } from './icons';
 
 const FIELDS = ['name', 'inputs', 'retry_limit', 'ingest_domain', 'on_play', 'on_publish'];
+
+const DEFAULT_TRUE_PROTOCOLS: (keyof StreamProtocols)[] = ['hls', 'player', 'rtmp', 'srt'];
 
 const inputClass =
   'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 transition focus:border-flu-pink focus:outline-none focus:ring-2 focus:ring-flu-pink/20';
@@ -41,7 +43,6 @@ const PROTOCOL_KEYS: (keyof StreamProtocols)[] = [
 
 type InputRow = {
   url: string;
-  priority: string;
   comment: string;
   source_timeout: string;
 };
@@ -56,11 +57,11 @@ type AuthHookState = {
   session_keys: string;
 };
 
-const EMPTY_INPUT_ROW: InputRow = { url: '', priority: '', comment: '', source_timeout: '' };
+const EMPTY_INPUT_ROW: InputRow = { url: '', comment: '', source_timeout: '30' };
 
 const EMPTY_AUTH_HOOK: AuthHookState = {
   url: '',
-  max_sessions: '',
+  max_sessions: '5',
   domains: '',
   allowed_countries: '',
   disallowed_countries: '',
@@ -69,12 +70,13 @@ const EMPTY_AUTH_HOOK: AuthHookState = {
 };
 
 const EMPTY_PROTOCOLS: Record<keyof StreamProtocols, boolean> = PROTOCOL_KEYS.reduce(
-  (acc, key) => ({ ...acc, [key]: false }),
+  (acc, key) => ({ ...acc, [key]: DEFAULT_TRUE_PROTOCOLS.includes(key) }),
   {} as Record<keyof StreamProtocols, boolean>,
 );
 
 type FormState = {
-  name: string;
+  applicationName: string;
+  key: string;
   comment: string;
   title: string;
   static: boolean;
@@ -90,12 +92,13 @@ type FormState = {
 };
 
 const EMPTY_FORM: FormState = {
-  name: '',
+  applicationName: 'live',
+  key: '',
   comment: '',
   title: '',
   static: true,
   disabled: false,
-  retry_limit: '',
+  retry_limit: '20',
   ingest_domain: '',
   inputs: [EMPTY_INPUT_ROW],
   protocols: EMPTY_PROTOCOLS,
@@ -105,11 +108,21 @@ const EMPTY_FORM: FormState = {
   onPublish: EMPTY_AUTH_HOOK,
 };
 
+function computeName(applicationName: string, key: string): string {
+  return `${applicationName.trim()}/${key.trim()}`;
+}
+
+function splitName(name: string): { applicationName: string; key: string } {
+  const index = name.indexOf('/');
+  if (index === -1) return { applicationName: name, key: '' };
+  return { applicationName: name.slice(0, index), key: name.slice(index + 1) };
+}
+
 function toAuthHookState(hook: FlussonicStream['config_json']['on_play']): AuthHookState {
   if (!hook) return EMPTY_AUTH_HOOK;
   return {
     url: hook.url,
-    max_sessions: hook.max_sessions !== undefined ? String(hook.max_sessions) : '',
+    max_sessions: hook.max_sessions !== undefined ? String(hook.max_sessions) : '5',
     domains: (hook.domains ?? []).join(','),
     allowed_countries: (hook.allowed_countries ?? []).join(','),
     disallowed_countries: (hook.disallowed_countries ?? []).join(','),
@@ -121,8 +134,10 @@ function toAuthHookState(hook: FlussonicStream['config_json']['on_play']): AuthH
 function toFormState(stream: FlussonicStream | null): FormState {
   if (!stream) return EMPTY_FORM;
   const config = stream.config_json;
+  const { applicationName, key } = splitName(config.name);
   return {
-    name: config.name,
+    applicationName,
+    key,
     comment: config.comment ?? '',
     title: config.title ?? '',
     static: config.static ?? true,
@@ -133,9 +148,8 @@ function toFormState(stream: FlussonicStream | null): FormState {
       config.inputs.length > 0
         ? config.inputs.map((i) => ({
             url: i.url,
-            priority: i.priority !== undefined ? String(i.priority) : '',
             comment: i.comment ?? '',
-            source_timeout: i.source_timeout !== undefined ? String(i.source_timeout) : '',
+            source_timeout: i.source_timeout !== undefined ? String(i.source_timeout) : '30',
           }))
         : [EMPTY_INPUT_ROW],
     protocols: { ...EMPTY_PROTOCOLS, ...config.protocols },
@@ -171,16 +185,16 @@ function toAuthHookPayload(state: AuthHookState) {
 
 function toPayload(form: FormState): FlussonicStreamInput {
   return {
-    name: form.name.trim(),
+    name: computeName(form.applicationName, form.key),
     comment: form.comment.trim() || undefined,
     title: form.title.trim() || undefined,
     static: form.static,
     disabled: form.disabled,
     inputs: form.inputs
       .filter((i) => i.url.trim())
-      .map((i) => ({
+      .map((i, index) => ({
         url: i.url.trim(),
-        priority: i.priority ? Number(i.priority) : undefined,
+        priority: index + 1,
         comment: i.comment.trim() || undefined,
         source_timeout: i.source_timeout ? Number(i.source_timeout) : undefined,
       })),
@@ -229,15 +243,56 @@ export function StreamFormPanel({
     }));
   }
 
+  function moveInputRow(index: number, direction: -1 | 1) {
+    setForm((prev) => {
+      const target = index + direction;
+      if (target < 0 || target >= prev.inputs.length) return prev;
+      const inputs = [...prev.inputs];
+      [inputs[index], inputs[target]] = [inputs[target], inputs[index]];
+      return { ...prev, inputs };
+    });
+  }
+
   function setProtocol(key: keyof StreamProtocols, value: boolean) {
     setForm((prev) => ({ ...prev, protocols: { ...prev.protocols, [key]: value } }));
+  }
+
+  function setOnPlay(next: AuthHookState) {
+    setForm((prev) => ({
+      ...prev,
+      onPlay: next,
+      onPublish:
+        next.max_sessions !== prev.onPlay.max_sessions
+          ? { ...prev.onPublish, max_sessions: next.max_sessions }
+          : prev.onPublish,
+    }));
+  }
+
+  function setOnPublish(next: AuthHookState) {
+    setForm((prev) => ({
+      ...prev,
+      onPublish: next,
+      onPlay:
+        next.max_sessions !== prev.onPublish.max_sessions
+          ? { ...prev.onPlay, max_sessions: next.max_sessions }
+          : prev.onPlay,
+    }));
   }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
 
-    const clientErrors: Record<string, string[]> = { name: [], inputs: [] };
-    if (!stream && form.name.trim().length < 1) clientErrors.name.push('Name is required');
+    const clientErrors: Record<string, string[]> = {
+      applicationName: [],
+      key: [],
+      inputs: [],
+    };
+    if (!stream && form.applicationName.trim().length < 1) {
+      clientErrors.applicationName.push('Application name is required');
+    }
+    if (!stream && form.key.trim().length < 1) {
+      clientErrors.key.push('Key is required');
+    }
     if (!form.inputs.some((i) => i.url.trim())) {
       clientErrors.inputs.push('At least one input URL is required');
     }
@@ -266,6 +321,8 @@ export function StreamFormPanel({
       setIsSubmitting(false);
     }
   }
+
+  const name = computeName(form.applicationName, form.key);
 
   return (
     <div className={`fixed inset-0 z-50 ${open ? '' : 'pointer-events-none'}`}>
@@ -304,14 +361,46 @@ export function StreamFormPanel({
               </div>
             )}
 
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelClass}>Application name *</label>
+                <input
+                  value={form.applicationName}
+                  onChange={(e) => setField('applicationName', e.target.value)}
+                  placeholder="live"
+                  disabled={Boolean(stream)}
+                  className={`${inputClass} ${stream ? 'bg-gray-50 text-gray-500' : ''}`}
+                />
+                {errors.applicationName?.map((msg) => (
+                  <p key={msg} className="mt-1 text-xs text-red-600">
+                    {msg}
+                  </p>
+                ))}
+              </div>
+              <div>
+                <label className={labelClass}>Key *</label>
+                <input
+                  value={form.key}
+                  onChange={(e) => setField('key', e.target.value)}
+                  placeholder="unique key"
+                  disabled={Boolean(stream)}
+                  className={`${inputClass} ${stream ? 'bg-gray-50 text-gray-500' : ''}`}
+                />
+                {errors.key?.map((msg) => (
+                  <p key={msg} className="mt-1 text-xs text-red-600">
+                    {msg}
+                  </p>
+                ))}
+              </div>
+            </div>
+
             <div>
-              <label className={labelClass}>Name *</label>
+              <label className={labelClass}>Name</label>
               <input
-                value={form.name}
-                onChange={(e) => setField('name', e.target.value)}
-                placeholder="live/demo"
-                disabled={Boolean(stream)}
-                className={`${inputClass} ${stream ? 'bg-gray-50 text-gray-500' : ''}`}
+                value={name}
+                disabled
+                readOnly
+                className={`${inputClass} bg-gray-50 text-gray-500`}
               />
               {stream && (
                 <p className="mt-1 text-xs text-gray-400">
@@ -401,17 +490,37 @@ export function StreamFormPanel({
                 {form.inputs.map((row, index) => (
                   <div key={index} className="rounded-lg border border-gray-200 p-3">
                     <div className="mb-2 flex items-center justify-between">
-                      <label className={labelClass}>URL</label>
-                      {form.inputs.length > 1 && (
+                      <label className={labelClass}>URL — Priority {index + 1}</label>
+                      <div className="flex items-center gap-1">
                         <button
                           type="button"
-                          onClick={() => removeInputRow(index)}
-                          className="text-gray-400 hover:text-red-600"
-                          aria-label="Remove input"
+                          onClick={() => moveInputRow(index, -1)}
+                          disabled={index === 0}
+                          className="text-gray-400 hover:text-flu-pink disabled:cursor-not-allowed disabled:opacity-30"
+                          aria-label="Move input up"
                         >
-                          <TrashIcon className="h-3.5 w-3.5" />
+                          <ChevronDownIcon className="h-3.5 w-3.5 rotate-180" />
                         </button>
-                      )}
+                        <button
+                          type="button"
+                          onClick={() => moveInputRow(index, 1)}
+                          disabled={index === form.inputs.length - 1}
+                          className="text-gray-400 hover:text-flu-pink disabled:cursor-not-allowed disabled:opacity-30"
+                          aria-label="Move input down"
+                        >
+                          <ChevronDownIcon className="h-3.5 w-3.5" />
+                        </button>
+                        {form.inputs.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeInputRow(index)}
+                            className="text-gray-400 hover:text-red-600"
+                            aria-label="Remove input"
+                          >
+                            <TrashIcon className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <input
                       value={row.url}
@@ -419,17 +528,7 @@ export function StreamFormPanel({
                       placeholder="publish://"
                       className={inputClass}
                     />
-                    <div className="mt-2 grid grid-cols-3 gap-2">
-                      <div>
-                        <label className={labelClass}>Priority</label>
-                        <input
-                          type="number"
-                          min={0}
-                          value={row.priority}
-                          onChange={(e) => setInputRow(index, { priority: e.target.value })}
-                          className={inputClass}
-                        />
-                      </div>
+                    <div className="mt-2 grid grid-cols-2 gap-2">
                       <div>
                         <label className={labelClass}>Source timeout</label>
                         <input
@@ -475,12 +574,7 @@ export function StreamFormPanel({
                 checked={form.onPlayEnabled}
                 onChange={(v) => setField('onPlayEnabled', v)}
               />
-              {form.onPlayEnabled && (
-                <AuthHookFields
-                  value={form.onPlay}
-                  onChange={(v) => setField('onPlay', v)}
-                />
-              )}
+              {form.onPlayEnabled && <AuthHookFields value={form.onPlay} onChange={setOnPlay} />}
             </div>
 
             <div className="border-t border-gray-100 pt-4">
@@ -491,10 +585,7 @@ export function StreamFormPanel({
                 onChange={(v) => setField('onPublishEnabled', v)}
               />
               {form.onPublishEnabled && (
-                <AuthHookFields
-                  value={form.onPublish}
-                  onChange={(v) => setField('onPublish', v)}
-                />
+                <AuthHookFields value={form.onPublish} onChange={setOnPublish} />
               )}
             </div>
           </div>
@@ -553,6 +644,7 @@ function AuthHookFields({
             onChange={(e) => setField('max_sessions', e.target.value)}
             className={inputClass}
           />
+          <p className="mt-1 text-xs text-gray-400">Kept in sync with on_publish.</p>
         </div>
         <div className="flex items-end pb-1">
           <ToggleField
