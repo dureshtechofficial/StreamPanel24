@@ -261,128 +261,170 @@ function ServersContent() {
         className="animate-fade-in-up overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"
         style={{ animationDelay: "120ms" }}
       >
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-gray-200 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
-              <tr>
-                <th className="px-4 py-3 font-medium">Name</th>
-                <th className="px-4 py-3 font-medium">Address</th>
-                <th className="px-4 py-3 font-medium">Domain</th>
-                <th className="px-4 py-3 font-medium">API version</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Clients</th>
-                <th className="px-4 py-3 font-medium">Uptime</th>
-                <th className="px-4 py-3 font-medium text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {isLoading && (
-                <tr>
-                  <td
-                    colSpan={8}
-                    className="px-4 py-10 text-center text-sm text-gray-400"
-                  >
-                    Loading servers…
-                  </td>
-                </tr>
-              )}
+        {isLoading && (
+          <p className="px-4 py-10 text-center text-sm text-gray-400">Loading servers…</p>
+        )}
 
-              {!isLoading && loadError && (
-                <tr>
-                  <td
-                    colSpan={8}
-                    className="px-4 py-10 text-center text-sm text-red-600"
-                  >
-                    {loadError}
-                  </td>
-                </tr>
-              )}
+        {!isLoading && loadError && (
+          <p className="px-4 py-10 text-center text-sm text-red-600">{loadError}</p>
+        )}
 
-              {!isLoading && !loadError && items.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={8}
-                    className="px-4 py-10 text-center text-sm text-gray-400"
-                  >
-                    No servers found.
-                  </td>
-                </tr>
-              )}
+        {!isLoading && !loadError && items.length === 0 && (
+          <p className="px-4 py-10 text-center text-sm text-gray-400">No servers found.</p>
+        )}
 
-              {!isLoading &&
-                !loadError &&
-                items.map((server) => (
-                  <tr
-                    key={server.id}
-                    className="transition-colors hover:bg-gray-50"
-                  >
-                    <td className="px-4 py-3 font-medium text-gray-900">
-                      {server.name}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">
-                      <div>
-                        {server.hostname}:{server.port}
-                      </div>
-                      <div className="text-xs text-gray-400">
-                        {server.use_ssl ? "SSL enabled" : "No SSL"}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">
-                      {server.domain ?? "—"}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600 uppercase">
-                      {server.api_version_tag}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium capitalize ${STATUS_STYLES[server.status]}`}
-                      >
-                        {server.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">
-                      {server.last_total_clients ?? "—"}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">
-                      {formatUptime(server.last_uptime_seconds)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex justify-end gap-1">
-                        <Link
-                          href={`/dashboard/servers/${server.id}/streams`}
-                          className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
-                          aria-label={`View streams for ${server.name}`}
-                        >
-                          <BroadcastIcon className="h-4 w-4" />
-                        </Link>
-                        <Link
-                          href={`/dashboard/servers/${server.id}/stats`}
-                          className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
-                          aria-label={`View stats for ${server.name}`}
-                        >
-                          <ChartBarIcon className="h-4 w-4" />
-                        </Link>
-                        <button
-                          onClick={() => openEdit(server)}
-                          className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
-                          aria-label={`Edit ${server.name}`}
-                        >
-                          <PencilIcon className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => setPendingDelete(server)}
-                          className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
-                          aria-label={`Delete ${server.name}`}
-                        >
-                          <TrashIcon className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
+        {!isLoading && !loadError && items.length > 0 && (
+          <>
+            {/* Table — sm and up */}
+            <div className="hidden overflow-x-auto sm:block">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-gray-200 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">Name</th>
+                    <th className="px-4 py-3 font-medium">Address</th>
+                    <th className="px-4 py-3 font-medium">Domain</th>
+                    <th className="px-4 py-3 font-medium">API version</th>
+                    <th className="px-4 py-3 font-medium">Status</th>
+                    <th className="px-4 py-3 font-medium">Clients</th>
+                    <th className="px-4 py-3 font-medium">Uptime</th>
+                    <th className="px-4 py-3 font-medium text-right">Actions</th>
                   </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {items.map((server) => (
+                    <tr
+                      key={server.id}
+                      className="transition-colors hover:bg-gray-50"
+                    >
+                      <td className="px-4 py-3 font-medium text-gray-900">
+                        {server.name}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">
+                        <div>
+                          {server.hostname}:{server.port}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          {server.use_ssl ? "SSL enabled" : "No SSL"}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">
+                        {server.domain ?? "—"}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600 uppercase">
+                        {server.api_version_tag}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium capitalize ${STATUS_STYLES[server.status]}`}
+                        >
+                          {server.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">
+                        {server.last_total_clients ?? "—"}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">
+                        {formatUptime(server.last_uptime_seconds)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end gap-1">
+                          <Link
+                            href={`/dashboard/servers/${server.id}/streams`}
+                            className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
+                            aria-label={`View streams for ${server.name}`}
+                          >
+                            <BroadcastIcon className="h-4 w-4" />
+                          </Link>
+                          <Link
+                            href={`/dashboard/servers/${server.id}/stats`}
+                            className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
+                            aria-label={`View stats for ${server.name}`}
+                          >
+                            <ChartBarIcon className="h-4 w-4" />
+                          </Link>
+                          <button
+                            onClick={() => openEdit(server)}
+                            className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
+                            aria-label={`Edit ${server.name}`}
+                          >
+                            <PencilIcon className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => setPendingDelete(server)}
+                            className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                            aria-label={`Delete ${server.name}`}
+                          >
+                            <TrashIcon className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Cards — below sm */}
+            <div className="divide-y divide-gray-100 sm:hidden">
+              {items.map((server) => (
+                <div key={server.id} className="p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-gray-900">{server.name}</p>
+                      <p className="truncate text-xs text-gray-500">
+                        {server.hostname}:{server.port} · {server.use_ssl ? "SSL" : "No SSL"}
+                      </p>
+                      {server.domain && (
+                        <p className="truncate text-xs text-gray-400">{server.domain}</p>
+                      )}
+                    </div>
+                    <div className="flex shrink-0 gap-1">
+                      <Link
+                        href={`/dashboard/servers/${server.id}/streams`}
+                        className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
+                        aria-label={`View streams for ${server.name}`}
+                      >
+                        <BroadcastIcon className="h-4 w-4" />
+                      </Link>
+                      <Link
+                        href={`/dashboard/servers/${server.id}/stats`}
+                        className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
+                        aria-label={`View stats for ${server.name}`}
+                      >
+                        <ChartBarIcon className="h-4 w-4" />
+                      </Link>
+                      <button
+                        onClick={() => openEdit(server)}
+                        className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
+                        aria-label={`Edit ${server.name}`}
+                      >
+                        <PencilIcon className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => setPendingDelete(server)}
+                        className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                        aria-label={`Delete ${server.name}`}
+                      >
+                        <TrashIcon className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
+                    <span
+                      className={`inline-block rounded-full px-2 py-0.5 font-medium capitalize ${STATUS_STYLES[server.status]}`}
+                    >
+                      {server.status}
+                    </span>
+                    <span className="uppercase">{server.api_version_tag}</span>
+                    <span>{server.last_total_clients ?? "—"} clients</span>
+                    <span>{formatUptime(server.last_uptime_seconds)} uptime</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
 
         <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3 text-sm text-gray-500">
           <span>
