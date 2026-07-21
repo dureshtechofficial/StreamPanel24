@@ -1,10 +1,31 @@
 'use client';
 
-import type { FlussonicStream, StreamMediaTrack } from '@/types/flussonic-stream';
+import type { FlussonicStream, StreamMediaTrack, StreamProtocols } from '@/types/flussonic-stream';
 import { formatUptime } from '@/lib/format';
 import { XIcon } from './icons';
 
 const labelClass = 'text-xs font-medium uppercase tracking-wide text-gray-400';
+
+const PROTOCOL_KEYS: (keyof StreamProtocols)[] = [
+  'hls',
+  'player',
+  'rtmp',
+  'srt',
+  'webrtc',
+  'dash',
+  'cmaf',
+  'mss',
+  'rtsp',
+  'mp4',
+  'jpeg',
+  'shoutcast',
+  'm4f',
+  'm4s',
+  'mseld',
+  'tshttp',
+  'api',
+  'whitelist',
+];
 
 function formatBitrate(kbps: number | undefined): string {
   if (kbps === undefined) return '—';
@@ -66,6 +87,27 @@ export function StreamDetailsPanel({
         </div>
 
         <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
+          {stream && (
+            <div>
+              <p className={`${labelClass} mb-2`}>Protocols</p>
+              <div className="flex flex-wrap gap-1.5">
+                {PROTOCOL_KEYS.map((key) => {
+                  const enabled = stream.config_json.protocols?.[key] ?? false;
+                  return (
+                    <span
+                      key={key}
+                      className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
+                        enabled ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-400'
+                      }`}
+                    >
+                      {key}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {!live && (
             <p className="text-sm text-gray-500">
               Not synced yet. Click &quot;Sync&quot; on the streams page to pull live data from the

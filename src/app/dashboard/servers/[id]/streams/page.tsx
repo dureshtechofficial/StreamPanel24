@@ -44,6 +44,13 @@ const STATUS_STYLES: Record<FlussonicStreamStatus, string> = {
   inactive: 'bg-gray-100 text-gray-600',
 };
 
+function liveStatusStyle(status: string | undefined): string {
+  if (status === 'running') return 'bg-green-50 text-green-700';
+  if (status === 'error') return 'bg-red-50 text-red-700';
+  if (status === 'waiting') return 'bg-amber-50 text-amber-700';
+  return 'bg-gray-100 text-gray-600';
+}
+
 function StreamsContent({ serverId }: { serverId: string }) {
   const [server, setServer] = useState<FlussonicServer | null>(null);
   usePageTitle(server ? `${server.name} Streams` : 'Streams');
@@ -272,7 +279,9 @@ function StreamsContent({ serverId }: { serverId: string }) {
                     <th className="px-4 py-3 font-medium">Name</th>
                     <th className="px-4 py-3 font-medium">Ingest domain</th>
                     <th className="px-4 py-3 font-medium">Inputs</th>
+                    <th className="px-4 py-3 font-medium">Max sessions</th>
                     <th className="px-4 py-3 font-medium">Status</th>
+                    <th className="px-4 py-3 font-medium">Live status</th>
                     <th className="px-4 py-3 font-medium text-right">Actions</th>
                   </tr>
                 </thead>
@@ -289,6 +298,9 @@ function StreamsContent({ serverId }: { serverId: string }) {
                       <td className="px-4 py-3 text-gray-600">
                         {stream.config_json.inputs?.length ?? 0}
                       </td>
+                      <td className="px-4 py-3 text-gray-600">
+                        {stream.config_json.on_play?.max_sessions ?? '—'}
+                      </td>
                       <td className="px-4 py-3">
                         <span
                           className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium capitalize ${STATUS_STYLES[stream.status]}`}
@@ -300,6 +312,13 @@ function StreamsContent({ serverId }: { serverId: string }) {
                             disabled
                           </span>
                         )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium capitalize ${liveStatusStyle(stream.live_stats_json?.stats?.status)}`}
+                        >
+                          {stream.live_stats_json?.stats?.status ?? '—'}
+                        </span>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-1">
@@ -380,12 +399,22 @@ function StreamsContent({ serverId }: { serverId: string }) {
                     >
                       {stream.status}
                     </span>
+                    {stream.live_stats_json?.stats?.status && (
+                      <span
+                        className={`inline-block rounded-full px-2 py-0.5 font-medium capitalize ${liveStatusStyle(stream.live_stats_json.stats.status)}`}
+                      >
+                        {stream.live_stats_json.stats.status}
+                      </span>
+                    )}
                     {stream.config_json.disabled && (
                       <span className="inline-block rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-700">
                         disabled
                       </span>
                     )}
                     <span>{stream.config_json.inputs?.length ?? 0} input(s)</span>
+                    {stream.config_json.on_play?.max_sessions !== undefined && (
+                      <span>{stream.config_json.on_play.max_sessions} max sessions</span>
+                    )}
                     {stream.ingest_domain && <span className="truncate">{stream.ingest_domain}</span>}
                   </div>
                 </div>
