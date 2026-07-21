@@ -11,6 +11,7 @@ import {
   ChevronRightIcon,
   SearchIcon,
 } from '@/components/icons';
+import { ToggleField } from '@/components/toggle';
 import { getServer } from '@/lib/flussonic-servers-api';
 import {
   listStreamSessions,
@@ -53,6 +54,7 @@ function SessionsContent({ serverId }: { serverId: string }) {
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [latestOnly, setLatestOnly] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -76,6 +78,7 @@ function SessionsContent({ serverId }: { serverId: string }) {
         getServer(serverId),
         listStreamSessions(serverId, {
           search: debouncedSearch || undefined,
+          latestOnly,
           page,
           limit: PAGE_SIZE,
         }),
@@ -89,7 +92,7 @@ function SessionsContent({ serverId }: { serverId: string }) {
     } finally {
       setIsLoading(false);
     }
-  }, [serverId, debouncedSearch, page]);
+  }, [serverId, debouncedSearch, latestOnly, page]);
 
   useEffect(() => {
     // Standard fetch-on-dependency-change effect. isLoading/loadError are reset
@@ -161,16 +164,27 @@ function SessionsContent({ serverId }: { serverId: string }) {
       )}
 
       <div
-        className="animate-fade-in-up mb-4"
+        className="animate-fade-in-up mb-4 flex flex-col gap-3 sm:flex-row sm:items-center"
         style={{ animationDelay: '60ms' }}
       >
-        <div className="relative">
+        <div className="relative flex-1">
           <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by stream name, IP, or country…"
             className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm text-gray-900 transition focus:border-flu-pink focus:outline-none focus:ring-2 focus:ring-flu-pink/20"
+          />
+        </div>
+        <div className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 sm:w-64">
+          <ToggleField
+            label="Current sessions only"
+            hint="Hide sessions not seen in the last sync"
+            checked={latestOnly}
+            onChange={(v) => {
+              setLatestOnly(v);
+              setPage(1);
+            }}
           />
         </div>
       </div>
