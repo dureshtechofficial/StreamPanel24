@@ -13,6 +13,7 @@ import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { Customer } from './customers/entities/customer.entity';
 import { CustomersModule } from './customers/customers.module';
+import { CustomerAuthModule } from './customer-auth/customer-auth.module';
 import { FlussonicServer } from './flussonic-servers/entities/flussonic-server.entity';
 import { FlussonicServerStat } from './flussonic-servers/entities/flussonic-server-stat.entity';
 import { FlussonicStream } from './flussonic-servers/entities/flussonic-stream.entity';
@@ -60,6 +61,7 @@ import { SettingsModule } from './settings/settings.module';
     UsersModule,
     AuthModule,
     CustomersModule,
+    CustomerAuthModule,
     FlussonicServersModule,
     SettingsModule,
   ],

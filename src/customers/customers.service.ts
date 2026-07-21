@@ -69,6 +69,28 @@ export class CustomersService {
     return customer;
   }
 
+  /** Non-throwing lookup for the customer-auth JWT strategies (an invalid/deleted id should 401, not 404). */
+  findActiveById(id: string): Promise<Customer | null> {
+    return this.customersRepository.findOne({
+      where: { id, status: Not(CustomerStatus.DELETED) },
+    });
+  }
+
+  /** Matches phone number OR username — the customer login form accepts either as the identifier. */
+  findByIdentifierWithPassword(identifier: string): Promise<Customer | null> {
+    return this.customersRepository
+      .createQueryBuilder('customer')
+      .addSelect('customer.password_hash')
+      .where('customer.status != :deleted', {
+        deleted: CustomerStatus.DELETED,
+      })
+      .andWhere(
+        '(customer.phone = :identifier OR customer.username = :identifier)',
+        { identifier },
+      )
+      .getOne();
+  }
+
   async create(dto: CreateCustomerDto): Promise<Customer> {
     this.assertSettableStatus(dto.status);
     await this.assertPhoneAvailable(dto.phone);
