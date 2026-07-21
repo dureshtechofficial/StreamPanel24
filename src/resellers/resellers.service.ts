@@ -7,7 +7,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
-import { Not, Repository } from 'typeorm';
+import { In, Not, Repository } from 'typeorm';
 import { Reseller } from './entities/reseller.entity';
 import { CreateResellerDto } from './dto/create-reseller.dto';
 import { UpdateResellerDto } from './dto/update-reseller.dto';
@@ -74,6 +74,12 @@ export class ResellersService {
     return this.resellersRepository.findOne({
       where: { id, status: Not(ResellerStatus.DELETED) },
     });
+  }
+
+  /** Batch lookup (including deleted rows, so an order's reseller name still resolves in reports) — used by OrdersService to enrich order listings. */
+  findByIds(ids: string[]): Promise<Reseller[]> {
+    if (ids.length === 0) return Promise.resolve([]);
+    return this.resellersRepository.find({ where: { id: In(ids) } });
   }
 
   /** Matches phone number OR username — the reseller login form accepts either as the identifier. */

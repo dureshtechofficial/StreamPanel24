@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, SelectQueryBuilder } from 'typeorm';
 import { Order } from './entities/order.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
@@ -8,11 +8,32 @@ import { QueryOrderDto } from './dto/query-order.dto';
 import { OrderStatus } from './enums/order-status.enum';
 import { PaymentStatus } from './enums/payment-status.enum';
 import { PlansService } from '../plans/plans.service';
+import { CustomersService } from '../customers/customers.service';
+import { ResellersService } from '../resellers/resellers.service';
 import { FlussonicStreamsService } from '../flussonic-servers/flussonic-streams.service';
 import { nowUnixSeconds } from '../common/utils/unix-timestamp.util';
 import type { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 
 const SECONDS_PER_DAY = 86_400;
+
+export type OrderReportEntry = Omit<
+  Order,
+  'setTimestampsOnInsert' | 'setTimestampOnUpdate'
+> & {
+  customer_name: string;
+  plan_name: string;
+  stream_name: string;
+  server_name: string;
+  reseller_name: string | null;
+};
+
+export interface OrdersSummary {
+  totalOrders: number;
+  /** Sum of `price` across every order matching the filter, regardless of payment_status. */
+  totalValue: string;
+  /** Sum of `price` across only payment_status = 'paid' orders — actual realized revenue. */
+  paidRevenue: string;
+}
 
 @Injectable()
 export class OrdersService {
@@ -20,6 +41,8 @@ export class OrdersService {
     @InjectRepository(Order)
     private readonly ordersRepository: Repository<Order>,
     private readonly plansService: PlansService,
+    private readonly customersService: CustomersService,
+    private readonly resellersService: ResellersService,
     private readonly streamsService: FlussonicStreamsService,
   ) {}
 
@@ -27,22 +50,10 @@ export class OrdersService {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
 
-    const qb = this.ordersRepository.createQueryBuilder('order');
-
-    if (query.customerId) {
-      qb.andWhere('order.customer_id = :customerId', {
-        customerId: query.customerId,
-      });
-    }
-    if (query.status) {
-      qb.andWhere('order.status = :status', { status: query.status });
-    }
-    if (query.paymentStatus) {
-      qb.andWhere('order.payment_status = :paymentStatus', {
-        paymentStatus: query.paymentStatus,
-      });
-    }
-
+    const qb = this.applyFilters(
+      this.ordersRepository.createQueryBuilder('order'),
+      query,
+    );
     qb.orderBy('order.created_at', 'DESC')
       .skip((page - 1) * limit)
       .take(limit);
@@ -56,6 +67,109 @@ export class OrdersService {
       limit,
       totalPages: Math.max(1, Math.ceil(total / limit)),
     };
+  }
+
+  /**
+   * Admin reports view: same pagination/filtering as findAll, but each order
+   * is enriched with the related customer/plan/stream/reseller names — the
+   * order itself only stores ids, and the report page needs readable labels.
+   * Lookups include soft-deleted/inactive rows so a historical order's
+   * labels still resolve even if the customer/plan/stream was later removed.
+   */
+  async findAllWithDetails(
+    query: QueryOrderDto,
+  ): Promise<PaginatedResult<OrderReportEntry>> {
+    const result = await this.findAll(query);
+    const items = await this.toReportEntries(result.items);
+    return { ...result, items };
+  }
+
+  /** Aggregate totals across every order matching the filter, ignoring pagination — for the reports page's summary cards. */
+  async getSummary(query: QueryOrderDto): Promise<OrdersSummary> {
+    const qb = this.applyFilters(
+      this.ordersRepository.createQueryBuilder('order'),
+      query,
+    );
+    const totals = await qb
+      .select('COUNT(*)', 'totalOrders')
+      .addSelect('COALESCE(SUM(order.price), 0)', 'totalValue')
+      .getRawOne<{ totalOrders: string; totalValue: string }>();
+
+    const paidQb = this.applyFilters(
+      this.ordersRepository
+        .createQueryBuilder('order')
+        .andWhere('order.payment_status = :paid', { paid: PaymentStatus.PAID }),
+      query,
+    );
+    const paidTotals = await paidQb
+      .select('COALESCE(SUM(order.price), 0)', 'paidRevenue')
+      .getRawOne<{ paidRevenue: string }>();
+
+    return {
+      totalOrders: Number(totals?.totalOrders ?? 0),
+      totalValue: Number(totals?.totalValue ?? 0).toFixed(2),
+      paidRevenue: Number(paidTotals?.paidRevenue ?? 0).toFixed(2),
+    };
+  }
+
+  private async toReportEntries(orders: Order[]): Promise<OrderReportEntry[]> {
+    const customerIds = [...new Set(orders.map((o) => o.customer_id))];
+    const planIds = [...new Set(orders.map((o) => o.plan_id))];
+    const streamIds = [...new Set(orders.map((o) => o.stream_id))];
+    const resellerIds = [
+      ...new Set(
+        orders
+          .map((o) => o.reseller_id)
+          .filter((id): id is string => id !== null),
+      ),
+    ];
+
+    const [customers, plans, streams, resellers] = await Promise.all([
+      this.customersService.findByIds(customerIds),
+      this.plansService.findByIds(planIds),
+      this.streamsService.findByIdsAsDirectoryEntries(streamIds),
+      this.resellersService.findByIds(resellerIds),
+    ]);
+
+    const customerNameById = new Map(customers.map((c) => [c.id, c.name]));
+    const planNameById = new Map(plans.map((p) => [p.id, p.name]));
+    const streamById = new Map(streams.map((s) => [s.id, s]));
+    const resellerNameById = new Map(resellers.map((r) => [r.id, r.name]));
+
+    return orders.map((order) => {
+      const stream = streamById.get(order.stream_id);
+      return {
+        ...order,
+        customer_name:
+          customerNameById.get(order.customer_id) ?? 'Unknown customer',
+        plan_name: planNameById.get(order.plan_id) ?? 'Unknown plan',
+        stream_name: stream?.name ?? 'Unknown stream',
+        server_name: stream?.server_name ?? 'Unknown server',
+        reseller_name: order.reseller_id
+          ? (resellerNameById.get(order.reseller_id) ?? 'Unknown reseller')
+          : null,
+      };
+    });
+  }
+
+  private applyFilters(
+    qb: SelectQueryBuilder<Order>,
+    query: QueryOrderDto,
+  ): SelectQueryBuilder<Order> {
+    if (query.customerId) {
+      qb.andWhere('order.customer_id = :customerId', {
+        customerId: query.customerId,
+      });
+    }
+    if (query.status) {
+      qb.andWhere('order.status = :status', { status: query.status });
+    }
+    if (query.paymentStatus) {
+      qb.andWhere('order.payment_status = :paymentStatus', {
+        paymentStatus: query.paymentStatus,
+      });
+    }
+    return qb;
   }
 
   findAllForCustomer(customerId: string): Promise<Order[]> {

@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Not, Repository } from 'typeorm';
+import { In, Not, Repository } from 'typeorm';
 import { Plan } from './entities/plan.entity';
 import { CreatePlanDto } from './dto/create-plan.dto';
 import { UpdatePlanDto } from './dto/update-plan.dto';
@@ -66,6 +66,12 @@ export class PlansService {
       where: { status: PlanStatus.ACTIVE, show_reseller: true },
       order: { created_at: 'DESC' },
     });
+  }
+
+  /** Batch lookup (including inactive/deleted rows, so an order's plan name still resolves in reports) — used by OrdersService to enrich order listings. */
+  findByIds(ids: string[]): Promise<Plan[]> {
+    if (ids.length === 0) return Promise.resolve([]);
+    return this.plansRepository.find({ where: { id: In(ids) } });
   }
 
   async findOne(id: string): Promise<Plan> {

@@ -5,6 +5,7 @@ import { OrdersService } from './orders.service';
 import { OrdersController } from './orders.controller';
 import { PlansModule } from '../plans/plans.module';
 import { CustomersModule } from '../customers/customers.module';
+import { ResellersModule } from '../resellers/resellers.module';
 import { FlussonicServersModule } from '../flussonic-servers/flussonic-servers.module';
 
 @Module({
@@ -12,6 +13,7 @@ import { FlussonicServersModule } from '../flussonic-servers/flussonic-servers.m
     TypeOrmModule.forFeature([Order]),
     PlansModule,
     CustomersModule,
+    ResellersModule,
     FlussonicServersModule,
   ],
   controllers: [OrdersController],

@@ -225,6 +225,17 @@ export class FlussonicStreamsService {
     });
   }
 
+  /** Batch lookup with server names attached (including soft-deleted rows, so an order's stream name still resolves in reports) — used by OrdersService to enrich order listings. */
+  async findByIdsAsDirectoryEntries(
+    ids: string[],
+  ): Promise<FlussonicStreamDirectoryEntry[]> {
+    if (ids.length === 0) return [];
+    const streams = await this.streamsRepository.find({
+      where: { id: In(ids) },
+    });
+    return this.toDirectoryEntries(streams);
+  }
+
   /**
    * Assigns exactly one stream to a customer without touching any of their
    * other assignments — unlike assignToCustomer, which replaces the whole

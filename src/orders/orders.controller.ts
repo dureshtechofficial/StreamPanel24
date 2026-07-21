@@ -42,6 +42,19 @@ export class OrdersController {
     return this.ordersService.findAll(query);
   }
 
+  @ApiOperation({
+    summary:
+      'Reports view: paginated orders enriched with customer/plan/stream/reseller names, plus aggregate totals — for the admin reports page. Must stay declared before :id.',
+  })
+  @Get('reports')
+  async findAllWithDetails(@Query() query: QueryOrderDto) {
+    const [page, summary] = await Promise.all([
+      this.ordersService.findAllWithDetails(query),
+      this.ordersService.getSummary(query),
+    ]);
+    return { ...page, summary };
+  }
+
   @ApiOperation({ summary: 'Get one order' })
   @Get(':id')
   findOne(@Param('id') id: string) {

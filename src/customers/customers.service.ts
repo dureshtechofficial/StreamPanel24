@@ -7,7 +7,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
-import { Not, Repository } from 'typeorm';
+import { In, Not, Repository } from 'typeorm';
 import { Customer } from './entities/customer.entity';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
@@ -181,6 +181,12 @@ export class CustomersService {
     return this.customersRepository.findOne({
       where: { id, status: Not(CustomerStatus.DELETED) },
     });
+  }
+
+  /** Batch lookup (including soft-deleted rows, so an order's customer name still resolves in reports) — used by OrdersService to enrich order listings. */
+  findByIds(ids: string[]): Promise<Customer[]> {
+    if (ids.length === 0) return Promise.resolve([]);
+    return this.customersRepository.find({ where: { id: In(ids) } });
   }
 
   /** Matches phone number OR username — the customer login form accepts either as the identifier. */
