@@ -12,6 +12,7 @@ import { FlussonicStreamsService } from './flussonic-streams.service';
 import { FlussonicStreamsController } from './flussonic-streams.controller';
 import { FlussonicStreamSessionsService } from './flussonic-stream-sessions.service';
 import { FlussonicStreamSessionsController } from './flussonic-stream-sessions.controller';
+import { FlussonicSyncAllService } from './flussonic-sync-all.service';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { FlussonicStreamSessionsController } from './flussonic-stream-sessions.c
     FlussonicServerStatsService,
     FlussonicStreamsService,
     FlussonicStreamSessionsService,
+    FlussonicSyncAllService,
   ],
   exports: [
     FlussonicServersService,

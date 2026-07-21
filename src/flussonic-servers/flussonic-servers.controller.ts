@@ -17,7 +17,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../users/enums/user-role.enum';
 import { FlussonicServersService } from './flussonic-servers.service';
-import { FlussonicServerStatsService } from './flussonic-server-stats.service';
+import { FlussonicSyncAllService } from './flussonic-sync-all.service';
 import { CreateFlussonicServerDto } from './dto/create-flussonic-server.dto';
 import { UpdateFlussonicServerDto } from './dto/update-flussonic-server.dto';
 import { QueryFlussonicServerDto } from './dto/query-flussonic-server.dto';
@@ -30,7 +30,7 @@ import { QueryFlussonicServerDto } from './dto/query-flussonic-server.dto';
 export class FlussonicServersController {
   constructor(
     private readonly serversService: FlussonicServersService,
-    private readonly statsService: FlussonicServerStatsService,
+    private readonly syncAllService: FlussonicSyncAllService,
   ) {}
 
   @ApiOperation({ summary: 'List Flussonic servers (admin only)' })
@@ -57,11 +57,11 @@ export class FlussonicServersController {
 
   @ApiOperation({
     summary:
-      'Sync every non-deleted server; one failure does not abort the rest',
+      'Sync every non-deleted server (stats, streams, and sessions); one failure does not abort the rest',
   })
   @Post('sync-all')
   syncAll() {
-    return this.statsService.syncAll();
+    return this.syncAllService.syncAll();
   }
 
   @ApiOperation({ summary: 'Update a server' })
