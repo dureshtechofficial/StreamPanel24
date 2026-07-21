@@ -326,10 +326,10 @@ export function StreamFormPanel({
       key: [],
       inputs: [],
     };
-    if (!stream && form.applicationName.trim().length < 1) {
+    if (form.applicationName.trim().length < 1) {
       clientErrors.applicationName.push('Application name is required');
     }
-    if (!stream && form.key.trim().length < 1) {
+    if (form.key.trim().length < 1) {
       clientErrors.key.push('Key is required');
     }
     if (!form.inputs.some((i) => resolveInputUrl(i))) {
@@ -347,11 +347,15 @@ export function StreamFormPanel({
     }
     setErrors({});
 
-    // Editing an existing stream keeps its immutable name, so there's nothing new to collide with.
-    if (!stream) {
+    const computedName = computeName(form.applicationName, form.key);
+    const nameChanged = !stream || computedName !== stream.config_json.name;
+
+    // Only re-check availability when the name is actually changing — checking
+    // an unchanged name would always find "itself" and falsely look taken.
+    if (nameChanged) {
       setIsCheckingName(true);
       try {
-        const check = await checkStreamName(serverId, computeName(form.applicationName, form.key));
+        const check = await checkStreamName(serverId, computedName);
         if (check.existsInDb) {
           setErrors({ key: ['A stream with this name already exists on this server.'] });
           return;
@@ -428,8 +432,7 @@ export function StreamFormPanel({
                   value={form.applicationName}
                   onChange={(e) => setField('applicationName', e.target.value)}
                   placeholder="live"
-                  disabled={Boolean(stream)}
-                  className={`${inputClass} ${stream ? 'bg-gray-50 text-gray-500' : ''}`}
+                  className={inputClass}
                 />
                 {errors.applicationName?.map((msg) => (
                   <p key={msg} className="mt-1 text-xs text-red-600">
@@ -443,8 +446,7 @@ export function StreamFormPanel({
                   value={form.key}
                   onChange={(e) => setField('key', e.target.value)}
                   placeholder="unique key"
-                  disabled={Boolean(stream)}
-                  className={`${inputClass} ${stream ? 'bg-gray-50 text-gray-500' : ''}`}
+                  className={inputClass}
                 />
                 {errors.key?.map((msg) => (
                   <p key={msg} className="mt-1 text-xs text-red-600">
@@ -462,11 +464,10 @@ export function StreamFormPanel({
                 readOnly
                 className={`${inputClass} bg-gray-50 text-gray-500`}
               />
-              {stream && (
-                <p className="mt-1 text-xs text-gray-400">
-                  Name can&apos;t be changed after creation.
-                </p>
-              )}
+              <p className="mt-1 text-xs text-gray-400">
+                Built automatically from application name and key.
+                {stream && ' Renaming deletes the old stream on Flussonic and recreates it under the new name.'}
+              </p>
               {errors.name?.map((msg) => (
                 <p key={msg} className="mt-1 text-xs text-red-600">
                   {msg}

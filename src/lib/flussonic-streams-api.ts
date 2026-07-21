@@ -47,7 +47,7 @@ export function createStream(serverId: string, input: FlussonicStreamInput) {
 export function updateStream(
   serverId: string,
   id: string,
-  input: Partial<Omit<FlussonicStreamInput, 'name'>>,
+  input: Partial<FlussonicStreamInput>,
 ) {
   return apiFetch<FlussonicStream>(`/flussonic-servers/${serverId}/streams/${id}`, {
     method: 'PATCH',

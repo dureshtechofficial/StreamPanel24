@@ -112,9 +112,7 @@ function StreamsContent({ serverId }: { serverId: string }) {
 
   async function handleSubmit(payload: FlussonicStreamInput) {
     if (editingStream) {
-      const rest = { ...payload };
-      delete (rest as { name?: string }).name;
-      await updateStream(serverId, editingStream.id, rest);
+      await updateStream(serverId, editingStream.id, payload);
     } else {
       await createStream(serverId, payload);
     }
