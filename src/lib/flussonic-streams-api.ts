@@ -3,6 +3,7 @@ import type {
   FlussonicStream,
   FlussonicStreamInput,
   FlussonicStreamStatus,
+  StreamNameCheckResult,
 } from '@/types/flussonic-stream';
 import type { PaginatedResult } from '@/types/pagination';
 
@@ -27,6 +28,13 @@ export function listStreams(serverId: string, params: ListStreamsParams) {
 
 export function getStream(serverId: string, id: string) {
   return apiFetch<FlussonicStream>(`/flussonic-servers/${serverId}/streams/${id}`);
+}
+
+export function checkStreamName(serverId: string, name: string) {
+  const query = new URLSearchParams({ name });
+  return apiFetch<StreamNameCheckResult>(
+    `/flussonic-servers/${serverId}/streams/check-name?${query.toString()}`,
+  );
 }
 
 export function createStream(serverId: string, input: FlussonicStreamInput) {

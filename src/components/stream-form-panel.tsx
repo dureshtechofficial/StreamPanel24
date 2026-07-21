@@ -8,7 +8,9 @@ import type {
 } from '@/types/flussonic-stream';
 import { ApiError } from '@/lib/api-error';
 import { groupFieldErrors } from '@/lib/form-errors';
+import { checkStreamName } from '@/lib/flussonic-streams-api';
 import { ToggleField } from './toggle';
+import { ConfirmDialog } from './confirm-dialog';
 import { ChevronDownIcon, PlusIcon, TrashIcon, XIcon } from './icons';
 
 const FIELDS = ['name', 'inputs', 'retry_limit', 'ingest_domain', 'on_play', 'on_publish'];
@@ -225,11 +227,13 @@ function toPayload(form: FormState): FlussonicStreamInput {
 
 export function StreamFormPanel({
   open,
+  serverId,
   stream,
   onClose,
   onSubmit,
 }: {
   open: boolean;
+  serverId: string;
   stream: FlussonicStream | null;
   onClose: () => void;
   onSubmit: (payload: FlussonicStreamInput) => Promise<void>;
@@ -237,6 +241,8 @@ export function StreamFormPanel({
   const [form, setForm] = useState<FormState>(() => toFormState(stream));
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCheckingName, setIsCheckingName] = useState(false);
+  const [pendingOverwriteConfirm, setPendingOverwriteConfirm] = useState(false);
 
   function setField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -296,6 +302,22 @@ export function StreamFormPanel({
     }));
   }
 
+  async function submitForm(confirmOverwrite: boolean) {
+    setErrors({});
+    setIsSubmitting(true);
+    try {
+      await onSubmit({ ...toPayload(form), confirmOverwrite: confirmOverwrite || undefined });
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setErrors(groupFieldErrors(err.messages, FIELDS));
+      } else {
+        setErrors({ general: ['Something went wrong. Please try again.'] });
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
 
@@ -323,20 +345,41 @@ export function StreamFormPanel({
       setErrors(clientErrors);
       return;
     }
-
     setErrors({});
-    setIsSubmitting(true);
-    try {
-      await onSubmit(toPayload(form));
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setErrors(groupFieldErrors(err.messages, FIELDS));
-      } else {
-        setErrors({ general: ['Something went wrong. Please try again.'] });
+
+    // Editing an existing stream keeps its immutable name, so there's nothing new to collide with.
+    if (!stream) {
+      setIsCheckingName(true);
+      try {
+        const check = await checkStreamName(serverId, computeName(form.applicationName, form.key));
+        if (check.existsInDb) {
+          setErrors({ key: ['A stream with this name already exists on this server.'] });
+          return;
+        }
+        if (check.existsOnServer) {
+          setPendingOverwriteConfirm(true);
+          return;
+        }
+      } catch (err) {
+        setErrors({
+          general: [
+            err instanceof ApiError
+              ? err.message
+              : 'Failed to verify whether this name is already in use.',
+          ],
+        });
+        return;
+      } finally {
+        setIsCheckingName(false);
       }
-    } finally {
-      setIsSubmitting(false);
     }
+
+    await submitForm(false);
+  }
+
+  async function handleConfirmOverwrite() {
+    setPendingOverwriteConfirm(false);
+    await submitForm(true);
   }
 
   const name = computeName(form.applicationName, form.key);
@@ -630,14 +673,24 @@ export function StreamFormPanel({
             </button>
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isCheckingName}
               className="rounded-full bg-flu-pink px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-flu-pink/30 transition hover:bg-flu-pink-dark disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isSubmitting ? 'Saving…' : 'Save stream'}
+              {isCheckingName ? 'Checking…' : isSubmitting ? 'Saving…' : 'Save stream'}
             </button>
           </div>
         </form>
       </div>
+
+      <ConfirmDialog
+        open={pendingOverwriteConfirm}
+        title="Stream already exists"
+        message={`A stream named "${name}" already exists on this Flussonic server (it wasn't created through this app). Overwriting it will replace its current configuration. Continue?`}
+        confirmLabel="Overwrite"
+        isBusy={isSubmitting}
+        onConfirm={handleConfirmOverwrite}
+        onCancel={() => setPendingOverwriteConfirm(false)}
+      />
     </div>
   );
 }

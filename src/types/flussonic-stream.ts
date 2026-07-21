@@ -69,4 +69,11 @@ export interface FlussonicStream {
 export interface FlussonicStreamInput extends FlussonicStreamConfig {
   ingest_domain?: string;
   status?: FlussonicStreamStatus;
+  /** Skips the "already exists on the live Flussonic server" check — set after the user confirms an overwrite prompt. */
+  confirmOverwrite?: boolean;
+}
+
+export interface StreamNameCheckResult {
+  existsInDb: boolean;
+  existsOnServer: boolean;
 }

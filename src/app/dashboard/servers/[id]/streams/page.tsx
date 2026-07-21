@@ -314,6 +314,7 @@ function StreamsContent({ serverId }: { serverId: string }) {
       <StreamFormPanel
         key={panelKey}
         open={panelOpen}
+        serverId={serverId}
         stream={editingStream}
         onClose={() => setPanelOpen(false)}
         onSubmit={handleSubmit}
