@@ -15,6 +15,9 @@ const FIELDS = ['name', 'inputs', 'retry_limit', 'ingest_domain', 'on_play', 'on
 
 const DEFAULT_TRUE_PROTOCOLS: (keyof StreamProtocols)[] = ['hls', 'player', 'rtmp', 'srt'];
 
+const URL_PRESETS = ['publish://', 'fake://fake', 'custom'] as const;
+type UrlPreset = (typeof URL_PRESETS)[number];
+
 const inputClass =
   'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 transition focus:border-flu-pink focus:outline-none focus:ring-2 focus:ring-flu-pink/20';
 const labelClass = 'mb-1 block text-xs font-medium text-gray-700';
@@ -42,10 +45,15 @@ const PROTOCOL_KEYS: (keyof StreamProtocols)[] = [
 ];
 
 type InputRow = {
-  url: string;
+  urlPreset: UrlPreset;
+  customUrl: string;
   comment: string;
   source_timeout: string;
 };
+
+function resolveInputUrl(row: InputRow): string {
+  return row.urlPreset === 'custom' ? row.customUrl.trim() : row.urlPreset;
+}
 
 type AuthHookState = {
   url: string;
@@ -57,7 +65,12 @@ type AuthHookState = {
   session_keys: string;
 };
 
-const EMPTY_INPUT_ROW: InputRow = { url: '', comment: '', source_timeout: '30' };
+const EMPTY_INPUT_ROW: InputRow = {
+  urlPreset: 'publish://',
+  customUrl: '',
+  comment: '',
+  source_timeout: '30',
+};
 
 const EMPTY_AUTH_HOOK: AuthHookState = {
   url: '',
@@ -146,11 +159,15 @@ function toFormState(stream: FlussonicStream | null): FormState {
     ingest_domain: stream.ingest_domain ?? '',
     inputs:
       config.inputs.length > 0
-        ? config.inputs.map((i) => ({
-            url: i.url,
-            comment: i.comment ?? '',
-            source_timeout: i.source_timeout !== undefined ? String(i.source_timeout) : '30',
-          }))
+        ? config.inputs.map((i) => {
+            const isKnownPreset = i.url === 'publish://' || i.url === 'fake://fake';
+            return {
+              urlPreset: isKnownPreset ? (i.url as UrlPreset) : 'custom',
+              customUrl: isKnownPreset ? '' : i.url,
+              comment: i.comment ?? '',
+              source_timeout: i.source_timeout !== undefined ? String(i.source_timeout) : '30',
+            };
+          })
         : [EMPTY_INPUT_ROW],
     protocols: { ...EMPTY_PROTOCOLS, ...config.protocols },
     onPlayEnabled: Boolean(config.on_play),
@@ -191,9 +208,9 @@ function toPayload(form: FormState): FlussonicStreamInput {
     static: form.static,
     disabled: form.disabled,
     inputs: form.inputs
-      .filter((i) => i.url.trim())
+      .filter((i) => resolveInputUrl(i))
       .map((i, index) => ({
-        url: i.url.trim(),
+        url: resolveInputUrl(i),
         priority: index + 1,
         comment: i.comment.trim() || undefined,
         source_timeout: i.source_timeout ? Number(i.source_timeout) : undefined,
@@ -293,7 +310,7 @@ export function StreamFormPanel({
     if (!stream && form.key.trim().length < 1) {
       clientErrors.key.push('Key is required');
     }
-    if (!form.inputs.some((i) => i.url.trim())) {
+    if (!form.inputs.some((i) => resolveInputUrl(i))) {
       clientErrors.inputs.push('At least one input URL is required');
     }
     if (form.onPlayEnabled && !form.onPlay.url.trim()) {
@@ -522,12 +539,25 @@ export function StreamFormPanel({
                         )}
                       </div>
                     </div>
-                    <input
-                      value={row.url}
-                      onChange={(e) => setInputRow(index, { url: e.target.value })}
-                      placeholder="publish://"
+                    <select
+                      value={row.urlPreset}
+                      onChange={(e) => setInputRow(index, { urlPreset: e.target.value as UrlPreset })}
                       className={inputClass}
-                    />
+                    >
+                      {URL_PRESETS.map((preset) => (
+                        <option key={preset} value={preset}>
+                          {preset === 'custom' ? 'Custom' : preset}
+                        </option>
+                      ))}
+                    </select>
+                    {row.urlPreset === 'custom' && (
+                      <input
+                        value={row.customUrl}
+                        onChange={(e) => setInputRow(index, { customUrl: e.target.value })}
+                        placeholder="rtsp://camera.example.com/stream"
+                        className={`${inputClass} mt-2`}
+                      />
+                    )}
                     <div className="mt-2 grid grid-cols-2 gap-2">
                       <div>
                         <label className={labelClass}>Source timeout</label>
