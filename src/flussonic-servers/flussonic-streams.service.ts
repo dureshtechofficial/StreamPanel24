@@ -6,12 +6,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Not, Repository } from 'typeorm';
 import { FlussonicStream } from './entities/flussonic-stream.entity';
 import { FlussonicServer } from './entities/flussonic-server.entity';
 import { CreateFlussonicStreamDto } from './dto/create-flussonic-stream.dto';
 import { UpdateFlussonicStreamDto } from './dto/update-flussonic-stream.dto';
 import { QueryFlussonicStreamDto } from './dto/query-flussonic-stream.dto';
+import { QueryFlussonicStreamsDirectoryDto } from './dto/query-flussonic-streams-directory.dto';
 import { FlussonicStreamStatus } from './enums/flussonic-stream-status.enum';
 import { FlussonicServersService } from './flussonic-servers.service';
 import { buildFlussonicApiUrl } from './utils/flussonic-api-url.util';
@@ -46,6 +47,15 @@ export interface SyncAllServersSummary {
   succeeded: number;
   failed: number;
   results: SyncAllServersResult[];
+}
+
+export interface FlussonicStreamDirectoryEntry {
+  id: string;
+  name: string;
+  server_id: string;
+  server_name: string;
+  customer_id: string | null;
+  status: FlussonicStreamStatus;
 }
 
 @Injectable()
@@ -96,6 +106,133 @@ export class FlussonicStreamsService {
       limit,
       totalPages: Math.max(1, Math.ceil(total / limit)),
     };
+  }
+
+  /**
+   * Cross-server stream search for the customer stream-assignment picker.
+   * `availableForCustomerId` restricts results to streams that are either
+   * unassigned or already assigned to that customer — a stream taken by a
+   * *different* customer is excluded entirely, so the picker can never show
+   * (let alone let an admin select) a stream that isn't actually available.
+   */
+  async findAllAcrossServers(
+    query: QueryFlussonicStreamsDirectoryDto,
+  ): Promise<PaginatedResult<FlussonicStreamDirectoryEntry>> {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+
+    const qb = this.streamsRepository
+      .createQueryBuilder('stream')
+      .where('stream.status != :deleted', {
+        deleted: FlussonicStreamStatus.DELETED,
+      });
+
+    if (query.availableForCustomerId) {
+      qb.andWhere(
+        '(stream.customer_id IS NULL OR stream.customer_id = :customerId)',
+        { customerId: query.availableForCustomerId },
+      );
+    }
+
+    if (query.search) {
+      qb.andWhere(
+        "(JSON_UNQUOTE(JSON_EXTRACT(stream.config_json, '$.name')) LIKE :search OR JSON_UNQUOTE(JSON_EXTRACT(stream.config_json, '$.title')) LIKE :search)",
+        { search: `%${query.search}%` },
+      );
+    }
+
+    qb.orderBy('stream.created_at', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    const [items, total] = await qb.getManyAndCount();
+
+    return {
+      items: await this.toDirectoryEntries(items),
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    };
+  }
+
+  /** All streams currently assigned to one customer, across every server. */
+  async findAllForCustomer(
+    customerId: string,
+  ): Promise<FlussonicStreamDirectoryEntry[]> {
+    const streams = await this.streamsRepository
+      .createQueryBuilder('stream')
+      .where('stream.customer_id = :customerId', { customerId })
+      .andWhere('stream.status != :deleted', {
+        deleted: FlussonicStreamStatus.DELETED,
+      })
+      .orderBy('stream.created_at', 'DESC')
+      .getMany();
+
+    return this.toDirectoryEntries(streams);
+  }
+
+  /**
+   * Replaces a customer's assigned streams with exactly `streamIds` — any
+   * stream currently assigned to this customer but not in the new list is
+   * unassigned, and every id in the list is assigned to this customer.
+   * Rejects if any id already belongs to a different customer, since a
+   * stream can only ever have one customer at a time.
+   */
+  async assignToCustomer(
+    customerId: string,
+    streamIds: string[],
+  ): Promise<FlussonicStreamDirectoryEntry[]> {
+    if (streamIds.length > 0) {
+      const conflicting = await this.streamsRepository
+        .createQueryBuilder('stream')
+        .where('stream.id IN (:...ids)', { ids: streamIds })
+        .andWhere('stream.customer_id IS NOT NULL')
+        .andWhere('stream.customer_id != :customerId', { customerId })
+        .getMany();
+      if (conflicting.length > 0) {
+        throw new ConflictException(
+          `Stream(s) already assigned to another customer: ${conflicting
+            .map((s) => s.config_json.name)
+            .join(', ')}`,
+        );
+      }
+    }
+
+    const now = nowUnixSeconds();
+    await this.streamsRepository.update(
+      {
+        customer_id: customerId,
+        ...(streamIds.length > 0 ? { id: Not(In(streamIds)) } : {}),
+      },
+      { customer_id: null, updated_at: now },
+    );
+
+    if (streamIds.length > 0) {
+      await this.streamsRepository.update(
+        { id: In(streamIds) },
+        { customer_id: customerId, updated_at: now },
+      );
+    }
+
+    return this.findAllForCustomer(customerId);
+  }
+
+  private async toDirectoryEntries(
+    streams: FlussonicStream[],
+  ): Promise<FlussonicStreamDirectoryEntry[]> {
+    const servers = await this.serversService.findAllActive();
+    const serverNameById = new Map(servers.map((s) => [s.id, s.name]));
+
+    return streams.map((stream) => ({
+      id: stream.id,
+      name: stream.config_json.name,
+      server_id: stream.flussonic_server_id,
+      server_name:
+        serverNameById.get(stream.flussonic_server_id) ?? 'Unknown server',
+      customer_id: stream.customer_id,
+      status: stream.status,
+    }));
   }
 
   async findOneForServer(

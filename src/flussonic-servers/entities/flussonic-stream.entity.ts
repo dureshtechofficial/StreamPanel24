@@ -23,6 +23,11 @@ export class FlussonicStream {
   @Column({ type: 'bigint', unsigned: true })
   flussonic_server_id: string;
 
+  /** Which customer this stream is assigned to, if any — a customer has many streams, a stream at most one customer. */
+  @Index()
+  @Column({ type: 'bigint', unsigned: true, nullable: true })
+  customer_id: string | null;
+
   @Column({ type: 'varchar', length: 255, nullable: true })
   ingest_domain: string | null;
 

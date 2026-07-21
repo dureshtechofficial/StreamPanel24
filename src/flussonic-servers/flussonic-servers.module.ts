@@ -10,6 +10,7 @@ import { FlussonicServerStatsService } from './flussonic-server-stats.service';
 import { FlussonicServerStatsController } from './flussonic-server-stats.controller';
 import { FlussonicStreamsService } from './flussonic-streams.service';
 import { FlussonicStreamsController } from './flussonic-streams.controller';
+import { FlussonicStreamsDirectoryController } from './flussonic-streams-directory.controller';
 import { FlussonicStreamSessionsService } from './flussonic-stream-sessions.service';
 import { FlussonicStreamSessionsController } from './flussonic-stream-sessions.controller';
 import { FlussonicSyncAllService } from './flussonic-sync-all.service';
@@ -27,6 +28,7 @@ import { FlussonicSyncAllService } from './flussonic-sync-all.service';
     FlussonicServersController,
     FlussonicServerStatsController,
     FlussonicStreamsController,
+    FlussonicStreamsDirectoryController,
     FlussonicStreamSessionsController,
   ],
   providers: [
