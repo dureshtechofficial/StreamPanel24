@@ -1,0 +1,602 @@
+'use client';
+
+import { useState, type FormEvent } from 'react';
+import type {
+  FlussonicStream,
+  FlussonicStreamInput,
+  StreamProtocols,
+} from '@/types/flussonic-stream';
+import { ApiError } from '@/lib/api-error';
+import { groupFieldErrors } from '@/lib/form-errors';
+import { ToggleField } from './toggle';
+import { PlusIcon, TrashIcon, XIcon } from './icons';
+
+const FIELDS = ['name', 'inputs', 'retry_limit', 'ingest_domain', 'on_play', 'on_publish'];
+
+const inputClass =
+  'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 transition focus:border-flu-pink focus:outline-none focus:ring-2 focus:ring-flu-pink/20';
+const labelClass = 'mb-1 block text-xs font-medium text-gray-700';
+const sectionHeaderClass = 'mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400';
+
+const PROTOCOL_KEYS: (keyof StreamProtocols)[] = [
+  'hls',
+  'player',
+  'rtmp',
+  'srt',
+  'webrtc',
+  'dash',
+  'cmaf',
+  'mss',
+  'rtsp',
+  'mp4',
+  'jpeg',
+  'shoutcast',
+  'm4f',
+  'm4s',
+  'mseld',
+  'tshttp',
+  'api',
+  'whitelist',
+];
+
+type InputRow = {
+  url: string;
+  priority: string;
+  comment: string;
+  source_timeout: string;
+};
+
+type AuthHookState = {
+  url: string;
+  max_sessions: string;
+  domains: string;
+  allowed_countries: string;
+  disallowed_countries: string;
+  soft_limitation: boolean;
+  session_keys: string;
+};
+
+const EMPTY_INPUT_ROW: InputRow = { url: '', priority: '', comment: '', source_timeout: '' };
+
+const EMPTY_AUTH_HOOK: AuthHookState = {
+  url: '',
+  max_sessions: '',
+  domains: '',
+  allowed_countries: '',
+  disallowed_countries: '',
+  soft_limitation: false,
+  session_keys: 'name,token,proto,ip',
+};
+
+const EMPTY_PROTOCOLS: Record<keyof StreamProtocols, boolean> = PROTOCOL_KEYS.reduce(
+  (acc, key) => ({ ...acc, [key]: false }),
+  {} as Record<keyof StreamProtocols, boolean>,
+);
+
+type FormState = {
+  name: string;
+  comment: string;
+  title: string;
+  static: boolean;
+  disabled: boolean;
+  retry_limit: string;
+  ingest_domain: string;
+  inputs: InputRow[];
+  protocols: Record<keyof StreamProtocols, boolean>;
+  onPlayEnabled: boolean;
+  onPlay: AuthHookState;
+  onPublishEnabled: boolean;
+  onPublish: AuthHookState;
+};
+
+const EMPTY_FORM: FormState = {
+  name: '',
+  comment: '',
+  title: '',
+  static: true,
+  disabled: false,
+  retry_limit: '',
+  ingest_domain: '',
+  inputs: [EMPTY_INPUT_ROW],
+  protocols: EMPTY_PROTOCOLS,
+  onPlayEnabled: false,
+  onPlay: EMPTY_AUTH_HOOK,
+  onPublishEnabled: false,
+  onPublish: EMPTY_AUTH_HOOK,
+};
+
+function toAuthHookState(hook: FlussonicStream['config_json']['on_play']): AuthHookState {
+  if (!hook) return EMPTY_AUTH_HOOK;
+  return {
+    url: hook.url,
+    max_sessions: hook.max_sessions !== undefined ? String(hook.max_sessions) : '',
+    domains: (hook.domains ?? []).join(','),
+    allowed_countries: (hook.allowed_countries ?? []).join(','),
+    disallowed_countries: (hook.disallowed_countries ?? []).join(','),
+    soft_limitation: hook.soft_limitation ?? false,
+    session_keys: (hook.session_keys ?? []).join(','),
+  };
+}
+
+function toFormState(stream: FlussonicStream | null): FormState {
+  if (!stream) return EMPTY_FORM;
+  const config = stream.config_json;
+  return {
+    name: config.name,
+    comment: config.comment ?? '',
+    title: config.title ?? '',
+    static: config.static ?? true,
+    disabled: config.disabled ?? false,
+    retry_limit: config.retry_limit !== undefined ? String(config.retry_limit) : '',
+    ingest_domain: stream.ingest_domain ?? '',
+    inputs:
+      config.inputs.length > 0
+        ? config.inputs.map((i) => ({
+            url: i.url,
+            priority: i.priority !== undefined ? String(i.priority) : '',
+            comment: i.comment ?? '',
+            source_timeout: i.source_timeout !== undefined ? String(i.source_timeout) : '',
+          }))
+        : [EMPTY_INPUT_ROW],
+    protocols: { ...EMPTY_PROTOCOLS, ...config.protocols },
+    onPlayEnabled: Boolean(config.on_play),
+    onPlay: toAuthHookState(config.on_play),
+    onPublishEnabled: Boolean(config.on_publish),
+    onPublish: toAuthHookState(config.on_publish),
+  };
+}
+
+function splitList(value: string): string[] {
+  return value
+    .split(',')
+    .map((v) => v.trim())
+    .filter(Boolean);
+}
+
+function toAuthHookPayload(state: AuthHookState) {
+  return {
+    url: state.url.trim(),
+    max_sessions: state.max_sessions ? Number(state.max_sessions) : undefined,
+    domains: splitList(state.domains).length ? splitList(state.domains) : undefined,
+    allowed_countries: splitList(state.allowed_countries).length
+      ? splitList(state.allowed_countries)
+      : undefined,
+    disallowed_countries: splitList(state.disallowed_countries).length
+      ? splitList(state.disallowed_countries)
+      : undefined,
+    soft_limitation: state.soft_limitation,
+    session_keys: splitList(state.session_keys).length ? splitList(state.session_keys) : undefined,
+  };
+}
+
+function toPayload(form: FormState): FlussonicStreamInput {
+  return {
+    name: form.name.trim(),
+    comment: form.comment.trim() || undefined,
+    title: form.title.trim() || undefined,
+    static: form.static,
+    disabled: form.disabled,
+    inputs: form.inputs
+      .filter((i) => i.url.trim())
+      .map((i) => ({
+        url: i.url.trim(),
+        priority: i.priority ? Number(i.priority) : undefined,
+        comment: i.comment.trim() || undefined,
+        source_timeout: i.source_timeout ? Number(i.source_timeout) : undefined,
+      })),
+    retry_limit: form.retry_limit ? Number(form.retry_limit) : undefined,
+    protocols: form.protocols,
+    ingest_domain: form.ingest_domain.trim() || undefined,
+    on_play: form.onPlayEnabled ? toAuthHookPayload(form.onPlay) : undefined,
+    on_publish: form.onPublishEnabled ? toAuthHookPayload(form.onPublish) : undefined,
+  };
+}
+
+export function StreamFormPanel({
+  open,
+  stream,
+  onClose,
+  onSubmit,
+}: {
+  open: boolean;
+  stream: FlussonicStream | null;
+  onClose: () => void;
+  onSubmit: (payload: FlussonicStreamInput) => Promise<void>;
+}) {
+  const [form, setForm] = useState<FormState>(() => toFormState(stream));
+  const [errors, setErrors] = useState<Record<string, string[]>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  function setField<K extends keyof FormState>(key: K, value: FormState[K]) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function setInputRow(index: number, patch: Partial<InputRow>) {
+    setForm((prev) => ({
+      ...prev,
+      inputs: prev.inputs.map((row, i) => (i === index ? { ...row, ...patch } : row)),
+    }));
+  }
+
+  function addInputRow() {
+    setForm((prev) => ({ ...prev, inputs: [...prev.inputs, EMPTY_INPUT_ROW] }));
+  }
+
+  function removeInputRow(index: number) {
+    setForm((prev) => ({
+      ...prev,
+      inputs: prev.inputs.length > 1 ? prev.inputs.filter((_, i) => i !== index) : prev.inputs,
+    }));
+  }
+
+  function setProtocol(key: keyof StreamProtocols, value: boolean) {
+    setForm((prev) => ({ ...prev, protocols: { ...prev.protocols, [key]: value } }));
+  }
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+
+    const clientErrors: Record<string, string[]> = { name: [], inputs: [] };
+    if (!stream && form.name.trim().length < 1) clientErrors.name.push('Name is required');
+    if (!form.inputs.some((i) => i.url.trim())) {
+      clientErrors.inputs.push('At least one input URL is required');
+    }
+    if (form.onPlayEnabled && !form.onPlay.url.trim()) {
+      clientErrors.inputs.push('on_play URL is required when enabled');
+    }
+    if (form.onPublishEnabled && !form.onPublish.url.trim()) {
+      clientErrors.inputs.push('on_publish URL is required when enabled');
+    }
+    if (Object.values(clientErrors).some((v) => v.length > 0)) {
+      setErrors(clientErrors);
+      return;
+    }
+
+    setErrors({});
+    setIsSubmitting(true);
+    try {
+      await onSubmit(toPayload(form));
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setErrors(groupFieldErrors(err.messages, FIELDS));
+      } else {
+        setErrors({ general: ['Something went wrong. Please try again.'] });
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <div className={`fixed inset-0 z-50 ${open ? '' : 'pointer-events-none'}`}>
+      <div
+        onClick={onClose}
+        className={`absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity duration-300 ${
+          open ? 'opacity-100' : 'opacity-0'
+        }`}
+      />
+
+      <div
+        className={`absolute inset-y-0 right-0 flex w-full max-w-lg flex-col bg-white shadow-2xl transition-transform duration-300 ease-in-out ${
+          open ? 'translate-x-0' : 'translate-x-full'
+        }`}
+      >
+        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+          <h2 className="text-base font-semibold text-gray-900">
+            {stream ? 'Edit stream' : 'Add stream'}
+          </h2>
+          <button
+            onClick={onClose}
+            className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            aria-label="Close panel"
+          >
+            <XIcon className="h-5 w-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-y-auto">
+          <div className="flex-1 space-y-5 px-6 py-5">
+            {errors.general && errors.general.length > 0 && (
+              <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+                {errors.general.map((msg) => (
+                  <p key={msg}>{msg}</p>
+                ))}
+              </div>
+            )}
+
+            <div>
+              <label className={labelClass}>Name *</label>
+              <input
+                value={form.name}
+                onChange={(e) => setField('name', e.target.value)}
+                placeholder="live/demo"
+                disabled={Boolean(stream)}
+                className={`${inputClass} ${stream ? 'bg-gray-50 text-gray-500' : ''}`}
+              />
+              {stream && (
+                <p className="mt-1 text-xs text-gray-400">
+                  Name can&apos;t be changed after creation.
+                </p>
+              )}
+              {errors.name?.map((msg) => (
+                <p key={msg} className="mt-1 text-xs text-red-600">
+                  {msg}
+                </p>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelClass}>Title</label>
+                <input
+                  value={form.title}
+                  onChange={(e) => setField('title', e.target.value)}
+                  placeholder="Hockey Channel"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Ingest domain</label>
+                <input
+                  value={form.ingest_domain}
+                  onChange={(e) => setField('ingest_domain', e.target.value)}
+                  placeholder="ingest.example.com"
+                  className={inputClass}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className={labelClass}>Comment</label>
+              <input
+                value={form.comment}
+                onChange={(e) => setField('comment', e.target.value)}
+                className={inputClass}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelClass}>Retry limit</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={form.retry_limit}
+                  onChange={(e) => setField('retry_limit', e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+              <div className="flex items-end gap-6 pb-1">
+                <ToggleField
+                  label="Static"
+                  checked={form.static}
+                  onChange={(v) => setField('static', v)}
+                />
+                <ToggleField
+                  label="Disabled"
+                  checked={form.disabled}
+                  onChange={(v) => setField('disabled', v)}
+                />
+              </div>
+            </div>
+
+            <div className="border-t border-gray-100 pt-4">
+              <div className="mb-3 flex items-center justify-between">
+                <p className={sectionHeaderClass}>Inputs *</p>
+                <button
+                  type="button"
+                  onClick={addInputRow}
+                  className="flex items-center gap-1 text-xs font-medium text-flu-pink hover:text-flu-pink-dark"
+                >
+                  <PlusIcon className="h-3.5 w-3.5" />
+                  Add input
+                </button>
+              </div>
+              {errors.inputs?.map((msg) => (
+                <p key={msg} className="mb-2 text-xs text-red-600">
+                  {msg}
+                </p>
+              ))}
+              <div className="space-y-3">
+                {form.inputs.map((row, index) => (
+                  <div key={index} className="rounded-lg border border-gray-200 p-3">
+                    <div className="mb-2 flex items-center justify-between">
+                      <label className={labelClass}>URL</label>
+                      {form.inputs.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeInputRow(index)}
+                          className="text-gray-400 hover:text-red-600"
+                          aria-label="Remove input"
+                        >
+                          <TrashIcon className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                    <input
+                      value={row.url}
+                      onChange={(e) => setInputRow(index, { url: e.target.value })}
+                      placeholder="publish://"
+                      className={inputClass}
+                    />
+                    <div className="mt-2 grid grid-cols-3 gap-2">
+                      <div>
+                        <label className={labelClass}>Priority</label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={row.priority}
+                          onChange={(e) => setInputRow(index, { priority: e.target.value })}
+                          className={inputClass}
+                        />
+                      </div>
+                      <div>
+                        <label className={labelClass}>Source timeout</label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={row.source_timeout}
+                          onChange={(e) => setInputRow(index, { source_timeout: e.target.value })}
+                          className={inputClass}
+                        />
+                      </div>
+                      <div>
+                        <label className={labelClass}>Comment</label>
+                        <input
+                          value={row.comment}
+                          onChange={(e) => setInputRow(index, { comment: e.target.value })}
+                          className={inputClass}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="border-t border-gray-100 pt-4">
+              <p className={sectionHeaderClass}>Protocols</p>
+              <div className="grid grid-cols-2 gap-x-4 sm:grid-cols-3">
+                {PROTOCOL_KEYS.map((key) => (
+                  <ToggleField
+                    key={key}
+                    label={key}
+                    checked={form.protocols[key]}
+                    onChange={(v) => setProtocol(key, v)}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="border-t border-gray-100 pt-4">
+              <ToggleField
+                label="on_play authentication"
+                hint="Restricts playback with an auth callback"
+                checked={form.onPlayEnabled}
+                onChange={(v) => setField('onPlayEnabled', v)}
+              />
+              {form.onPlayEnabled && (
+                <AuthHookFields
+                  value={form.onPlay}
+                  onChange={(v) => setField('onPlay', v)}
+                />
+              )}
+            </div>
+
+            <div className="border-t border-gray-100 pt-4">
+              <ToggleField
+                label="on_publish authentication"
+                hint="Restricts publishing with an auth callback"
+                checked={form.onPublishEnabled}
+                onChange={(v) => setField('onPublishEnabled', v)}
+              />
+              {form.onPublishEnabled && (
+                <AuthHookFields
+                  value={form.onPublish}
+                  onChange={(v) => setField('onPublish', v)}
+                />
+              )}
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 border-t border-gray-200 px-6 py-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="rounded-full bg-flu-pink px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-flu-pink/30 transition hover:bg-flu-pink-dark disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isSubmitting ? 'Saving…' : 'Save stream'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function AuthHookFields({
+  value,
+  onChange,
+}: {
+  value: AuthHookState;
+  onChange: (value: AuthHookState) => void;
+}) {
+  function setField<K extends keyof AuthHookState>(key: K, v: AuthHookState[K]) {
+    onChange({ ...value, [key]: v });
+  }
+
+  return (
+    <div className="mt-3 space-y-3 rounded-lg border border-gray-200 p-3">
+      <div>
+        <label className={labelClass}>Callback URL *</label>
+        <input
+          value={value.url}
+          onChange={(e) => setField('url', e.target.value)}
+          placeholder="{{streamAuthUrl}}"
+          className={inputClass}
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className={labelClass}>Max sessions</label>
+          <input
+            type="number"
+            min={0}
+            value={value.max_sessions}
+            onChange={(e) => setField('max_sessions', e.target.value)}
+            className={inputClass}
+          />
+        </div>
+        <div className="flex items-end pb-1">
+          <ToggleField
+            label="Soft limitation"
+            checked={value.soft_limitation}
+            onChange={(v) => setField('soft_limitation', v)}
+          />
+        </div>
+      </div>
+      <div>
+        <label className={labelClass}>Session keys (comma-separated)</label>
+        <input
+          value={value.session_keys}
+          onChange={(e) => setField('session_keys', e.target.value)}
+          className={inputClass}
+        />
+      </div>
+      <div>
+        <label className={labelClass}>Domains (comma-separated)</label>
+        <input
+          value={value.domains}
+          onChange={(e) => setField('domains', e.target.value)}
+          className={inputClass}
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className={labelClass}>Allowed countries</label>
+          <input
+            value={value.allowed_countries}
+            onChange={(e) => setField('allowed_countries', e.target.value)}
+            placeholder="US,GB"
+            className={inputClass}
+          />
+        </div>
+        <div>
+          <label className={labelClass}>Disallowed countries</label>
+          <input
+            value={value.disallowed_countries}
+            onChange={(e) => setField('disallowed_countries', e.target.value)}
+            className={inputClass}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}

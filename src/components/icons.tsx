@@ -238,3 +238,15 @@ export function ArrowPathIcon(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+export function BroadcastIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.8} stroke="currentColor" {...props}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M12 18.75a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM8.288 14.038a5.25 5.25 0 0 1 7.424 0M5.636 11.386a9 9 0 0 1 12.728 0M3.257 8.735a12.75 12.75 0 0 1 17.486 0"
+      />
+    </svg>
+  );
+}

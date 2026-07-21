@@ -11,6 +11,7 @@ All notable changes to this frontend are documented here. Format loosely follows
 - `/dashboard/customers` — searchable/filterable/paginated table with a slide-over create/edit form and delete confirmation, available to any logged-in user. The form now includes username/password fields (password required on create, optional on edit — blank leaves it unchanged).
 - `/dashboard/servers` — same CRUD pattern for Flussonic servers, gated to admins (nav item hidden, page shows "Access restricted" for non-admins). Full-width table with live status, latest client count, and uptime. "Sync all" button syncs every server and shows a per-server result summary.
 - `/dashboard/servers/[id]/stats` — paginated stats log for one server, with a "Sync" button that triggers the backend's real Flussonic `config/stats` integration.
+- `/dashboard/servers/[id]/streams` — full CRUD for a server's streams (reached via the broadcast icon on the servers table), matching Flussonic's real stream config shape: inputs (dynamic add/remove rows), all 18 protocol flags, and optional `on_play`/`on_publish` auth-hook sections that only appear once toggled on. Boolean fields use a reusable switch component (`components/toggle.tsx`) instead of checkboxes. `name` is read-only once a stream is created (it's baked into the Flussonic API URL).
 - Flussonic-inspired visual theme (dark navy nav, blue→violet gradient auth screens, pink accent) via CSS custom properties in `globals.css`.
 
 ### Changed

@@ -8,6 +8,7 @@ import { ServerFormPanel } from "@/components/server-form-panel";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import {
   ArrowPathIcon,
+  BroadcastIcon,
   ChartBarIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -347,6 +348,13 @@ function ServersContent() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-1">
+                        <Link
+                          href={`/dashboard/servers/${server.id}/streams`}
+                          className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
+                          aria-label={`View streams for ${server.name}`}
+                        >
+                          <BroadcastIcon className="h-4 w-4" />
+                        </Link>
                         <Link
                           href={`/dashboard/servers/${server.id}/stats`}
                           className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
