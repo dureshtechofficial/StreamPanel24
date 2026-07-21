@@ -147,8 +147,26 @@ export class FlussonicStreamsService {
     const server = await this.serversService.findOne(serverId);
     const existing = stream.config_json;
 
+    const newName = dto.name?.trim();
+    const isRename = Boolean(newName) && newName !== existing.name;
+
+    if (isRename) {
+      await this.assertNameAvailable(serverId, newName!);
+      if (!dto.confirmOverwrite) {
+        const existsOnServer = await this.nameExistsOnFlussonic(
+          server,
+          newName!,
+        );
+        if (existsOnServer) {
+          throw new ConflictException(
+            `A stream named "${newName}" already exists on the Flussonic server (created outside this app) — confirm to overwrite it`,
+          );
+        }
+      }
+    }
+
     const mergedConfig = this.stripUndefined<FlussonicStreamConfig>({
-      name: existing.name,
+      name: isRename ? newName! : existing.name,
       comment: dto.comment ?? existing.comment,
       title: dto.title ?? existing.title,
       static: dto.static ?? existing.static,
@@ -160,7 +178,13 @@ export class FlussonicStreamsService {
       on_publish: dto.on_publish ?? existing.on_publish,
     });
 
+    // Flussonic has no rename operation — the "new" name is a different stream
+    // resource, so renaming means creating it under the new name and removing
+    // the old one. Create first: if it fails, the old stream is left intact.
     await this.putToFlussonic(server, mergedConfig);
+    if (isRename) {
+      await this.deleteFromFlussonic(server, existing.name);
+    }
 
     stream.config_json = mergedConfig;
     if (dto.ingest_domain !== undefined) {

@@ -71,7 +71,7 @@ export class FlussonicStreamsController {
 
   @ApiOperation({
     summary:
-      'Update a stream (re-PUTs the merged config to Flussonic; name is immutable)',
+      'Update a stream (re-PUTs the merged config to Flussonic; renaming PUTs the new name then deletes the old one)',
   })
   @Patch(':id')
   update(
