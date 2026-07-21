@@ -50,6 +50,16 @@ export class FlussonicStreamsController {
     return this.streamsService.checkNameExists(serverId, name);
   }
 
+  @ApiOperation({
+    summary:
+      "Sync with the server's real GET streams endpoint — refreshes live_stats_json for known streams and imports any found on the server but missing locally",
+  })
+  @Post('sync')
+  @HttpCode(HttpStatus.OK)
+  sync(@Param('serverId') serverId: string) {
+    return this.streamsService.syncFromFlussonic(serverId);
+  }
+
   @ApiOperation({ summary: 'Get one stream' })
   @Get(':id')
   findOne(@Param('serverId') serverId: string, @Param('id') id: string) {

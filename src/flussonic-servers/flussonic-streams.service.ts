@@ -17,9 +17,20 @@ import { FlussonicServersService } from './flussonic-servers.service';
 import { buildFlussonicApiUrl } from './utils/flussonic-api-url.util';
 import { nowUnixSeconds } from '../common/utils/unix-timestamp.util';
 import type { FlussonicStreamConfig } from './interfaces/flussonic-stream-config.interface';
+import type {
+  FlussonicLiveStream,
+  FlussonicStreamsListResponse,
+} from './interfaces/flussonic-live-stream.interface';
 import type { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 
 const REQUEST_TIMEOUT_MS = 8_000;
+const MAX_SYNC_PAGES = 100;
+
+export interface SyncStreamsSummary {
+  total: number;
+  created: number;
+  updated: number;
+}
 
 @Injectable()
 export class FlussonicStreamsService {
@@ -94,6 +105,42 @@ export class FlussonicStreamsService {
       this.nameExistsOnFlussonic(server, name),
     ]);
     return { existsInDb, existsOnServer };
+  }
+
+  /**
+   * Pulls the server's actual live stream list (`GET streams`, cursor-paginated
+   * via `next`) and reconciles it with our cache: a known stream (matched by
+   * name) gets its `live_stats_json` refreshed; a stream that exists upstream
+   * but has no local row yet is created from its `config_on_disk`. Existing
+   * rows' `config_json` is left untouched — live data is additive, not a
+   * source of truth for what we'll PUT back on the next edit.
+   */
+  async syncFromFlussonic(serverId: string): Promise<SyncStreamsSummary> {
+    const server = await this.serversService.findOne(serverId);
+    const liveStreams = await this.fetchAllLiveStreams(server);
+
+    let created = 0;
+    let updated = 0;
+    for (const live of liveStreams) {
+      const existing = await this.findByNameInDb(serverId, live.name);
+      if (existing) {
+        existing.live_stats_json = live;
+        await this.streamsRepository.save(existing);
+        updated++;
+      } else if (live.config_on_disk) {
+        const stream = this.streamsRepository.create({
+          flussonic_server_id: serverId,
+          ingest_domain: null,
+          config_json: live.config_on_disk as unknown as FlussonicStreamConfig,
+          live_stats_json: live,
+          status: FlussonicStreamStatus.ACTIVE,
+        });
+        await this.streamsRepository.save(stream);
+        created++;
+      }
+    }
+
+    return { total: liveStreams.length, created, updated };
   }
 
   async create(
@@ -233,7 +280,14 @@ export class FlussonicStreamsService {
     serverId: string,
     name: string,
   ): Promise<boolean> {
-    const existing = await this.streamsRepository
+    return Boolean(await this.findByNameInDb(serverId, name));
+  }
+
+  private async findByNameInDb(
+    serverId: string,
+    name: string,
+  ): Promise<FlussonicStream | null> {
+    return this.streamsRepository
       .createQueryBuilder('stream')
       .where('stream.flussonic_server_id = :serverId', { serverId })
       .andWhere('stream.status != :deleted', {
@@ -244,7 +298,57 @@ export class FlussonicStreamsService {
         { name },
       )
       .getOne();
-    return Boolean(existing);
+  }
+
+  /** Follows `next` cursor pagination until exhausted (capped at MAX_SYNC_PAGES as a safety net). */
+  private async fetchAllLiveStreams(
+    server: FlussonicServer,
+  ): Promise<FlussonicLiveStream[]> {
+    const accessToken = await this.serversService.ensureAccessToken(server);
+    const all: FlussonicLiveStream[] = [];
+    let cursor: string | null = null;
+
+    for (let page = 0; page < MAX_SYNC_PAGES; page++) {
+      const url =
+        buildFlussonicApiUrl(server, 'streams') +
+        (cursor ? `?next=${encodeURIComponent(cursor)}` : '');
+
+      let res: Response;
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(
+          () => controller.abort(),
+          REQUEST_TIMEOUT_MS,
+        );
+        try {
+          res = await fetch(url, {
+            headers: {
+              Accept: 'application/json',
+              Authorization: `Bearer ${accessToken}`,
+            },
+            signal: controller.signal,
+          });
+        } finally {
+          clearTimeout(timeout);
+        }
+        if (!res.ok) {
+          throw new Error(`upstream responded with HTTP ${res.status}`);
+        }
+      } catch (err) {
+        const reason = err instanceof Error ? err.message : 'unknown error';
+        throw new BadGatewayException(
+          `Failed to list streams from "${server.name}" (${url}): ${reason}`,
+        );
+      }
+
+      const body = (await res.json()) as FlussonicStreamsListResponse;
+      all.push(...body.streams);
+
+      if (!body.next) break;
+      cursor = body.next;
+    }
+
+    return all;
   }
 
   /**

@@ -8,6 +8,7 @@ import {
 } from 'typeorm';
 import { FlussonicStreamStatus } from '../enums/flussonic-stream-status.enum';
 import type { FlussonicStreamConfig } from '../interfaces/flussonic-stream-config.interface';
+import type { FlussonicLiveStream } from '../interfaces/flussonic-live-stream.interface';
 import {
   nowUnixSeconds,
   unixTimestampTransformer,
@@ -28,6 +29,10 @@ export class FlussonicStream {
   /** The exact payload submitted to/returned by Flussonic's `PUT /streams/urlencode(name)` — see FlussonicStreamConfig. */
   @Column({ type: 'json' })
   config_json: FlussonicStreamConfig;
+
+  /** Raw per-stream object from Flussonic's real `GET streams` (live stats, media info, etc.) — set by FlussonicStreamsService.syncFromFlussonic, untouched by create/update. */
+  @Column({ type: 'json', nullable: true })
+  live_stats_json: FlussonicLiveStream | null;
 
   @Index()
   @Column({
