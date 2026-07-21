@@ -163,80 +163,137 @@ function ServerStatsContent({ serverId }: { serverId: string }) {
         className="animate-fade-in-up overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"
         style={{ animationDelay: '80ms' }}
       >
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-gray-200 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
-              <tr>
-                <th className="px-4 py-3 font-medium">Time</th>
-                <th className="px-4 py-3 font-medium">CPU %</th>
-                <th className="px-4 py-3 font-medium">Memory</th>
-                <th className="px-4 py-3 font-medium">Disk (GB)</th>
-                <th className="px-4 py-3 font-medium">Net in/out (Mbps)</th>
-                <th className="px-4 py-3 font-medium">Streams (online/total)</th>
-                <th className="px-4 py-3 font-medium">Clients</th>
-                <th className="px-4 py-3 font-medium">Scheduler load</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Version</th>
-                <th className="px-4 py-3 font-medium">Uptime</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {isLoading && (
-                <tr>
-                  <td colSpan={11} className="px-4 py-10 text-center text-sm text-gray-400">
-                    Loading stats…
-                  </td>
-                </tr>
-              )}
+        {isLoading && (
+          <p className="px-4 py-10 text-center text-sm text-gray-400">Loading stats…</p>
+        )}
 
-              {!isLoading && loadError && (
-                <tr>
-                  <td colSpan={11} className="px-4 py-10 text-center text-sm text-red-600">
-                    {loadError}
-                  </td>
-                </tr>
-              )}
+        {!isLoading && loadError && (
+          <p className="px-4 py-10 text-center text-sm text-red-600">{loadError}</p>
+        )}
 
-              {!isLoading && !loadError && items.length === 0 && (
-                <tr>
-                  <td colSpan={11} className="px-4 py-10 text-center text-sm text-gray-400">
-                    No stats recorded yet. Click Sync to pull the latest reading from this server.
-                  </td>
-                </tr>
-              )}
+        {!isLoading && !loadError && items.length === 0 && (
+          <p className="px-4 py-10 text-center text-sm text-gray-400">
+            No stats recorded yet. Click Sync to pull the latest reading from this server.
+          </p>
+        )}
 
-              {!isLoading &&
-                !loadError &&
-                items.map((stat) => (
-                  <tr key={stat.id} className="transition-colors hover:bg-gray-50">
-                    <td className="px-4 py-3 whitespace-nowrap text-gray-600">
-                      {formatTime(stat.created_at)}
-                    </td>
-                    <td className="px-4 py-3 font-medium text-gray-900">
-                      {formatDecimal(stat.cpu_usage)}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">{formatMemory(stat)}</td>
-                    <td className="px-4 py-3 text-gray-600">{formatNumber(stat.disk_usage_gb)}</td>
-                    <td className="px-4 py-3 text-gray-600">
-                      {formatDecimal(stat.network_in_mbps)} / {formatDecimal(stat.network_out_mbps)}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">{formatStreams(stat)}</td>
-                    <td className="px-4 py-3 text-gray-600">{formatNumber(stat.total_clients)}</td>
-                    <td className="px-4 py-3 text-gray-600">
-                      {formatNumber(stat.scheduler_load)}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">
-                      {formatNumber(stat.streamer_status)}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">
-                      {formatNumber(stat.server_version)}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">{formatUptime(stat.uptime_seconds)}</td>
+        {!isLoading && !loadError && items.length > 0 && (
+          <>
+            {/* Table — sm and up */}
+            <div className="hidden overflow-x-auto sm:block">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-gray-200 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">Time</th>
+                    <th className="px-4 py-3 font-medium">CPU %</th>
+                    <th className="px-4 py-3 font-medium">Memory</th>
+                    <th className="px-4 py-3 font-medium">Disk (GB)</th>
+                    <th className="px-4 py-3 font-medium">Net in/out (Mbps)</th>
+                    <th className="px-4 py-3 font-medium">Streams (online/total)</th>
+                    <th className="px-4 py-3 font-medium">Clients</th>
+                    <th className="px-4 py-3 font-medium">Scheduler load</th>
+                    <th className="px-4 py-3 font-medium">Status</th>
+                    <th className="px-4 py-3 font-medium">Version</th>
+                    <th className="px-4 py-3 font-medium">Uptime</th>
                   </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {items.map((stat) => (
+                    <tr key={stat.id} className="transition-colors hover:bg-gray-50">
+                      <td className="px-4 py-3 whitespace-nowrap text-gray-600">
+                        {formatTime(stat.created_at)}
+                      </td>
+                      <td className="px-4 py-3 font-medium text-gray-900">
+                        {formatDecimal(stat.cpu_usage)}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">{formatMemory(stat)}</td>
+                      <td className="px-4 py-3 text-gray-600">
+                        {formatNumber(stat.disk_usage_gb)}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">
+                        {formatDecimal(stat.network_in_mbps)} /{" "}
+                        {formatDecimal(stat.network_out_mbps)}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">{formatStreams(stat)}</td>
+                      <td className="px-4 py-3 text-gray-600">
+                        {formatNumber(stat.total_clients)}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">
+                        {formatNumber(stat.scheduler_load)}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">
+                        {formatNumber(stat.streamer_status)}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">
+                        {formatNumber(stat.server_version)}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">
+                        {formatUptime(stat.uptime_seconds)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Cards — below sm */}
+            <div className="divide-y divide-gray-100 sm:hidden">
+              {items.map((stat) => (
+                <div key={stat.id} className="p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium text-gray-900">
+                      {formatTime(stat.created_at)}
+                    </span>
+                    {stat.streamer_status !== null && (
+                      <span className="inline-block rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                        {stat.streamer_status}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-3 gap-3 text-xs">
+                    <div>
+                      <p className="text-gray-400">CPU</p>
+                      <p className="font-medium text-gray-900">{formatDecimal(stat.cpu_usage)}%</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400">Memory</p>
+                      <p className="font-medium text-gray-900">{formatMemory(stat)}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400">Streams</p>
+                      <p className="font-medium text-gray-900">{formatStreams(stat)}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400">Clients</p>
+                      <p className="font-medium text-gray-900">
+                        {formatNumber(stat.total_clients)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400">Uptime</p>
+                      <p className="font-medium text-gray-900">
+                        {formatUptime(stat.uptime_seconds)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400">Version</p>
+                      <p className="font-medium text-gray-900">
+                        {formatNumber(stat.server_version)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-2 text-xs text-gray-500">
+                    Disk {formatNumber(stat.disk_usage_gb)} GB · Net{" "}
+                    {formatDecimal(stat.network_in_mbps)}/{formatDecimal(stat.network_out_mbps)}{" "}
+                    Mbps · Scheduler {formatNumber(stat.scheduler_load)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
 
         <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3 text-sm text-gray-500">
           <span>{total === 0 ? 'No results' : `Showing ${from}–${to} of ${total}`}</span>
