@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ProtectedRoute } from "@/components/protected-route";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { ToggleField } from "@/components/toggle";
+import { SyncRunHistoryPanel } from "@/components/sync-run-history-panel";
 import { ArrowPathIcon } from "@/components/icons";
 import {
   listSyncSchedules,
@@ -77,10 +78,12 @@ function ScheduleCard({
   type,
   schedule,
   onSaved,
+  onViewHistory,
 }: {
   type: SyncType;
   schedule: SyncSchedule;
   onSaved: (updated: SyncSchedule) => void;
+  onViewHistory: (type: SyncType) => void;
 }) {
   const [draft, setDraft] = useState<Draft>({
     enabled: schedule.enabled,
@@ -174,13 +177,21 @@ function ScheduleCard({
           Last run: {formatRelativeTime(schedule.last_run_at)}
           {lastRunText ? ` — ${lastRunText}` : ""}
         </p>
-        <button
-          onClick={handleSave}
-          disabled={!isDirty || isSaving}
-          className="rounded-full bg-flu-pink px-4 py-1.5 text-sm font-semibold text-white shadow-lg shadow-flu-pink/30 transition hover:bg-flu-pink-dark disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {isSaving ? "Saving…" : "Save"}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onViewHistory(type)}
+            className="rounded-full border border-gray-300 px-4 py-1.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+          >
+            History
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={!isDirty || isSaving}
+            className="rounded-full bg-flu-pink px-4 py-1.5 text-sm font-semibold text-white shadow-lg shadow-flu-pink/30 transition hover:bg-flu-pink-dark disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isSaving ? "Saving…" : "Save"}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -191,6 +202,7 @@ function SettingsContent() {
   const [schedules, setSchedules] = useState<SyncSchedule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [historyType, setHistoryType] = useState<SyncType | null>(null);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -251,10 +263,18 @@ function SettingsContent() {
               type={schedule.sync_type}
               schedule={schedule}
               onSaved={handleSaved}
+              onViewHistory={setHistoryType}
             />
           ))}
         </div>
       )}
+
+      <SyncRunHistoryPanel
+        open={historyType !== null}
+        type={historyType}
+        title={historyType ? TYPE_INFO[historyType].title : ""}
+        onClose={() => setHistoryType(null)}
+      />
     </div>
   );
 }

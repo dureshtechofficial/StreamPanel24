@@ -18,3 +18,12 @@ export interface UpdateSyncScheduleInput {
   enabled?: boolean;
   cron_expression?: string;
 }
+
+export interface SyncScheduleRun {
+  id: string;
+  sync_type: SyncType;
+  /** UTC unix timestamp (seconds) */
+  ran_at: number;
+  success: boolean;
+  summary: Record<string, unknown>;
+}
