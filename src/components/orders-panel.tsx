@@ -85,6 +85,7 @@ export function OrdersPanel({
   const [remark, setRemark] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitInfo, setSubmitInfo] = useState<string | null>(null);
 
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
@@ -99,6 +100,7 @@ export function OrdersPanel({
     setPaymentMethod(PAYMENT_METHODS[0]);
     setRemark('');
     setSubmitError(null);
+    setSubmitInfo(null);
   }
 
   const load = useCallback(async () => {
@@ -137,15 +139,26 @@ export function OrdersPanel({
     }
     setIsSubmitting(true);
     setSubmitError(null);
+    setSubmitInfo(null);
     try {
-      await api.createOrder(customer.id, {
+      const created = await api.createOrder(customer.id, {
         plan_id: planId,
         stream_id: streamId,
         duration_days: durationDays,
         payment_method: paymentMethod,
         remark: remark.trim() || undefined,
       });
-      setShowForm(false);
+      // The backend pushes effective_from past an existing active order on
+      // this stream instead of overlapping it — surface that as a renewal,
+      // not a silent surprise about why the order isn't starting today.
+      const startsInFuture = created.effective_from > Date.now() / 1000 + 300;
+      if (startsInFuture) {
+        setSubmitInfo(
+          `This stream already has an active order — the new one is queued to start ${formatDate(created.effective_from)}, right after the current one ends.`,
+        );
+      } else {
+        setShowForm(false);
+      }
       await load();
     } catch (err) {
       setSubmitError(
@@ -316,6 +329,11 @@ export function OrdersPanel({
                   </div>
 
                   {submitError && <p className="text-xs text-red-600">{submitError}</p>}
+                  {submitInfo && (
+                    <p className="rounded-md bg-amber-50 px-2 py-1.5 text-xs text-amber-700">
+                      {submitInfo}
+                    </p>
+                  )}
 
                   <div className="flex justify-end gap-2 pt-1">
                     <button
