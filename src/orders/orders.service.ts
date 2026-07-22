@@ -199,6 +199,28 @@ export class OrdersService {
   }
 
   /**
+   * A stream can only be under one active order's date range at a time — if
+   * it already has an active order whose window extends past `requestedFrom`,
+   * the new order is queued to start exactly when that one ends (a renewal/
+   * extension) rather than overlapping it as a duplicate. Picks the active
+   * order with the furthest-out effective_to, so renewing more than once
+   * chains correctly instead of always stacking off the first one.
+   */
+  private async resolveEffectiveFrom(
+    streamId: string,
+    requestedFrom: number,
+  ): Promise<number> {
+    const latestActive = await this.ordersRepository.findOne({
+      where: { stream_id: streamId, status: OrderStatus.ACTIVE },
+      order: { effective_to: 'DESC' },
+    });
+    if (!latestActive || latestActive.effective_to <= requestedFrom) {
+      return requestedFrom;
+    }
+    return latestActive.effective_to;
+  }
+
+  /**
    * Core order creation, shared by the admin and reseller-scoped controllers
    * (they only differ in which price field defaults apply and where
    * customerId/resellerId come from). Snapshots the plan's terms onto the
@@ -218,7 +240,11 @@ export class OrdersService {
     const maxStreams = dto.max_streams ?? plan.max_streams;
     const maxConnections = dto.max_connections ?? plan.max_connections;
     const playbackProtocols = dto.playback_protocols ?? plan.playback_protocols;
-    const effectiveFrom = dto.effective_from ?? nowUnixSeconds();
+    const requestedFrom = dto.effective_from ?? nowUnixSeconds();
+    const effectiveFrom = await this.resolveEffectiveFrom(
+      dto.stream_id,
+      requestedFrom,
+    );
     const effectiveTo = effectiveFrom + dto.duration_days * SECONDS_PER_DAY;
 
     // Assign first — if the stream is already taken by a different customer,
