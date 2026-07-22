@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ProtectedRoute } from "@/components/protected-route";
 import { DashboardShell } from "@/components/dashboard-shell";
-import { ToggleField } from "@/components/toggle";
+import { Toggle, ToggleField } from "@/components/toggle";
 import { SyncRunHistoryPanel } from "@/components/sync-run-history-panel";
 import { ArrowPathIcon } from "@/components/icons";
 import {
@@ -14,8 +14,17 @@ import {
   listOrderCancelSettings,
   updateOrderCancelSetting,
 } from "@/lib/order-cancel-settings-api";
+import {
+  listCustomerActionSettings,
+  updateCustomerActionSetting,
+} from "@/lib/customer-action-settings-api";
 import type { SyncSchedule, SyncType } from "@/types/sync-schedule";
 import type { OrderCancelActor, OrderCancelSetting } from "@/types/order-cancel-setting";
+import type {
+  CustomerAction,
+  CustomerActionActor,
+  CustomerActionSetting,
+} from "@/types/customer-action-setting";
 import { ApiError } from "@/lib/api-error";
 import { useAuth } from "@/lib/auth-context";
 import { usePageTitle } from "@/lib/use-page-title";
@@ -172,6 +181,143 @@ function OrderCancelSection() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+    </div>
+  );
+}
+
+const CUSTOMER_ACTION_ACTOR_ORDER: CustomerActionActor[] = ["admin", "reseller"];
+const CUSTOMER_ACTION_ACTOR_LABELS: Record<CustomerActionActor, string> = {
+  admin: "Admin",
+  reseller: "Reseller",
+};
+const CUSTOMER_ACTION_ORDER: CustomerAction[] = ["edit", "delete", "assign"];
+const CUSTOMER_ACTION_LABELS: Record<CustomerAction, string> = {
+  edit: "Edit customer",
+  delete: "Delete customer",
+  assign: "Assign streams",
+};
+
+function CustomerActionsSection() {
+  const [settings, setSettings] = useState<CustomerActionSetting[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [savingKey, setSavingKey] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setIsLoading(true);
+    setLoadError(null);
+    try {
+      const result = await listCustomerActionSettings();
+      setSettings(result);
+    } catch (err) {
+      setLoadError(
+        err instanceof ApiError ? err.message : "Failed to load customer-action settings.",
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load();
+  }, [load]);
+
+  async function handleToggle(
+    actorType: CustomerActionActor,
+    action: CustomerAction,
+    enabled: boolean,
+  ) {
+    const key = `${actorType}:${action}`;
+    setSavingKey(key);
+    setError(null);
+    try {
+      const updated = await updateCustomerActionSetting(actorType, action, enabled);
+      setSettings((prev) =>
+        prev.map((s) =>
+          s.actor_type === actorType && s.action === action ? updated : s,
+        ),
+      );
+    } catch (err) {
+      setError(
+        err instanceof ApiError ? err.message : "Failed to save customer-action setting.",
+      );
+    } finally {
+      setSavingKey(null);
+    }
+  }
+
+  return (
+    <div className="animate-fade-in-up mb-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+      <h2 className="text-base font-semibold text-gray-900">Customer management</h2>
+      <p className="mt-1 text-sm text-gray-500">
+        Control who is currently allowed to edit, delete, or assign streams to
+        a customer, independently for admin and resellers.
+      </p>
+
+      {isLoading && (
+        <p className="mt-4 flex items-center gap-2 text-sm text-gray-400">
+          <ArrowPathIcon className="h-4 w-4 animate-spin" />
+          Loading…
+        </p>
+      )}
+
+      {!isLoading && loadError && (
+        <p className="mt-4 text-sm text-red-600">{loadError}</p>
+      )}
+
+      {!isLoading && !loadError && (
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr>
+                <th className="pb-2 pr-4 font-medium text-gray-500"></th>
+                {CUSTOMER_ACTION_ACTOR_ORDER.map((actorType) => (
+                  <th
+                    key={actorType}
+                    className="pb-2 px-3 text-center text-xs font-medium uppercase tracking-wide text-gray-400"
+                  >
+                    {CUSTOMER_ACTION_ACTOR_LABELS[actorType]}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {CUSTOMER_ACTION_ORDER.map((action) => (
+                <tr key={action}>
+                  <td className="py-2 pr-4 text-gray-700">
+                    {CUSTOMER_ACTION_LABELS[action]}
+                  </td>
+                  {CUSTOMER_ACTION_ACTOR_ORDER.map((actorType) => {
+                    const setting = settings.find(
+                      (s) => s.actor_type === actorType && s.action === action,
+                    );
+                    const key = `${actorType}:${action}`;
+                    if (!setting) return <td key={actorType} className="px-3 py-2" />;
+                    return (
+                      <td key={actorType} className="px-3 py-2 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <Toggle
+                            label={`${CUSTOMER_ACTION_ACTOR_LABELS[actorType]} can ${CUSTOMER_ACTION_LABELS[action].toLowerCase()}`}
+                            checked={setting.enabled}
+                            onChange={(v) => handleToggle(actorType, action, v)}
+                          />
+                          {savingKey === key && (
+                            <ArrowPathIcon className="h-3.5 w-3.5 animate-spin text-gray-400" />
+                          )}
+                        </div>
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -362,6 +508,7 @@ function SettingsContent() {
       </div>
 
       <OrderCancelSection />
+      <CustomerActionsSection />
 
       {isLoading && (
         <p className="flex items-center gap-2 text-sm text-gray-400">

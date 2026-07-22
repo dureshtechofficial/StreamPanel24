@@ -27,6 +27,7 @@ import type { Customer, CustomerInput, CustomerStatus } from "@/types/customer";
 import { ApiError } from "@/lib/api-error";
 import { usePageTitle } from "@/lib/use-page-title";
 import { useAdminOrderCancelEnabled } from "@/lib/use-order-cancel-enabled";
+import { useAdminCustomerActionFlags } from "@/lib/use-customer-action-flags";
 
 const PAGE_SIZE = 10;
 
@@ -39,6 +40,7 @@ const STATUS_STYLES: Record<CustomerStatus, string> = {
 function CustomersContent() {
   usePageTitle("Customers");
   const orderCancelEnabled = useAdminOrderCancelEnabled();
+  const customerActionFlags = useAdminCustomerActionFlags();
   const [items, setItems] = useState<Customer[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -253,27 +255,33 @@ function CustomersContent() {
                           >
                             <ReceiptIcon className="h-4 w-4" />
                           </button>
-                          <button
-                            onClick={() => setStreamsCustomer(customer)}
-                            className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
-                            aria-label={`Assign streams to ${customer.name}`}
-                          >
-                            <BroadcastIcon className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => openEdit(customer)}
-                            className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
-                            aria-label={`Edit ${customer.name}`}
-                          >
-                            <PencilIcon className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => setPendingDelete(customer)}
-                            className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
-                            aria-label={`Delete ${customer.name}`}
-                          >
-                            <TrashIcon className="h-4 w-4" />
-                          </button>
+                          {customerActionFlags.assign && (
+                            <button
+                              onClick={() => setStreamsCustomer(customer)}
+                              className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
+                              aria-label={`Assign streams to ${customer.name}`}
+                            >
+                              <BroadcastIcon className="h-4 w-4" />
+                            </button>
+                          )}
+                          {customerActionFlags.edit && (
+                            <button
+                              onClick={() => openEdit(customer)}
+                              className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
+                              aria-label={`Edit ${customer.name}`}
+                            >
+                              <PencilIcon className="h-4 w-4" />
+                            </button>
+                          )}
+                          {customerActionFlags.delete && (
+                            <button
+                              onClick={() => setPendingDelete(customer)}
+                              className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                              aria-label={`Delete ${customer.name}`}
+                            >
+                              <TrashIcon className="h-4 w-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -302,27 +310,33 @@ function CustomersContent() {
                       >
                         <ReceiptIcon className="h-4 w-4" />
                       </button>
-                      <button
-                        onClick={() => setStreamsCustomer(customer)}
-                        className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
-                        aria-label={`Assign streams to ${customer.name}`}
-                      >
-                        <BroadcastIcon className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => openEdit(customer)}
-                        className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
-                        aria-label={`Edit ${customer.name}`}
-                      >
-                        <PencilIcon className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => setPendingDelete(customer)}
-                        className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
-                        aria-label={`Delete ${customer.name}`}
-                      >
-                        <TrashIcon className="h-4 w-4" />
-                      </button>
+                      {customerActionFlags.assign && (
+                        <button
+                          onClick={() => setStreamsCustomer(customer)}
+                          className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
+                          aria-label={`Assign streams to ${customer.name}`}
+                        >
+                          <BroadcastIcon className="h-4 w-4" />
+                        </button>
+                      )}
+                      {customerActionFlags.edit && (
+                        <button
+                          onClick={() => openEdit(customer)}
+                          className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
+                          aria-label={`Edit ${customer.name}`}
+                        >
+                          <PencilIcon className="h-4 w-4" />
+                        </button>
+                      )}
+                      {customerActionFlags.delete && (
+                        <button
+                          onClick={() => setPendingDelete(customer)}
+                          className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                          aria-label={`Delete ${customer.name}`}
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                        </button>
+                      )}
                     </div>
                   </div>
 
