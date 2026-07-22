@@ -13,6 +13,7 @@ import { CustomerActionSetting } from '../settings/entities/customer-action-sett
 import { Reseller } from '../resellers/entities/reseller.entity';
 import { Plan } from '../plans/entities/plan.entity';
 import { Order } from '../orders/entities/order.entity';
+import { WalletTransaction } from '../wallet/entities/wallet-transaction.entity';
 
 config();
 
@@ -37,6 +38,7 @@ export const dataSourceOptions: DataSourceOptions = {
     Reseller,
     Plan,
     Order,
+    WalletTransaction,
   ],
   migrations: [__dirname + '/migrations/*.{ts,js}'],
   synchronize: false,

@@ -9,6 +9,7 @@ import { FlussonicServersModule } from '../flussonic-servers/flussonic-servers.m
 import { PlansModule } from '../plans/plans.module';
 import { OrdersModule } from '../orders/orders.module';
 import { SettingsModule } from '../settings/settings.module';
+import { WalletModule } from '../wallet/wallet.module';
 import { ResellerAuthService } from './reseller-auth.service';
 import { ResellerAuthController } from './reseller-auth.controller';
 import { ResellerCustomersController } from './reseller-customers.controller';
@@ -16,6 +17,7 @@ import { ResellerCustomerStreamsController } from './reseller-customer-streams.c
 import { ResellerPlansController } from './reseller-plans.controller';
 import { ResellerOrdersController } from './reseller-orders.controller';
 import { ResellerSettingsController } from './reseller-settings.controller';
+import { ResellerWalletController } from './reseller-wallet.controller';
 import { ResellerJwtAccessStrategy } from './strategies/reseller-jwt-access.strategy';
 import { ResellerJwtRefreshStrategy } from './strategies/reseller-jwt-refresh.strategy';
 
@@ -27,6 +29,7 @@ import { ResellerJwtRefreshStrategy } from './strategies/reseller-jwt-refresh.st
     PlansModule,
     OrdersModule,
     SettingsModule,
+    WalletModule,
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -48,6 +51,7 @@ import { ResellerJwtRefreshStrategy } from './strategies/reseller-jwt-refresh.st
     ResellerPlansController,
     ResellerOrdersController,
     ResellerSettingsController,
+    ResellerWalletController,
   ],
   providers: [
     ResellerAuthService,

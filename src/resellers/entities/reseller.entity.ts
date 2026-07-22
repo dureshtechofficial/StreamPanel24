@@ -51,6 +51,10 @@ export class Reseller {
   @Column({ type: 'varchar', length: 10, nullable: true })
   pincode: string | null;
 
+  /** Current wallet balance — mutated only via WalletService.topUp (never directly), which also logs a WalletTransaction row. */
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: '0.00' })
+  wallet_balance: string;
+
   @Index()
   @Column({
     type: 'enum',

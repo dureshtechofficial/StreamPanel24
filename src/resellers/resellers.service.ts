@@ -129,6 +129,25 @@ export class ResellersService {
     return this.resellersRepository.save(reseller);
   }
 
+  /**
+   * The only place `wallet_balance` is ever mutated — always by a signed
+   * delta (positive for a topup), never set directly, so callers can't
+   * accidentally clobber a concurrent change. Used by WalletService, which
+   * pairs every call with a WalletTransaction row logging why the balance
+   * moved. Rejects a delta that would take the balance negative.
+   */
+  async adjustWalletBalance(id: string, delta: number): Promise<Reseller> {
+    const reseller = await this.findOne(id);
+    const newBalance = Number(reseller.wallet_balance) + delta;
+    if (newBalance < 0) {
+      throw new BadRequestException(
+        'This would take the wallet balance below zero',
+      );
+    }
+    reseller.wallet_balance = newBalance.toFixed(2);
+    return this.resellersRepository.save(reseller);
+  }
+
   /** Soft delete: the row is never physically removed, only marked as deleted. */
   async remove(id: string): Promise<void> {
     const reseller = await this.findOne(id);

@@ -31,6 +31,8 @@ import { Plan } from './plans/entities/plan.entity';
 import { PlansModule } from './plans/plans.module';
 import { Order } from './orders/entities/order.entity';
 import { OrdersModule } from './orders/orders.module';
+import { WalletTransaction } from './wallet/entities/wallet-transaction.entity';
+import { WalletModule } from './wallet/wallet.module';
 
 @Module({
   imports: [
@@ -67,6 +69,7 @@ import { OrdersModule } from './orders/orders.module';
           Reseller,
           Plan,
           Order,
+          WalletTransaction,
         ],
         synchronize: false,
         logging: configService.get<string>('appEnv') === 'development',
@@ -82,6 +85,7 @@ import { OrdersModule } from './orders/orders.module';
     SettingsModule,
     PlansModule,
     OrdersModule,
+    WalletModule,
   ],
   controllers: [AppController],
   providers: [
