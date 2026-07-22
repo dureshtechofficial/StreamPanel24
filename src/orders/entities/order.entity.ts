@@ -57,6 +57,38 @@ export class Order {
   @Column({ type: 'json', nullable: true })
   playback_protocols: string[] | null;
 
+  /** Plan name/description snapshotted at purchase time, for invoicing — same reasoning as price/duration_days above: a later rename must never alter a past invoice. */
+  @Column({ type: 'varchar', length: 100 })
+  plan_name: string;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  plan_description: string | null;
+
+  /** Customer contact/billing details snapshotted at purchase time, for invoicing — frozen even if the customer's own record is later edited, renamed, or soft-deleted. */
+  @Column({ type: 'varchar', length: 150 })
+  customer_name: string;
+
+  @Column({ type: 'varchar', length: 150, nullable: true })
+  customer_email: string | null;
+
+  @Column({ type: 'varchar', length: 20 })
+  customer_phone: string;
+
+  @Column({ type: 'varchar', length: 150, nullable: true })
+  customer_company_name: string | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  customer_address: string | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  customer_city: string | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  customer_state: string | null;
+
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  customer_pincode: string | null;
+
   @Column({
     type: 'bigint',
     unsigned: true,

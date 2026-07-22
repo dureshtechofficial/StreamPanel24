@@ -12,7 +12,7 @@ import { QueryOrderDto } from './dto/query-order.dto';
 import { OrderStatus } from './enums/order-status.enum';
 import { PaymentStatus } from './enums/payment-status.enum';
 import { PlansService } from '../plans/plans.service';
-import { CustomersService } from '../customers/customers.service';
+import { Customer } from '../customers/entities/customer.entity';
 import { ResellersService } from '../resellers/resellers.service';
 import { FlussonicStreamsService } from '../flussonic-servers/flussonic-streams.service';
 import { OrderCancelSettingsService } from '../settings/order-cancel-settings.service';
@@ -27,8 +27,6 @@ export type OrderReportEntry = Omit<
   Order,
   'setTimestampsOnInsert' | 'setTimestampOnUpdate'
 > & {
-  customer_name: string;
-  plan_name: string;
   stream_name: string;
   server_name: string;
   reseller_name: string | null;
@@ -48,7 +46,6 @@ export class OrdersService {
     @InjectRepository(Order)
     private readonly ordersRepository: Repository<Order>,
     private readonly plansService: PlansService,
-    private readonly customersService: CustomersService,
     private readonly resellersService: ResellersService,
     private readonly streamsService: FlussonicStreamsService,
     private readonly orderCancelSettingsService: OrderCancelSettingsService,
@@ -80,10 +77,11 @@ export class OrdersService {
 
   /**
    * Admin reports view: same pagination/filtering as findAll, but each order
-   * is enriched with the related customer/plan/stream/reseller names — the
-   * order itself only stores ids, and the report page needs readable labels.
-   * Lookups include soft-deleted/inactive rows so a historical order's
-   * labels still resolve even if the customer/plan/stream was later removed.
+   * is enriched with a readable stream/server/reseller name — customer and
+   * plan names are already on the order itself (the invoicing snapshot), so
+   * only stream/reseller still need a live lookup here. Lookups include
+   * soft-deleted/inactive rows so a historical order's labels still resolve
+   * even if the stream/reseller was later removed.
    */
   async findAllWithDetails(
     query: QueryOrderDto,
@@ -122,8 +120,6 @@ export class OrdersService {
   }
 
   private async toReportEntries(orders: Order[]): Promise<OrderReportEntry[]> {
-    const customerIds = [...new Set(orders.map((o) => o.customer_id))];
-    const planIds = [...new Set(orders.map((o) => o.plan_id))];
     const streamIds = [...new Set(orders.map((o) => o.stream_id))];
     const resellerIds = [
       ...new Set(
@@ -133,15 +129,11 @@ export class OrdersService {
       ),
     ];
 
-    const [customers, plans, streams, resellers] = await Promise.all([
-      this.customersService.findByIds(customerIds),
-      this.plansService.findByIds(planIds),
+    const [streams, resellers] = await Promise.all([
       this.streamsService.findByIdsAsDirectoryEntries(streamIds),
       this.resellersService.findByIds(resellerIds),
     ]);
 
-    const customerNameById = new Map(customers.map((c) => [c.id, c.name]));
-    const planNameById = new Map(plans.map((p) => [p.id, p.name]));
     const streamById = new Map(streams.map((s) => [s.id, s]));
     const resellerNameById = new Map(resellers.map((r) => [r.id, r.name]));
 
@@ -149,9 +141,6 @@ export class OrdersService {
       const stream = streamById.get(order.stream_id);
       return {
         ...order,
-        customer_name:
-          customerNameById.get(order.customer_id) ?? 'Unknown customer',
-        plan_name: planNameById.get(order.plan_id) ?? 'Unknown plan',
         stream_name: stream?.name ?? 'Unknown stream',
         server_name: stream?.server_name ?? 'Unknown server',
         reseller_name: order.reseller_id
@@ -232,20 +221,24 @@ export class OrdersService {
   /**
    * Core order creation, shared by the admin and reseller-scoped controllers
    * (they only differ in which price field defaults apply and where
-   * customerId/resellerId come from). Snapshots the plan's terms onto the
-   * order, then assigns the stream to the customer (without touching their
-   * other assignments) — a conflict there aborts the whole order.
+   * customer/resellerId come from). Snapshots the plan's terms *and* the
+   * customer's contact/billing details onto the order for invoicing — both
+   * callers already have the full `Customer` in hand from their own
+   * ownership check, so no extra lookup is needed here. Then assigns the
+   * stream to the customer (without touching their other assignments) — a
+   * conflict there aborts the whole order.
    */
   async create(params: {
-    customerId: string;
+    customer: Customer;
     resellerId: string | null;
     priceField: 'customer_price' | 'reseller_price';
     dto: CreateOrderDto;
     /** Only the reseller-scoped controller sets this — bills the order to the reseller's own wallet instead of an external payment method. */
     chargeResellerWallet?: boolean;
   }): Promise<Order> {
-    const { customerId, resellerId, priceField, dto, chargeResellerWallet } =
+    const { customer, resellerId, priceField, dto, chargeResellerWallet } =
       params;
+    const customerId = customer.id;
 
     if (chargeResellerWallet) {
       if (!resellerId) {
@@ -323,6 +316,16 @@ export class OrdersService {
       max_streams: maxStreams,
       max_connections: maxConnections,
       playback_protocols: playbackProtocols,
+      plan_name: plan.name,
+      plan_description: plan.description,
+      customer_name: customer.name,
+      customer_email: customer.email,
+      customer_phone: customer.phone,
+      customer_company_name: customer.company_name,
+      customer_address: customer.address,
+      customer_city: customer.city,
+      customer_state: customer.state,
+      customer_pincode: customer.pincode,
       effective_from: effectiveFrom,
       effective_to: effectiveTo,
       status: OrderStatus.ACTIVE,

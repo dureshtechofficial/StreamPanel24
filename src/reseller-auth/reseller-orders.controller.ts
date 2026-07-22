@@ -50,9 +50,12 @@ export class ResellerOrdersController {
     @Param('customerId') customerId: string,
     @Body() dto: CreateOrderDto,
   ) {
-    await this.customersService.findOneForReseller(reseller.id, customerId);
-    return this.ordersService.create({
+    const customer = await this.customersService.findOneForReseller(
+      reseller.id,
       customerId,
+    );
+    return this.ordersService.create({
+      customer,
       resellerId: reseller.id,
       priceField: 'reseller_price',
       dto,

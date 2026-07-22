@@ -73,7 +73,7 @@ export class OrdersController {
     }
     const customer = await this.customersService.findOne(dto.customer_id);
     return this.ordersService.create({
-      customerId: customer.id,
+      customer,
       resellerId: customer.reseller_id,
       priceField: 'customer_price',
       dto,
