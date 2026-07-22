@@ -15,6 +15,9 @@ import { CustomersService } from '../customers/customers.service';
 import { FlussonicStreamsService } from '../flussonic-servers/flussonic-streams.service';
 import { AssignCustomerStreamsDto } from '../customers/dto/assign-customer-streams.dto';
 import { QueryFlussonicStreamsDirectoryDto } from '../flussonic-servers/dto/query-flussonic-streams-directory.dto';
+import { CustomerActionSettingsService } from '../settings/customer-action-settings.service';
+import { CustomerActionActor } from '../settings/enums/customer-action-actor.enum';
+import { CustomerAction } from '../settings/enums/customer-action.enum';
 
 @ApiTags('reseller-auth')
 @ApiBearerAuth('access-token')
@@ -24,6 +27,7 @@ export class ResellerCustomerStreamsController {
   constructor(
     private readonly customersService: CustomersService,
     private readonly streamsService: FlussonicStreamsService,
+    private readonly customerActionSettingsService: CustomerActionSettingsService,
   ) {}
 
   @ApiOperation({
@@ -57,6 +61,10 @@ export class ResellerCustomerStreamsController {
     @Param('customerId') customerId: string,
     @Body() dto: AssignCustomerStreamsDto,
   ) {
+    await this.customerActionSettingsService.assertActionEnabled(
+      CustomerActionActor.RESELLER,
+      CustomerAction.ASSIGN,
+    );
     await this.customersService.findOneForReseller(reseller.id, customerId);
     return this.streamsService.assignToCustomer(customerId, dto.streamIds);
   }

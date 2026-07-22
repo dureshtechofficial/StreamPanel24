@@ -19,13 +19,19 @@ import { CustomersService } from '../customers/customers.service';
 import { CreateCustomerDto } from '../customers/dto/create-customer.dto';
 import { UpdateCustomerDto } from '../customers/dto/update-customer.dto';
 import { QueryCustomerDto } from '../customers/dto/query-customer.dto';
+import { CustomerActionSettingsService } from '../settings/customer-action-settings.service';
+import { CustomerActionActor } from '../settings/enums/customer-action-actor.enum';
+import { CustomerAction } from '../settings/enums/customer-action.enum';
 
 @ApiTags('reseller-auth')
 @ApiBearerAuth('access-token')
 @UseGuards(ResellerJwtAccessGuard)
 @Controller('reseller-auth/customers')
 export class ResellerCustomersController {
-  constructor(private readonly customersService: CustomersService) {}
+  constructor(
+    private readonly customersService: CustomersService,
+    private readonly customerActionSettingsService: CustomerActionSettingsService,
+  ) {}
 
   @ApiOperation({
     summary:
@@ -60,11 +66,15 @@ export class ResellerCustomersController {
 
   @ApiOperation({ summary: "Update one of the reseller's own customers" })
   @Patch(':id')
-  update(
+  async update(
     @CurrentReseller() reseller: Reseller,
     @Param('id') id: string,
     @Body() dto: UpdateCustomerDto,
   ) {
+    await this.customerActionSettingsService.assertActionEnabled(
+      CustomerActionActor.RESELLER,
+      CustomerAction.EDIT,
+    );
     return this.customersService.updateForReseller(reseller.id, id, dto);
   }
 
@@ -78,6 +88,10 @@ export class ResellerCustomersController {
     @CurrentReseller() reseller: Reseller,
     @Param('id') id: string,
   ): Promise<void> {
+    await this.customerActionSettingsService.assertActionEnabled(
+      CustomerActionActor.RESELLER,
+      CustomerAction.DELETE,
+    );
     await this.customersService.removeForReseller(reseller.id, id);
   }
 }

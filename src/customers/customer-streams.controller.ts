@@ -7,6 +7,9 @@ import { UserRole } from '../users/enums/user-role.enum';
 import { CustomersService } from './customers.service';
 import { FlussonicStreamsService } from '../flussonic-servers/flussonic-streams.service';
 import { AssignCustomerStreamsDto } from './dto/assign-customer-streams.dto';
+import { CustomerActionSettingsService } from '../settings/customer-action-settings.service';
+import { CustomerActionActor } from '../settings/enums/customer-action-actor.enum';
+import { CustomerAction } from '../settings/enums/customer-action.enum';
 
 @ApiTags('customers')
 @ApiBearerAuth('access-token')
@@ -17,6 +20,7 @@ export class CustomerStreamsController {
   constructor(
     private readonly customersService: CustomersService,
     private readonly streamsService: FlussonicStreamsService,
+    private readonly customerActionSettingsService: CustomerActionSettingsService,
   ) {}
 
   @ApiOperation({ summary: "List a customer's assigned streams" })
@@ -32,6 +36,10 @@ export class CustomerStreamsController {
   })
   @Put()
   async assign(@Param('id') id: string, @Body() dto: AssignCustomerStreamsDto) {
+    await this.customerActionSettingsService.assertActionEnabled(
+      CustomerActionActor.ADMIN,
+      CustomerAction.ASSIGN,
+    );
     await this.customersService.findOne(id);
     return this.streamsService.assignToCustomer(id, dto.streamIds);
   }
