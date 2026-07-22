@@ -23,6 +23,7 @@ import type { FlussonicStreamSession } from '@/types/flussonic-stream-session';
 import { ApiError } from '@/lib/api-error';
 import { useAuth } from '@/lib/auth-context';
 import { usePageTitle } from '@/lib/use-page-title';
+import { useSyncManualFlags } from '@/lib/use-sync-manual-flags';
 
 const PAGE_SIZE = 20;
 
@@ -61,6 +62,7 @@ function SessionsContent({ serverId }: { serverId: string }) {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncSummary, setSyncSummary] = useState<SyncSessionsSummary | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const syncManualFlags = useSyncManualFlags();
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -141,7 +143,8 @@ function SessionsContent({ serverId }: { serverId: string }) {
         </div>
         <button
           onClick={handleSync}
-          disabled={isSyncing}
+          disabled={isSyncing || !syncManualFlags.sessions}
+          title={syncManualFlags.sessions ? undefined : 'Manual sessions sync is disabled in Settings'}
           className="flex items-center justify-center gap-1.5 rounded-full bg-flu-pink px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-flu-pink/30 transition hover:bg-flu-pink-dark disabled:cursor-not-allowed disabled:opacity-60"
         >
           <ArrowPathIcon className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />

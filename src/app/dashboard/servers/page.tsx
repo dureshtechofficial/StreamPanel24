@@ -34,6 +34,7 @@ import { ApiError } from "@/lib/api-error";
 import { formatUptime } from "@/lib/format";
 import { useAuth } from "@/lib/auth-context";
 import { usePageTitle } from "@/lib/use-page-title";
+import { useSyncManualFlags } from "@/lib/use-sync-manual-flags";
 
 const PAGE_SIZE = 10;
 
@@ -69,6 +70,9 @@ function ServersContent() {
   const [isSyncingAll, setIsSyncingAll] = useState(false);
   const [syncSummary, setSyncSummary] = useState<SyncAllSummary | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const syncManualFlags = useSyncManualFlags();
+  const anyManualSyncEnabled =
+    syncManualFlags.server_stats || syncManualFlags.streams || syncManualFlags.sessions;
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -177,7 +181,12 @@ function ServersContent() {
         <div className="flex gap-2">
           <button
             onClick={handleSyncAll}
-            disabled={isSyncingAll}
+            disabled={isSyncingAll || !anyManualSyncEnabled}
+            title={
+              anyManualSyncEnabled
+                ? undefined
+                : "All manual syncs are disabled in Settings"
+            }
             className="flex items-center justify-center gap-1.5 rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <ArrowPathIcon

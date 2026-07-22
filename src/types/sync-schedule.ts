@@ -4,6 +4,8 @@ export interface SyncSchedule {
   id: string;
   sync_type: SyncType;
   enabled: boolean;
+  /** Gates the manual "Sync"/"Sync all" buttons for this type — independent of `enabled`, which only gates the cron. */
+  manual_sync_enabled: boolean;
   cron_expression: string;
   /** UTC unix timestamp (seconds) */
   last_run_at: number | null;
@@ -16,6 +18,7 @@ export interface SyncSchedule {
 
 export interface UpdateSyncScheduleInput {
   enabled?: boolean;
+  manual_sync_enabled?: boolean;
   cron_expression?: string;
 }
 

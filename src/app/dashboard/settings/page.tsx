@@ -46,7 +46,11 @@ const CRON_PRESETS = [
   { label: "Daily at midnight", value: "0 0 * * *" },
 ];
 
-type Draft = { enabled: boolean; cron_expression: string };
+type Draft = {
+  enabled: boolean;
+  manual_sync_enabled: boolean;
+  cron_expression: string;
+};
 
 function formatRelativeTime(unixSeconds: number | null): string {
   if (unixSeconds === null) return "Never";
@@ -87,6 +91,7 @@ function ScheduleCard({
 }) {
   const [draft, setDraft] = useState<Draft>({
     enabled: schedule.enabled,
+    manual_sync_enabled: schedule.manual_sync_enabled,
     cron_expression: schedule.cron_expression,
   });
   const [isSaving, setIsSaving] = useState(false);
@@ -94,6 +99,7 @@ function ScheduleCard({
 
   const isDirty =
     draft.enabled !== schedule.enabled ||
+    draft.manual_sync_enabled !== schedule.manual_sync_enabled ||
     draft.cron_expression !== schedule.cron_expression;
 
   async function handleSave() {
@@ -123,11 +129,20 @@ function ScheduleCard({
           </h2>
           <p className="mt-1 text-sm text-gray-500">{info.description}</p>
         </div>
-        <ToggleField
-          label="Enabled"
-          checked={draft.enabled}
-          onChange={(v) => setDraft((prev) => ({ ...prev, enabled: v }))}
-        />
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          <ToggleField
+            label="Scheduled (cron)"
+            checked={draft.enabled}
+            onChange={(v) => setDraft((prev) => ({ ...prev, enabled: v }))}
+          />
+          <ToggleField
+            label="Manual sync button"
+            checked={draft.manual_sync_enabled}
+            onChange={(v) =>
+              setDraft((prev) => ({ ...prev, manual_sync_enabled: v }))
+            }
+          />
+        </div>
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">

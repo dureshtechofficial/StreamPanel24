@@ -28,6 +28,7 @@ import {
   updateStream,
   type SyncStreamsSummary,
 } from '@/lib/flussonic-streams-api';
+import { useSyncManualFlags } from '@/lib/use-sync-manual-flags';
 import type { FlussonicServer } from '@/types/flussonic-server';
 import type {
   FlussonicStream,
@@ -77,6 +78,7 @@ function StreamsContent({ serverId }: { serverId: string }) {
 
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncSummary, setSyncSummary] = useState<SyncStreamsSummary | null>(null);
+  const syncManualFlags = useSyncManualFlags();
   const [syncError, setSyncError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -203,7 +205,8 @@ function StreamsContent({ serverId }: { serverId: string }) {
           </Link>
           <button
             onClick={handleSync}
-            disabled={isSyncing}
+            disabled={isSyncing || !syncManualFlags.streams}
+            title={syncManualFlags.streams ? undefined : 'Manual streams sync is disabled in Settings'}
             className="flex items-center justify-center gap-1.5 rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <ArrowPathIcon className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />

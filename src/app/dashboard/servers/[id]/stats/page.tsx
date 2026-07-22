@@ -18,6 +18,7 @@ import type { FlussonicServerStat } from '@/types/flussonic-server-stat';
 import { ApiError } from '@/lib/api-error';
 import { useAuth } from '@/lib/auth-context';
 import { usePageTitle } from '@/lib/use-page-title';
+import { useSyncManualFlags } from '@/lib/use-sync-manual-flags';
 
 const PAGE_SIZE = 15;
 
@@ -69,6 +70,7 @@ function ServerStatsContent({ serverId }: { serverId: string }) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const syncManualFlags = useSyncManualFlags();
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -145,7 +147,8 @@ function ServerStatsContent({ serverId }: { serverId: string }) {
         </div>
         <button
           onClick={handleSync}
-          disabled={isSyncing}
+          disabled={isSyncing || !syncManualFlags.server_stats}
+          title={syncManualFlags.server_stats ? undefined : 'Manual server stats sync is disabled in Settings'}
           className="flex items-center justify-center gap-1.5 rounded-full bg-flu-pink px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-flu-pink/30 transition hover:bg-flu-pink-dark disabled:cursor-not-allowed disabled:opacity-60"
         >
           <ArrowPathIcon className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
