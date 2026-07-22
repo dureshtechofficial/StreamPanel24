@@ -55,10 +55,6 @@ export class FlussonicStreamSession {
   @Column({ type: 'varchar', length: 10, nullable: true })
   country: string | null;
 
-  /** Full response from the ipwho.is lookup for `ip`, fetched once when the session is first seen. */
-  @Column({ type: 'json', nullable: true })
-  ipwhois_json: Record<string, unknown> | null;
-
   /**
    * UTC unix timestamp (seconds) of the sync run that last touched this row —
    * one value captured per `syncFromFlussonic` call, stamped on every session

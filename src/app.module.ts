@@ -26,6 +26,7 @@ import { SyncSchedule } from './settings/entities/sync-schedule.entity';
 import { SyncScheduleRun } from './settings/entities/sync-schedule-run.entity';
 import { OrderCancelSetting } from './settings/entities/order-cancel-setting.entity';
 import { CustomerActionSetting } from './settings/entities/customer-action-setting.entity';
+import { WalletTopupSetting } from './settings/entities/wallet-topup-setting.entity';
 import { SettingsModule } from './settings/settings.module';
 import { Plan } from './plans/entities/plan.entity';
 import { PlansModule } from './plans/plans.module';
@@ -33,6 +34,9 @@ import { Order } from './orders/entities/order.entity';
 import { OrdersModule } from './orders/orders.module';
 import { WalletTransaction } from './wallet/entities/wallet-transaction.entity';
 import { WalletModule } from './wallet/wallet.module';
+import { CustomerWalletTransaction } from './customer-wallet/entities/customer-wallet-transaction.entity';
+import { CustomerWalletModule } from './customer-wallet/customer-wallet.module';
+import { RazorpayModule } from './razorpay/razorpay.module';
 
 @Module({
   imports: [
@@ -66,10 +70,12 @@ import { WalletModule } from './wallet/wallet.module';
           SyncScheduleRun,
           OrderCancelSetting,
           CustomerActionSetting,
+          WalletTopupSetting,
           Reseller,
           Plan,
           Order,
           WalletTransaction,
+          CustomerWalletTransaction,
         ],
         synchronize: false,
         logging: configService.get<string>('appEnv') === 'development',
@@ -86,6 +92,8 @@ import { WalletModule } from './wallet/wallet.module';
     PlansModule,
     OrdersModule,
     WalletModule,
+    CustomerWalletModule,
+    RazorpayModule,
   ],
   controllers: [AppController],
   providers: [

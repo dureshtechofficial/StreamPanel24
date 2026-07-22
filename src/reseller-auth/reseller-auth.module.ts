@@ -10,6 +10,7 @@ import { PlansModule } from '../plans/plans.module';
 import { OrdersModule } from '../orders/orders.module';
 import { SettingsModule } from '../settings/settings.module';
 import { WalletModule } from '../wallet/wallet.module';
+import { RazorpayModule } from '../razorpay/razorpay.module';
 import { ResellerAuthService } from './reseller-auth.service';
 import { ResellerAuthController } from './reseller-auth.controller';
 import { ResellerCustomersController } from './reseller-customers.controller';
@@ -30,6 +31,7 @@ import { ResellerJwtRefreshStrategy } from './strategies/reseller-jwt-refresh.st
     OrdersModule,
     SettingsModule,
     WalletModule,
+    RazorpayModule,
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],

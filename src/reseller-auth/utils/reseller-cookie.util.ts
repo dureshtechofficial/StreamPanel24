@@ -16,7 +16,8 @@ export function setResellerRefreshTokenCookie(
   res.cookie(RESELLER_REFRESH_TOKEN_COOKIE, token, {
     httpOnly: true,
     secure: isProduction,
-    sameSite: 'strict',
+    // See auth/utils/cookie.util.ts for why 'lax' rather than 'strict'.
+    sameSite: 'lax',
     path: '/api/v1/reseller-auth',
     maxAge,
   });
@@ -31,7 +32,8 @@ export function clearResellerRefreshTokenCookie(
   res.clearCookie(RESELLER_REFRESH_TOKEN_COOKIE, {
     httpOnly: true,
     secure: isProduction,
-    sameSite: 'strict',
+    // See auth/utils/cookie.util.ts for why 'lax' rather than 'strict'.
+    sameSite: 'lax',
     path: '/api/v1/reseller-auth',
   });
 }

@@ -2,7 +2,9 @@ import {
   Body,
   Controller,
   Get,
+  NotFoundException,
   Param,
+  Patch,
   Put,
   Query,
   UseGuards,
@@ -13,8 +15,12 @@ import { CurrentReseller } from './decorators/current-reseller.decorator';
 import { Reseller } from '../resellers/entities/reseller.entity';
 import { CustomersService } from '../customers/customers.service';
 import { FlussonicStreamsService } from '../flussonic-servers/flussonic-streams.service';
+import { FlussonicStreamSessionsService } from '../flussonic-servers/flussonic-stream-sessions.service';
+import { FlussonicStream } from '../flussonic-servers/entities/flussonic-stream.entity';
 import { AssignCustomerStreamsDto } from '../customers/dto/assign-customer-streams.dto';
 import { QueryFlussonicStreamsDirectoryDto } from '../flussonic-servers/dto/query-flussonic-streams-directory.dto';
+import { QueryFlussonicStreamSessionDto } from '../flussonic-servers/dto/query-flussonic-stream-session.dto';
+import { SetStreamDisabledDto } from '../flussonic-servers/dto/set-stream-disabled.dto';
 import { CustomerActionSettingsService } from '../settings/customer-action-settings.service';
 import { CustomerActionActor } from '../settings/enums/customer-action-actor.enum';
 import { CustomerAction } from '../settings/enums/customer-action.enum';
@@ -27,6 +33,7 @@ export class ResellerCustomerStreamsController {
   constructor(
     private readonly customersService: CustomersService,
     private readonly streamsService: FlussonicStreamsService,
+    private readonly sessionsService: FlussonicStreamSessionsService,
     private readonly customerActionSettingsService: CustomerActionSettingsService,
   ) {}
 
@@ -67,5 +74,63 @@ export class ResellerCustomerStreamsController {
     );
     await this.customersService.findOneForReseller(reseller.id, customerId);
     return this.streamsService.assignToCustomer(customerId, dto.streamIds);
+  }
+
+  @ApiOperation({
+    summary:
+      "Get one stream's full details — 404s unless it's currently assigned to one of the reseller's own customers",
+  })
+  @Get('streams/:streamId')
+  async findOneStream(
+    @CurrentReseller() reseller: Reseller,
+    @Param('streamId') streamId: string,
+  ) {
+    return this.assertOwnedStream(reseller, streamId);
+  }
+
+  @ApiOperation({
+    summary:
+      "Sessions for one stream — 404s unless the stream is currently assigned to one of the reseller's own customers",
+  })
+  @Get('streams/:streamId/sessions')
+  async findStreamSessions(
+    @CurrentReseller() reseller: Reseller,
+    @Param('streamId') streamId: string,
+    @Query() query: QueryFlussonicStreamSessionDto,
+  ) {
+    await this.assertOwnedStream(reseller, streamId);
+    return this.sessionsService.findAllForStream(streamId, query);
+  }
+
+  @ApiOperation({
+    summary:
+      'Disable/re-enable one stream (used for the "Disable"/"Restart" actions) — 404s unless it\'s currently assigned to one of the reseller\'s own customers',
+  })
+  @Patch('streams/:streamId/disabled')
+  async setStreamDisabled(
+    @CurrentReseller() reseller: Reseller,
+    @Param('streamId') streamId: string,
+    @Body() dto: SetStreamDisabledDto,
+  ) {
+    const stream = await this.assertOwnedStream(reseller, streamId);
+    return this.streamsService.update(stream.flussonic_server_id, streamId, {
+      disabled: dto.disabled,
+    });
+  }
+
+  /** 404s unless `streamId` is currently assigned to one of this reseller's own customers. */
+  private async assertOwnedStream(
+    reseller: Reseller,
+    streamId: string,
+  ): Promise<FlussonicStream> {
+    const stream = await this.streamsService.findOneById(streamId);
+    if (!stream || !stream.customer_id) {
+      throw new NotFoundException('Stream not found');
+    }
+    await this.customersService.findOneForReseller(
+      reseller.id,
+      stream.customer_id,
+    );
+    return stream;
   }
 }

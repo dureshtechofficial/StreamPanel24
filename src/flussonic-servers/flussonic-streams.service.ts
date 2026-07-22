@@ -17,6 +17,8 @@ import { FlussonicStreamStatus } from './enums/flussonic-stream-status.enum';
 import { FlussonicServersService } from './flussonic-servers.service';
 import { buildFlussonicApiUrl } from './utils/flussonic-api-url.util';
 import { nowUnixSeconds } from '../common/utils/unix-timestamp.util';
+import { Order } from '../orders/entities/order.entity';
+import { OrderStatus } from '../orders/enums/order-status.enum';
 import type { FlussonicStreamConfig } from './interfaces/flussonic-stream-config.interface';
 import type {
   FlussonicLiveStream,
@@ -52,10 +54,17 @@ export interface SyncAllServersSummary {
 export interface FlussonicStreamDirectoryEntry {
   id: string;
   name: string;
+  title: string | null;
   server_id: string;
   server_name: string;
   customer_id: string | null;
   status: FlussonicStreamStatus;
+  /** Flussonic-side `config_json.disabled` — distinct from `status` (our own soft-delete/active flag). */
+  disabled: boolean;
+  /** Flussonic's own real-time `stats.status` (e.g. running/waiting/error) from the last sync — null if never synced. */
+  live_status: string | null;
+  /** Whether this stream currently has an order whose date window covers right now — gates the customer/reseller portal's on/off controls. */
+  has_active_order: boolean;
 }
 
 @Injectable()
@@ -63,8 +72,27 @@ export class FlussonicStreamsService {
   constructor(
     @InjectRepository(FlussonicStream)
     private readonly streamsRepository: Repository<FlussonicStream>,
+    @InjectRepository(Order)
+    private readonly ordersRepository: Repository<Order>,
     private readonly serversService: FlussonicServersService,
   ) {}
+
+  /** Batch "does this stream currently have an order actually inside its date window" check — one query for a whole directory-entry page instead of N. */
+  private async getValidActiveOrderStreamIds(
+    streamIds: string[],
+  ): Promise<Set<string>> {
+    if (streamIds.length === 0) return new Set();
+    const now = nowUnixSeconds();
+    const rows = await this.ordersRepository
+      .createQueryBuilder('order')
+      .select('DISTINCT order.stream_id', 'stream_id')
+      .where('order.stream_id IN (:...streamIds)', { streamIds })
+      .andWhere('order.status = :active', { active: OrderStatus.ACTIVE })
+      .andWhere('order.effective_from <= :now', { now })
+      .andWhere('order.effective_to > :now', { now })
+      .getRawMany<{ stream_id: string }>();
+    return new Set(rows.map((r) => r.stream_id));
+  }
 
   async findAllForServer(
     serverId: string,
@@ -283,16 +311,28 @@ export class FlussonicStreamsService {
   ): Promise<FlussonicStreamDirectoryEntry[]> {
     const servers = await this.serversService.findAllActive();
     const serverNameById = new Map(servers.map((s) => [s.id, s.name]));
+    const validOrderStreamIds = await this.getValidActiveOrderStreamIds(
+      streams.map((s) => s.id),
+    );
 
-    return streams.map((stream) => ({
-      id: stream.id,
-      name: stream.config_json.name,
-      server_id: stream.flussonic_server_id,
-      server_name:
-        serverNameById.get(stream.flussonic_server_id) ?? 'Unknown server',
-      customer_id: stream.customer_id,
-      status: stream.status,
-    }));
+    return streams.map((stream) => {
+      const liveStats = stream.live_stats_json as {
+        stats?: { status?: string };
+      } | null;
+      return {
+        id: stream.id,
+        name: stream.config_json.name,
+        title: stream.config_json.title ?? null,
+        server_id: stream.flussonic_server_id,
+        server_name:
+          serverNameById.get(stream.flussonic_server_id) ?? 'Unknown server',
+        customer_id: stream.customer_id,
+        status: stream.status,
+        disabled: Boolean(stream.config_json.disabled),
+        live_status: liveStats?.stats?.status ?? null,
+        has_active_order: validOrderStreamIds.has(stream.id),
+      };
+    });
   }
 
   async findOneForServer(

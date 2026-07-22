@@ -51,6 +51,10 @@ export class Customer {
   @Column({ type: 'varchar', length: 10, nullable: true })
   pincode: string | null;
 
+  /** Current wallet balance — mutated only via CustomersService.adjustWalletBalance (never directly), which also logs a CustomerWalletTransaction row. */
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: '0.00' })
+  wallet_balance: string;
+
   /** Which reseller manages this customer, if any — a reseller has many customers, a customer at most one reseller. */
   @Index()
   @Column({ type: 'bigint', unsigned: true, nullable: true })

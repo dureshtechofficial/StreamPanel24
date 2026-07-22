@@ -18,7 +18,12 @@ import { FlussonicStreamsService } from '../flussonic-servers/flussonic-streams.
 import { OrderCancelSettingsService } from '../settings/order-cancel-settings.service';
 import { OrderCancelActor } from '../settings/enums/order-cancel-actor.enum';
 import { WalletService } from '../wallet/wallet.service';
+import { CustomerWalletService } from '../customer-wallet/customer-wallet.service';
 import { nowUnixSeconds } from '../common/utils/unix-timestamp.util';
+import {
+  streamHasValidActiveOrder,
+  syncStreamDisabledState,
+} from './utils/stream-order-validity.util';
 import type { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 
 const SECONDS_PER_DAY = 86_400;
@@ -50,6 +55,7 @@ export class OrdersService {
     private readonly streamsService: FlussonicStreamsService,
     private readonly orderCancelSettingsService: OrderCancelSettingsService,
     private readonly walletService: WalletService,
+    private readonly customerWalletService: CustomerWalletService,
   ) {}
 
   async findAll(query: QueryOrderDto): Promise<PaginatedResult<Order>> {
@@ -158,6 +164,27 @@ export class OrdersService {
       qb.andWhere('order.customer_id = :customerId', {
         customerId: query.customerId,
       });
+    }
+    if (query.resellerId === 'none') {
+      qb.andWhere('order.reseller_id IS NULL');
+    } else if (query.resellerId) {
+      qb.andWhere('order.reseller_id = :resellerId', {
+        resellerId: query.resellerId,
+      });
+    }
+    if (query.search) {
+      qb.andWhere(
+        '(order.order_number LIKE :search OR order.customer_name LIKE :search OR order.stream_name LIKE :search)',
+        { search: `%${query.search}%` },
+      );
+    }
+    if (query.dateFrom !== undefined) {
+      qb.andWhere('order.created_at >= :dateFrom', {
+        dateFrom: query.dateFrom,
+      });
+    }
+    if (query.dateTo !== undefined) {
+      qb.andWhere('order.created_at <= :dateTo', { dateTo: query.dateTo });
     }
     if (query.status) {
       qb.andWhere('order.status = :status', { status: query.status });
@@ -281,11 +308,24 @@ export class OrdersService {
       dto.stream_id,
     );
 
-    // Charge next, before the order row exists — if the reseller's balance
-    // can't cover it, undo the assignment above (only if it was new) so a
-    // failed payment never leaves a stream held without a corresponding
-    // order, but also never strips a pre-existing assignment it didn't make.
+    // Unreachable in practice — assignSingleStreamToCustomer above already
+    // 404s if the stream doesn't exist, so streamBefore is guaranteed here.
+    // Narrows the type so the snapshot fields below don't need non-null casts.
+    if (!streamBefore) {
+      throw new NotFoundException('Stream not found');
+    }
+
+    // Charge next, before the order row exists — if the balance can't cover
+    // it, undo the assignment above (only if it was new) so a failed payment
+    // never leaves a stream held without a corresponding order, but also
+    // never strips a pre-existing assignment it didn't make. Reseller-billed
+    // orders charge the reseller's wallet (chargeResellerWallet, set only by
+    // the reseller-scoped controller); any other order paid via 'wallet'
+    // charges the customer's own wallet instead — the two are mutually
+    // exclusive since a reseller-billed order always forces payment_method
+    // to 'wallet' too, so this can't double-charge.
     let chargeTransactionId: string | null = null;
+    let customerChargeTransactionId: string | null = null;
     if (chargeResellerWallet && resellerId) {
       try {
         const charge = await this.walletService.chargeForOrder(
@@ -294,6 +334,23 @@ export class OrdersService {
           `Order for plan "${plan.name}"`,
         );
         chargeTransactionId = charge.id;
+      } catch (err) {
+        if (isNewAssignment) {
+          await this.streamsService.unassignSingleStreamFromCustomer(
+            dto.stream_id,
+            customerId,
+          );
+        }
+        throw err;
+      }
+    } else if (dto.payment_method === 'wallet') {
+      try {
+        const charge = await this.customerWalletService.chargeForOrder(
+          customerId,
+          price,
+          `Order for plan "${plan.name}"`,
+        );
+        customerChargeTransactionId = charge.id;
       } catch (err) {
         if (isNewAssignment) {
           await this.streamsService.unassignSingleStreamFromCustomer(
@@ -326,6 +383,9 @@ export class OrdersService {
       customer_city: customer.city,
       customer_state: customer.state,
       customer_pincode: customer.pincode,
+      stream_name: streamBefore.config_json.name,
+      stream_title: streamBefore.config_json.title ?? null,
+      stream_ingest_domain: streamBefore.ingest_domain,
       effective_from: effectiveFrom,
       effective_to: effectiveTo,
       status: OrderStatus.ACTIVE,
@@ -339,16 +399,47 @@ export class OrdersService {
     await this.ordersRepository.save(order);
 
     if (chargeTransactionId) {
-      await this.walletService.attachOrder(chargeTransactionId, order.id);
+      await this.walletService.attachOrder(
+        chargeTransactionId,
+        order.id,
+        order.order_number,
+      );
     }
+    if (customerChargeTransactionId) {
+      await this.customerWalletService.attachOrder(
+        customerChargeTransactionId,
+        order.id,
+        order.order_number,
+      );
+    }
+
+    // Reconcile Flussonic's disabled flag against actual order validity right
+    // now — same shared check cancellation/expiry use. Enables the stream if
+    // this order starts immediately (e.g. re-provisioning one Flussonic
+    // disabled when its previous order expired); leaves it disabled if this
+    // is a queued future renewal (effective_from in the future, see
+    // resolveEffectiveFrom) with nothing else currently valid.
+    const streamIsValidNow = await streamHasValidActiveOrder(
+      this.ordersRepository,
+      dto.stream_id,
+      nowUnixSeconds(),
+    );
+    await syncStreamDisabledState(
+      this.streamsService,
+      dto.stream_id,
+      streamIsValidNow,
+    );
 
     return order;
   }
 
   /**
    * Updates lifecycle/payment state and remarks only — every other field is
-   * an immutable purchase-time snapshot. Cancelling unassigns the stream
-   * (best-effort: a no-op if it was already reassigned elsewhere since).
+   * an immutable purchase-time snapshot. Cancelling does NOT unassign the
+   * stream — the customer keeps it (same reasoning as expiry: an admin might
+   * cancel an older order in a renewal chain, or simply want the customer to
+   * keep the stream regardless) — it only reconciles Flussonic's `disabled`
+   * flag off if nothing else currently grants it (see applyStatusUpdate).
    */
   async updateStatus(id: string, dto: UpdateOrderStatusDto): Promise<Order> {
     const order = await this.findOne(id);
@@ -375,30 +466,77 @@ export class OrdersService {
     );
   }
 
+  /**
+   * Prorated refund: `Applicable Price` is simply `order.price` — already
+   * resolved to the reseller price or customer price at creation time
+   * depending on who created it (`priceField`), so there's no need to
+   * re-derive it from the (possibly since-changed) live plan. Clamping
+   * `usedDays` to `[0, totalServiceDays]` means cancelling before
+   * `effective_from` (a queued renewal that never started) refunds the
+   * full price, and cancelling after `effective_to` (already fully
+   * consumed) refunds nothing — both without a special-cased branch.
+   */
+  private calculateRefundAmount(order: Order, cancelledAt: number): number {
+    const totalServiceDays =
+      (order.effective_to - order.effective_from) / SECONDS_PER_DAY;
+    if (totalServiceDays <= 0) return 0;
+
+    const dailyRate = Number(order.price) / totalServiceDays;
+    const usedDaysRaw = (cancelledAt - order.effective_from) / SECONDS_PER_DAY;
+    const usedDays = Math.min(Math.max(usedDaysRaw, 0), totalServiceDays);
+    const remainingDays = totalServiceDays - usedDays;
+
+    return Math.round(dailyRate * remainingDays * 100) / 100;
+  }
+
   private async applyStatusUpdate(
     order: Order,
     dto: UpdateOrderStatusDto,
     actorType: OrderCancelActor,
   ): Promise<Order> {
-    if (
+    const isCancelling =
       dto.status === OrderStatus.CANCELLED &&
-      order.status !== OrderStatus.CANCELLED
-    ) {
+      order.status !== OrderStatus.CANCELLED;
+
+    if (isCancelling) {
       await this.orderCancelSettingsService.assertCancelEnabled(actorType);
-      await this.streamsService.unassignSingleStreamFromCustomer(
-        order.stream_id,
-        order.customer_id,
-      );
-      // No-ops if this order was never actually charged to a wallet (e.g. it
-      // was created via the admin route) — refundForOrder checks for a real
-      // charge transaction rather than trusting payment_method alone.
+      // Deliberately does NOT unassign the stream — the customer keeps it
+      // regardless of why this order was cancelled (an admin might cancel an
+      // older order in a renewal chain, or just want the customer to keep
+      // the stream). Only Flussonic's disabled flag is reconciled below,
+      // once the new status is actually persisted.
+      const refundAmount = this.calculateRefundAmount(order, nowUnixSeconds());
+      // No-ops if this order was never actually charged to a wallet —
+      // refundForOrder checks for a real charge transaction by order_id
+      // rather than trusting payment_method alone, so calling both is safe
+      // even though at most one of them ever actually charged this order.
+      // Each returns the created refund transaction (or null on a no-op),
+      // which is also how we know whether to mark this order 'refunded'.
+      let refunded = false;
       if (order.reseller_id) {
-        await this.walletService.refundForOrder(
+        const resellerRefund = await this.walletService.refundForOrder(
           order.reseller_id,
           order.id,
+          refundAmount,
           `Refund for cancelled order ${order.order_number}`,
         );
+        if (resellerRefund) refunded = true;
       }
+      const customerRefund = await this.customerWalletService.refundForOrder(
+        order.customer_id,
+        order.id,
+        refundAmount,
+        `Refund for cancelled order ${order.order_number}`,
+      );
+      if (customerRefund) refunded = true;
+
+      // Cancelling always resolves payment_status — 'refunded' if money was
+      // actually credited back, otherwise 'cancelled' (never billed to a
+      // wallet at all, e.g. cash/manual payment, or nothing left to refund).
+      // A caller-supplied dto.payment_status below still wins over this.
+      order.payment_status = refunded
+        ? PaymentStatus.REFUNDED
+        : PaymentStatus.CANCELLED;
     }
 
     if (dto.status !== undefined) order.status = dto.status;
@@ -406,7 +544,27 @@ export class OrdersService {
       order.payment_status = dto.payment_status;
     if (dto.remark !== undefined) order.remark = dto.remark;
 
-    return this.ordersRepository.save(order);
+    const saved = await this.ordersRepository.save(order);
+
+    if (isCancelling) {
+      // Runs against the now-persisted status, so this cancelled order never
+      // counts as its own "still valid" order below (see
+      // streamHasValidActiveOrder — a stale in-memory read here could
+      // otherwise leave a stream enabled with nothing actually granting it).
+      const now = nowUnixSeconds();
+      const stillValid = await streamHasValidActiveOrder(
+        this.ordersRepository,
+        saved.stream_id,
+        now,
+      );
+      await syncStreamDisabledState(
+        this.streamsService,
+        saved.stream_id,
+        stillValid,
+      );
+    }
+
+    return saved;
   }
 
   private buildOrderNumber(id: string): string {

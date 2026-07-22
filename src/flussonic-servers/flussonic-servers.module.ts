@@ -5,6 +5,7 @@ import { FlussonicServerStat } from './entities/flussonic-server-stat.entity';
 import { FlussonicStream } from './entities/flussonic-stream.entity';
 import { FlussonicStreamSession } from './entities/flussonic-stream-session.entity';
 import { SyncSchedule } from '../settings/entities/sync-schedule.entity';
+import { Order } from '../orders/entities/order.entity';
 import { FlussonicServersService } from './flussonic-servers.service';
 import { FlussonicServersController } from './flussonic-servers.controller';
 import { FlussonicServerStatsService } from './flussonic-server-stats.service';
@@ -25,6 +26,12 @@ import { SyncScheduleGateService } from './sync-schedule-gate.service';
       FlussonicStream,
       FlussonicStreamSession,
       SyncSchedule,
+      // Registered here (not via OrdersModule) so FlussonicStreamsService can
+      // compute has_active_order — OrdersModule already imports
+      // FlussonicServersModule, so importing OrdersModule back would be
+      // circular. Same "touch a foreign entity directly to break a cycle"
+      // pattern as SyncSchedule above and OrderExpiryService in SettingsModule.
+      Order,
     ]),
   ],
   controllers: [

@@ -56,6 +56,11 @@ export class WalletTransaction {
   @Column({ type: 'bigint', unsigned: true, nullable: true })
   order_id: string | null;
 
+  /** Razorpay's payment id (type = topup, via self-service top-up only) — unique so a retried/duplicated webhook can never credit the wallet twice for the same payment. */
+  @Index({ unique: true })
+  @Column({ type: 'varchar', length: 64, nullable: true })
+  razorpay_payment_id: string | null;
+
   /** UTC unix timestamp (seconds). Set by the app, not MySQL. */
   @Index()
   @Column({

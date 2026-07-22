@@ -16,6 +16,7 @@ import { QuerySyncScheduleRunDto } from './dto/query-sync-schedule-run.dto';
 import { FlussonicServerStatsService } from '../flussonic-servers/flussonic-server-stats.service';
 import { FlussonicStreamsService } from '../flussonic-servers/flussonic-streams.service';
 import { FlussonicStreamSessionsService } from '../flussonic-servers/flussonic-stream-sessions.service';
+import { OrderExpiryService } from '../orders/order-expiry.service';
 import { nowUnixSeconds } from '../common/utils/unix-timestamp.util';
 import type { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 
@@ -38,6 +39,7 @@ export class SyncScheduleService implements OnModuleInit {
     private readonly statsService: FlussonicServerStatsService,
     private readonly streamsService: FlussonicStreamsService,
     private readonly sessionsService: FlussonicStreamSessionsService,
+    private readonly orderExpiryService: OrderExpiryService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -134,8 +136,10 @@ export class SyncScheduleService implements OnModuleInit {
         summary = await this.statsService.syncAll();
       } else if (type === SyncType.STREAMS) {
         summary = await this.streamsService.syncAllServers();
-      } else {
+      } else if (type === SyncType.SESSIONS) {
         summary = await this.sessionsService.syncAllServers();
+      } else {
+        summary = await this.orderExpiryService.expireOverdueOrders();
       }
     } catch (err) {
       success = false;

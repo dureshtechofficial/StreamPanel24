@@ -9,6 +9,7 @@ import { ResellersModule } from '../resellers/resellers.module';
 import { FlussonicServersModule } from '../flussonic-servers/flussonic-servers.module';
 import { SettingsModule } from '../settings/settings.module';
 import { WalletModule } from '../wallet/wallet.module';
+import { CustomerWalletModule } from '../customer-wallet/customer-wallet.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { WalletModule } from '../wallet/wallet.module';
     FlussonicServersModule,
     SettingsModule,
     WalletModule,
+    CustomerWalletModule,
   ],
   controllers: [OrdersController],
   providers: [OrdersService],

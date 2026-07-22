@@ -7,18 +7,21 @@ import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // rawBody: true exposes `request.rawBody` (a Buffer) alongside the parsed
+  // JSON body — needed by the Razorpay webhook, whose signature is computed
+  // over the exact raw request bytes, not the re-serialized parsed object.
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   const configService = app.get(ConfigService);
 
   const apiPrefix = configService.get<string>('apiPrefix') ?? 'api/v1';
-  const frontendOrigin = configService.get<string>('frontendOrigin');
+  const frontendOrigins = configService.get<string[]>('frontendOrigins');
 
   app.setGlobalPrefix(apiPrefix);
 
   app.use(cookieParser());
 
   app.enableCors({
-    origin: frontendOrigin,
+    origin: frontendOrigins,
     credentials: true,
   });
 

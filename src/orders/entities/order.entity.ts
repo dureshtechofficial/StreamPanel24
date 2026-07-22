@@ -89,6 +89,16 @@ export class Order {
   @Column({ type: 'varchar', length: 10, nullable: true })
   customer_pincode: string | null;
 
+  /** Stream identity snapshotted at purchase time, for invoicing — a stream can be renamed/reconfigured or reassigned later without altering a past invoice's record of what was actually sold. */
+  @Column({ type: 'varchar', length: 150 })
+  stream_name: string;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  stream_title: string | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  stream_ingest_domain: string | null;
+
   @Column({
     type: 'bigint',
     unsigned: true,

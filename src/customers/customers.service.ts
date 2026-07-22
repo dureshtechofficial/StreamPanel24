@@ -243,6 +243,26 @@ export class CustomersService {
     await this.customersRepository.save(customer);
   }
 
+  /**
+   * The only place `wallet_balance` is ever mutated — always by a signed
+   * delta (positive for a topup), never set directly, so callers can't
+   * accidentally clobber a concurrent change. Used by CustomerWalletService,
+   * which pairs every call with a CustomerWalletTransaction row logging why
+   * the balance moved. Rejects a delta that would take the balance negative.
+   */
+  async adjustWalletBalance(id: string, delta: number): Promise<Customer> {
+    const customer = await this.findOne(id);
+    const currentBalance = Number(customer.wallet_balance);
+    const newBalance = currentBalance + delta;
+    if (newBalance < 0) {
+      throw new BadRequestException(
+        `Insufficient wallet balance: current balance is ${currentBalance.toFixed(2)}, this requires ${Math.abs(delta).toFixed(2)}`,
+      );
+    }
+    customer.wallet_balance = newBalance.toFixed(2);
+    return this.customersRepository.save(customer);
+  }
+
   private assertSettableStatus(status: CustomerStatus | undefined): void {
     if (status === CustomerStatus.DELETED) {
       throw new BadRequestException(

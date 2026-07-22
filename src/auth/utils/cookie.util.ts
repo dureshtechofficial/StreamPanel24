@@ -16,7 +16,13 @@ export function setRefreshTokenCookie(
   res.cookie(REFRESH_TOKEN_COOKIE, token, {
     httpOnly: true,
     secure: isProduction,
-    sameSite: 'strict',
+    // 'lax' rather than 'strict': the frontend and this API are served from
+    // separate origins (different ports locally, different subdomains in the
+    // tunnel/production setup) — same-site fetches between them should carry
+    // a 'strict' cookie fine per spec, but 'lax' is the more broadly
+    // compatible choice in practice across browsers/proxies for exactly this
+    // split-origin shape, and still blocks genuine cross-site requests.
+    sameSite: 'lax',
     path: '/api/v1/auth',
     maxAge,
   });
@@ -31,7 +37,7 @@ export function clearRefreshTokenCookie(
   res.clearCookie(REFRESH_TOKEN_COOKIE, {
     httpOnly: true,
     secure: isProduction,
-    sameSite: 'strict',
+    sameSite: 'lax',
     path: '/api/v1/auth',
   });
 }

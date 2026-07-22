@@ -10,10 +10,12 @@ import { SyncSchedule } from '../settings/entities/sync-schedule.entity';
 import { SyncScheduleRun } from '../settings/entities/sync-schedule-run.entity';
 import { OrderCancelSetting } from '../settings/entities/order-cancel-setting.entity';
 import { CustomerActionSetting } from '../settings/entities/customer-action-setting.entity';
+import { WalletTopupSetting } from '../settings/entities/wallet-topup-setting.entity';
 import { Reseller } from '../resellers/entities/reseller.entity';
 import { Plan } from '../plans/entities/plan.entity';
 import { Order } from '../orders/entities/order.entity';
 import { WalletTransaction } from '../wallet/entities/wallet-transaction.entity';
+import { CustomerWalletTransaction } from '../customer-wallet/entities/customer-wallet-transaction.entity';
 
 config();
 
@@ -35,10 +37,12 @@ export const dataSourceOptions: DataSourceOptions = {
     SyncScheduleRun,
     OrderCancelSetting,
     CustomerActionSetting,
+    WalletTopupSetting,
     Reseller,
     Plan,
     Order,
     WalletTransaction,
+    CustomerWalletTransaction,
   ],
   migrations: [__dirname + '/migrations/*.{ts,js}'],
   synchronize: false,

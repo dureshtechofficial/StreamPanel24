@@ -2,7 +2,6 @@ import { plainToInstance } from 'class-transformer';
 import {
   IsEnum,
   IsNumber,
-  IsOptional,
   IsString,
   Matches,
   Max,
@@ -29,8 +28,9 @@ class EnvironmentVariables {
   @IsString()
   API_PREFIX: string;
 
+  /** Comma-separated list of allowed CORS origins — split into an array in configuration.ts. */
   @IsString()
-  FRONTEND_ORIGIN: string;
+  FRONTEND_ORIGINS: string;
 
   @IsString()
   DB_HOST: string;
@@ -70,10 +70,14 @@ class EnvironmentVariables {
   })
   CREDENTIALS_ENCRYPTION_KEY: string;
 
-  /** Optional — defaults to https://ipwho.is in configuration.ts. Only used for best-effort session IP enrichment. */
-  @IsOptional()
   @IsString()
-  IPWHOIS_API_URL?: string;
+  RAZORPAY_KEY_ID: string;
+
+  @IsString()
+  RAZORPAY_KEY_SECRET: string;
+
+  @IsString()
+  RAZORPAY_WEBHOOK_SECRET: string;
 }
 
 export function validate(config: Record<string, unknown>) {

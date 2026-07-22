@@ -1,5 +1,4 @@
 import { BadGatewayException, Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { FlussonicStreamSession } from './entities/flussonic-stream-session.entity';
@@ -8,7 +7,6 @@ import { QueryFlussonicStreamSessionDto } from './dto/query-flussonic-stream-ses
 import { FlussonicServersService } from './flussonic-servers.service';
 import { FlussonicStreamsService } from './flussonic-streams.service';
 import { buildFlussonicApiUrl } from './utils/flussonic-api-url.util';
-import { fetchIpWhoIs } from '../common/utils/ipwhois.util';
 import { nowUnixSeconds } from '../common/utils/unix-timestamp.util';
 import type {
   FlussonicSessionEntry,
@@ -18,6 +16,20 @@ import type { PaginatedResult } from '../common/interfaces/paginated-result.inte
 
 const REQUEST_TIMEOUT_MS = 8_000;
 const MAX_SYNC_PAGES = 200;
+
+/** A session row plus a computed (never stored) link to look up its IP on ip.me. */
+export type FlussonicStreamSessionWithLookup = FlussonicStreamSession & {
+  ip_lookup_url: string | null;
+};
+
+function withIpLookupUrl(
+  session: FlussonicStreamSession,
+): FlussonicStreamSessionWithLookup {
+  return {
+    ...session,
+    ip_lookup_url: session.ip ? `https://ip.me/ip/${session.ip}` : null,
+  };
+}
 
 export interface SyncSessionsSummary {
   total: number;
@@ -48,13 +60,12 @@ export class FlussonicStreamSessionsService {
     private readonly sessionsRepository: Repository<FlussonicStreamSession>,
     private readonly serversService: FlussonicServersService,
     private readonly streamsService: FlussonicStreamsService,
-    private readonly configService: ConfigService,
   ) {}
 
   async findAllForServer(
     serverId: string,
     query: QueryFlussonicStreamSessionDto,
-  ): Promise<PaginatedResult<FlussonicStreamSession>> {
+  ): Promise<PaginatedResult<FlussonicStreamSessionWithLookup>> {
     await this.serversService.findOne(serverId); // 404s if the server doesn't exist or is soft-deleted
 
     const page = query.page ?? 1;
@@ -99,7 +110,56 @@ export class FlussonicStreamSessionsService {
     const [items, total] = await qb.getManyAndCount();
 
     return {
-      items,
+      items: items.map(withIpLookupUrl),
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    };
+  }
+
+  /**
+   * Sessions for one specific stream — used by the reseller/customer portals
+   * (each behind their own ownership check in the caller controller) so they
+   * can see who's watching/publishing a stream they hold without exposing
+   * the rest of the server's sessions the way the admin per-server view does.
+   */
+  async findAllForStream(
+    streamId: string,
+    query: QueryFlussonicStreamSessionDto,
+  ): Promise<PaginatedResult<FlussonicStreamSessionWithLookup>> {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+
+    const qb = this.sessionsRepository
+      .createQueryBuilder('session')
+      .where('session.flussonic_stream_id = :streamId', { streamId });
+
+    if (query.search) {
+      qb.andWhere('(session.ip LIKE :search OR session.country LIKE :search)', {
+        search: `%${query.search}%`,
+      });
+    }
+
+    if (query.latestOnly) {
+      qb.andWhere(
+        `session.synced_at = (
+          SELECT MAX(s2.synced_at)
+          FROM flussonic_stream_sessions s2
+          WHERE s2.flussonic_stream_id = :streamId
+        )`,
+        { streamId },
+      );
+    }
+
+    qb.orderBy('session.updated_at', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    const [items, total] = await qb.getManyAndCount();
+
+    return {
+      items: items.map(withIpLookupUrl),
       total,
       page,
       limit,
@@ -111,8 +171,10 @@ export class FlussonicStreamSessionsService {
    * Pulls every current session from the server's real `GET sessions`
    * (cursor-paginated, covers all streams at once) and upserts each by its
    * Flussonic session id — one row per real session, refreshed while it's
-   * ongoing. A brand-new session's IP is enriched via ipwho.is (best-effort,
-   * never blocks the sync).
+   * ongoing. IP geolocation is deliberately not done here — it's looked up
+   * client-side (browser calls ipwho.is directly) so that a server pulling
+   * thousands of sessions across many servers never hammers a rate-limited
+   * IP-lookup API from one server IP.
    */
   async syncFromFlussonic(serverId: string): Promise<SyncSessionsSummary> {
     const server = await this.serversService.findOne(serverId);
@@ -150,13 +212,6 @@ export class FlussonicStreamSessionsService {
         continue;
       }
 
-      const ipwhoisJson = entry.ip
-        ? await fetchIpWhoIs(
-            entry.ip,
-            this.configService.get<string>('ipWhoIsApiUrl')!,
-          )
-        : null;
-
       const session = this.sessionsRepository.create({
         flussonic_stream_id: stream?.id ?? null,
         session_uuid: entry.id,
@@ -167,7 +222,6 @@ export class FlussonicStreamSessionsService {
         proto: entry.proto ?? null,
         updated_at: toUnixSeconds(entry.updated_at),
         country: entry.country ?? null,
-        ipwhois_json: ipwhoisJson,
         synced_at: syncTimestamp,
       });
       await this.sessionsRepository.save(session);

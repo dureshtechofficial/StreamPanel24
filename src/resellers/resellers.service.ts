@@ -138,10 +138,11 @@ export class ResellersService {
    */
   async adjustWalletBalance(id: string, delta: number): Promise<Reseller> {
     const reseller = await this.findOne(id);
-    const newBalance = Number(reseller.wallet_balance) + delta;
+    const currentBalance = Number(reseller.wallet_balance);
+    const newBalance = currentBalance + delta;
     if (newBalance < 0) {
       throw new BadRequestException(
-        'This would take the wallet balance below zero',
+        `Insufficient wallet balance: current balance is ${currentBalance.toFixed(2)}, this requires ${Math.abs(delta).toFixed(2)}`,
       );
     }
     reseller.wallet_balance = newBalance.toFixed(2);

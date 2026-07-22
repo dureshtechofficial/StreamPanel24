@@ -51,6 +51,62 @@ export class WalletService {
   }
 
   /**
+   * Credits the wallet for a completed Razorpay top-up payment — idempotent
+   * by `razorpayPaymentId`, since both the client-side verify call and the
+   * async webhook end up calling this for the same payment, and the webhook
+   * alone can also fire more than once. The pre-check covers the normal
+   * (non-concurrent) case; the unique index on `razorpay_payment_id` catches
+   * a genuinely concurrent duplicate at insert time, same read-then-write
+   * race tolerance as `adjustWalletBalance` itself already has everywhere
+   * else in this app (order charges/refunds, admin top-ups) — not something
+   * this path alone needs to solve.
+   */
+  async creditFromRazorpay(
+    resellerId: string,
+    amount: number,
+    razorpayPaymentId: string,
+  ): Promise<WalletTransaction> {
+    const existing = await this.transactionsRepository.findOne({
+      where: { razorpay_payment_id: razorpayPaymentId },
+    });
+    if (existing) return existing;
+
+    const reseller = await this.resellersService.adjustWalletBalance(
+      resellerId,
+      amount,
+    );
+    const transaction = this.transactionsRepository.create({
+      reseller_id: resellerId,
+      type: WalletTransactionType.TOPUP,
+      amount: amount.toFixed(2),
+      balance_after: reseller.wallet_balance,
+      remark: `Razorpay top-up (${razorpayPaymentId})`,
+      created_by_admin_id: null,
+      razorpay_payment_id: razorpayPaymentId,
+    });
+
+    try {
+      return await this.transactionsRepository.save(transaction);
+    } catch (err) {
+      const isDuplicate =
+        err instanceof Error &&
+        'code' in err &&
+        (err as { code?: string }).code === 'ER_DUP_ENTRY';
+      if (!isDuplicate) throw err;
+      // Lost the race to a concurrent call for the same payment — the
+      // wallet was already credited by whichever call won; the balance
+      // adjustment above already happened though, so this path should be
+      // unreachable in practice (the pre-check catches the normal case) —
+      // surfacing the original error is safer than silently double-crediting.
+      const winner = await this.transactionsRepository.findOne({
+        where: { razorpay_payment_id: razorpayPaymentId },
+      });
+      if (winner) return winner;
+      throw err;
+    }
+  }
+
+  /**
    * Debits the reseller's wallet for an order purchase — called by
    * OrdersService.create *before* the order row exists (stream assignment
    * and order insert can still fail), so `order_id` starts null here and is
@@ -78,24 +134,51 @@ export class WalletService {
     return this.transactionsRepository.save(transaction);
   }
 
-  async attachOrder(transactionId: string, orderId: string): Promise<void> {
+  /**
+   * Patches `order_id` in and prefixes the remark with the now-known order
+   * number (e.g. "ORD-2026-000123 — Order for plan ...") — the charge itself
+   * happens before the order row exists, so the number isn't known yet at
+   * `chargeForOrder` time.
+   */
+  async attachOrder(
+    transactionId: string,
+    orderId: string,
+    orderNumber: string,
+  ): Promise<void> {
+    const transaction = await this.transactionsRepository.findOne({
+      where: { id: transactionId },
+    });
+    if (!transaction) return;
+
     await this.transactionsRepository.update(transactionId, {
       order_id: orderId,
+      remark: transaction.remark
+        ? `${orderNumber} — ${transaction.remark}`
+        : orderNumber,
     });
   }
 
   /**
-   * Refunds an order's wallet charge on cancellation. Looks up the original
-   * `order_payment` debit for this order rather than trusting the order's
-   * live `price` — if no charge exists (the order was never actually billed
-   * to a wallet, e.g. created via the admin route), this is a silent no-op
-   * rather than crediting money that was never taken.
+   * Refunds an order's wallet charge on cancellation. `amount` is the
+   * caller-computed prorated refund (see OrdersService.calculateRefundAmount)
+   * — this method only decides *whether* to refund, not how much: it looks
+   * up the original `order_payment` debit for this order and no-ops if none
+   * exists (the order was never actually billed to a wallet, e.g. created
+   * via the admin route) or if `amount` is zero or negative (e.g. the order
+   * was already fully consumed by the time it was cancelled). The refund is
+   * also capped at the original charge amount, so a prorated figure can
+   * never credit back more than was actually taken.
    */
   async refundForOrder(
     resellerId: string,
     orderId: string,
+    amount: number,
     remark: string | null,
   ): Promise<WalletTransaction | null> {
+    if (amount <= 0) {
+      return null;
+    }
+
     const charge = await this.transactionsRepository.findOne({
       where: { order_id: orderId, type: WalletTransactionType.ORDER_PAYMENT },
       order: { created_at: 'ASC' },
@@ -104,7 +187,7 @@ export class WalletService {
       return null;
     }
 
-    const refundAmount = -Number(charge.amount);
+    const refundAmount = Math.min(amount, -Number(charge.amount));
     const reseller = await this.resellersService.adjustWalletBalance(
       resellerId,
       refundAmount,
