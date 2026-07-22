@@ -26,3 +26,10 @@ export function updateMyCustomerOrderStatus(
 export function cancelMyCustomerOrder(customerId: string, orderId: string) {
   return updateMyCustomerOrderStatus(customerId, orderId, { status: 'cancelled' });
 }
+
+export async function isResellerOrderCancelEnabled(): Promise<boolean> {
+  const result = await resellerApiFetch<{ enabled: boolean }>(
+    '/reseller-auth/settings/order-cancel-enabled',
+  );
+  return result.enabled;
+}

@@ -26,6 +26,7 @@ import {
 import type { Customer, CustomerInput, CustomerStatus } from "@/types/customer";
 import { ApiError } from "@/lib/api-error";
 import { usePageTitle } from "@/lib/use-page-title";
+import { useAdminOrderCancelEnabled } from "@/lib/use-order-cancel-enabled";
 
 const PAGE_SIZE = 10;
 
@@ -37,6 +38,7 @@ const STATUS_STYLES: Record<CustomerStatus, string> = {
 
 function CustomersContent() {
   usePageTitle("Customers");
+  const orderCancelEnabled = useAdminOrderCancelEnabled();
   const [items, setItems] = useState<Customer[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -398,6 +400,7 @@ function CustomersContent() {
         open={ordersCustomer !== null}
         customer={ordersCustomer}
         onClose={() => setOrdersCustomer(null)}
+        cancelEnabled={orderCancelEnabled}
       />
     </div>
   );

@@ -12,6 +12,7 @@ import type { SearchAvailableStreamsParams } from '@/lib/customer-streams-api';
 import type { Customer } from '@/types/customer';
 import { ApiError } from '@/lib/api-error';
 import { ArrowPathIcon, PlusIcon, XIcon } from './icons';
+import { ConfirmDialog } from './confirm-dialog';
 
 const DURATION_PRESETS = [30, 90, 180, 365];
 
@@ -62,6 +63,7 @@ export function OrdersPanel({
   onClose,
   api = DEFAULT_API,
   priceField = 'customer_price',
+  cancelEnabled = true,
 }: {
   open: boolean;
   customer: Customer | null;
@@ -70,6 +72,8 @@ export function OrdersPanel({
   api?: OrdersPanelApi;
   /** Which plan price to show/default to — 'customer_price' for admin, 'reseller_price' for the reseller portal. */
   priceField?: 'customer_price' | 'reseller_price';
+  /** Whether the current actor (admin/reseller) is currently allowed to cancel an order — set from Settings' per-role toggle. */
+  cancelEnabled?: boolean;
 }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -88,6 +92,8 @@ export function OrdersPanel({
   const [submitInfo, setSubmitInfo] = useState<string | null>(null);
 
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [pendingCancel, setPendingCancel] = useState<Order | null>(null);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   // Reset transient state whenever the panel is (re)opened for a customer.
   const [initializedFor, setInitializedFor] = useState<string | null>(null);
@@ -169,14 +175,16 @@ export function OrdersPanel({
     }
   }
 
-  async function handleCancel(order: Order) {
-    if (!customer) return;
-    setCancellingId(order.id);
+  async function handleConfirmCancel() {
+    if (!customer || !pendingCancel) return;
+    setCancellingId(pendingCancel.id);
+    setCancelError(null);
     try {
-      await api.cancelOrder(customer.id, order.id);
+      await api.cancelOrder(customer.id, pendingCancel.id);
+      setPendingCancel(null);
       await load();
     } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : 'Failed to cancel order.');
+      setCancelError(err instanceof ApiError ? err.message : 'Failed to cancel order.');
     } finally {
       setCancellingId(null);
     }
@@ -211,6 +219,8 @@ export function OrdersPanel({
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-4">
+          {cancelError && <p className="mb-3 text-sm text-red-600">{cancelError}</p>}
+
           {isLoading && (
             <p className="flex items-center gap-2 text-sm text-gray-400">
               <ArrowPathIcon className="h-4 w-4 animate-spin" />
@@ -392,14 +402,19 @@ export function OrdersPanel({
                         {order.payment_method.replace('_', ' ')}
                         {order.remark ? ` — ${order.remark}` : ''}
                       </p>
-                      {order.status === 'active' && (
+                      {order.status === 'active' && cancelEnabled && (
                         <button
-                          onClick={() => handleCancel(order)}
+                          onClick={() => setPendingCancel(order)}
                           disabled={cancellingId === order.id}
                           className="mt-2 text-xs font-medium text-red-600 hover:text-red-700 disabled:opacity-60"
                         >
-                          {cancellingId === order.id ? 'Cancelling…' : 'Cancel order'}
+                          Cancel order
                         </button>
+                      )}
+                      {order.status === 'active' && !cancelEnabled && (
+                        <p className="mt-2 text-xs text-gray-400">
+                          Order cancellation is currently disabled
+                        </p>
                       )}
                     </li>
                   ))}
@@ -409,6 +424,17 @@ export function OrdersPanel({
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={pendingCancel !== null}
+        title="Cancel order"
+        message={`Are you sure you want to cancel order "${pendingCancel?.order_number}"? This unassigns the stream and can't be undone.`}
+        confirmLabel="Cancel order"
+        busyLabel="Cancelling…"
+        isBusy={cancellingId === pendingCancel?.id}
+        onConfirm={handleConfirmCancel}
+        onCancel={() => setPendingCancel(null)}
+      />
     </div>
   );
 }

@@ -38,6 +38,7 @@ import type { Customer, CustomerInput, CustomerStatus } from '@/types/customer';
 import { ApiError } from '@/lib/api-error';
 import { useResellerAuth } from '@/lib/reseller-auth-context';
 import { usePageTitle } from '@/lib/use-page-title';
+import { useResellerOrderCancelEnabled } from '@/lib/use-order-cancel-enabled';
 
 const PAGE_SIZE = 10;
 
@@ -65,6 +66,7 @@ const ORDERS_API: OrdersPanelApi = {
 function ResellerDashboardContent() {
   usePageTitle('My Customers');
   const { reseller } = useResellerAuth();
+  const orderCancelEnabled = useResellerOrderCancelEnabled();
 
   const [items, setItems] = useState<Customer[]>([]);
   const [total, setTotal] = useState(0);
@@ -396,6 +398,7 @@ function ResellerDashboardContent() {
         onClose={() => setOrdersCustomer(null)}
         api={ORDERS_API}
         priceField="reseller_price"
+        cancelEnabled={orderCancelEnabled}
       />
     </div>
   );

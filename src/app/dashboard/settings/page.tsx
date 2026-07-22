@@ -10,7 +10,12 @@ import {
   listSyncSchedules,
   updateSyncSchedule,
 } from "@/lib/sync-schedules-api";
+import {
+  listOrderCancelSettings,
+  updateOrderCancelSetting,
+} from "@/lib/order-cancel-settings-api";
 import type { SyncSchedule, SyncType } from "@/types/sync-schedule";
+import type { OrderCancelActor, OrderCancelSetting } from "@/types/order-cancel-setting";
 import { ApiError } from "@/lib/api-error";
 import { useAuth } from "@/lib/auth-context";
 import { usePageTitle } from "@/lib/use-page-title";
@@ -76,6 +81,103 @@ function summarizeLastRun(
     );
   }
   return null;
+}
+
+const ORDER_CANCEL_ACTOR_LABELS: Record<OrderCancelActor, string> = {
+  admin: "Admin",
+  reseller: "Reseller",
+  customer: "Customer",
+};
+
+const ORDER_CANCEL_ACTOR_ORDER: OrderCancelActor[] = ["admin", "reseller", "customer"];
+
+function OrderCancelSection() {
+  const [settings, setSettings] = useState<OrderCancelSetting[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [savingActor, setSavingActor] = useState<OrderCancelActor | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setIsLoading(true);
+    setLoadError(null);
+    try {
+      const result = await listOrderCancelSettings();
+      setSettings(result);
+    } catch (err) {
+      setLoadError(
+        err instanceof ApiError ? err.message : "Failed to load order-cancel settings.",
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load();
+  }, [load]);
+
+  async function handleToggle(actorType: OrderCancelActor, enabled: boolean) {
+    setSavingActor(actorType);
+    setError(null);
+    try {
+      const updated = await updateOrderCancelSetting(actorType, enabled);
+      setSettings((prev) =>
+        prev.map((s) => (s.actor_type === actorType ? updated : s)),
+      );
+    } catch (err) {
+      setError(
+        err instanceof ApiError ? err.message : "Failed to save order-cancel setting.",
+      );
+    } finally {
+      setSavingActor(null);
+    }
+  }
+
+  return (
+    <div className="animate-fade-in-up mb-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+      <h2 className="text-base font-semibold text-gray-900">Order cancellation</h2>
+      <p className="mt-1 text-sm text-gray-500">
+        Control who is currently allowed to cancel an order, independently for
+        each role.
+      </p>
+
+      {isLoading && (
+        <p className="mt-4 flex items-center gap-2 text-sm text-gray-400">
+          <ArrowPathIcon className="h-4 w-4 animate-spin" />
+          Loading…
+        </p>
+      )}
+
+      {!isLoading && loadError && (
+        <p className="mt-4 text-sm text-red-600">{loadError}</p>
+      )}
+
+      {!isLoading && !loadError && (
+        <div className="mt-4 divide-y divide-gray-100">
+          {ORDER_CANCEL_ACTOR_ORDER.map((actorType) => {
+            const setting = settings.find((s) => s.actor_type === actorType);
+            if (!setting) return null;
+            return (
+              <div key={actorType} className="flex items-center justify-between py-2">
+                <ToggleField
+                  label={`${ORDER_CANCEL_ACTOR_LABELS[actorType]} can cancel orders`}
+                  checked={setting.enabled}
+                  onChange={(v) => handleToggle(actorType, v)}
+                />
+                {savingActor === actorType && (
+                  <ArrowPathIcon className="h-4 w-4 animate-spin text-gray-400" />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+    </div>
+  );
 }
 
 function ScheduleCard({
@@ -258,6 +360,8 @@ function SettingsContent() {
           registered server.
         </p>
       </div>
+
+      <OrderCancelSection />
 
       {isLoading && (
         <p className="flex items-center gap-2 text-sm text-gray-400">

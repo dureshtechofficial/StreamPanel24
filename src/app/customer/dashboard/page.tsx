@@ -4,8 +4,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { CustomerProtectedRoute } from '@/components/customer-protected-route';
 import { CustomerShell } from '@/components/customer-shell';
 import { ArrowPathIcon, BroadcastIcon } from '@/components/icons';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { listMyStreams } from '@/lib/customer-portal-api';
-import { listMyOrders } from '@/lib/customer-orders-api';
+import { listMyOrders, cancelMyOrder } from '@/lib/customer-orders-api';
+import { useCustomerOrderCancelEnabled } from '@/lib/use-order-cancel-enabled';
 import type { FlussonicStreamDirectoryEntry } from '@/types/flussonic-stream-directory';
 import type { Order } from '@/types/order';
 import { ApiError } from '@/lib/api-error';
@@ -31,10 +33,14 @@ function formatDate(unixSeconds: number): string {
 function CustomerDashboardContent() {
   usePageTitle('My Streams');
   const { customer } = useCustomerAuth();
+  const cancelEnabled = useCustomerOrderCancelEnabled();
   const [streams, setStreams] = useState<FlussonicStreamDirectoryEntry[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [pendingCancel, setPendingCancel] = useState<Order | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -54,6 +60,21 @@ function CustomerDashboardContent() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
+
+  async function handleConfirmCancel() {
+    if (!pendingCancel) return;
+    setIsCancelling(true);
+    setCancelError(null);
+    try {
+      await cancelMyOrder(pendingCancel.id);
+      setPendingCancel(null);
+      await load();
+    } catch (err) {
+      setCancelError(err instanceof ApiError ? err.message : 'Failed to cancel order.');
+    } finally {
+      setIsCancelling(false);
+    }
+  }
 
   return (
     <div className="mx-auto w-full max-w-3xl">
@@ -131,12 +152,37 @@ function CustomerDashboardContent() {
                   <p className="mt-1 text-xs text-gray-500">
                     {formatDate(order.effective_from)} – {formatDate(order.effective_to)}
                   </p>
+                  {order.status === 'active' && cancelEnabled && (
+                    <button
+                      onClick={() => setPendingCancel(order)}
+                      className="mt-2 text-xs font-medium text-red-600 hover:text-red-700"
+                    >
+                      Cancel order
+                    </button>
+                  )}
+                  {order.status === 'active' && !cancelEnabled && (
+                    <p className="mt-2 text-xs text-gray-400">
+                      Order cancellation is currently disabled
+                    </p>
+                  )}
                 </li>
               ))}
             </ul>
           )}
         </div>
+        {cancelError && <p className="mt-2 text-xs text-red-600">{cancelError}</p>}
       </div>
+
+      <ConfirmDialog
+        open={pendingCancel !== null}
+        title="Cancel order"
+        message={`Are you sure you want to cancel order "${pendingCancel?.order_number}"? This can't be undone.`}
+        confirmLabel="Cancel order"
+        busyLabel="Cancelling…"
+        isBusy={isCancelling}
+        onConfirm={handleConfirmCancel}
+        onCancel={() => setPendingCancel(null)}
+      />
     </div>
   );
 }
