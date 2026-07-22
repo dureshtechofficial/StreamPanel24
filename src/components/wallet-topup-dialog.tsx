@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { ApiError } from '@/lib/api-error';
 
+type Mode = 'add' | 'deduct';
+
 export function WalletTopupDialog({
   open,
   resellerName,
@@ -16,33 +18,44 @@ export function WalletTopupDialog({
   onSubmit: (amount: number, remark: string) => Promise<void>;
   onCancel: () => void;
 }) {
+  const [mode, setMode] = useState<Mode>('add');
   const [amount, setAmount] = useState('');
   const [remark, setRemark] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   if (!open) return null;
 
-  function handleCancel() {
+  function reset() {
+    setMode('add');
     setAmount('');
     setRemark('');
     setError(null);
+  }
+
+  function handleCancel() {
+    reset();
     onCancel();
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const parsed = Number(amount);
-    if (!amount || Number.isNaN(parsed) || parsed <= 0) {
+    const magnitude = Number(amount);
+    if (!amount || Number.isNaN(magnitude) || magnitude <= 0) {
       setError('Enter an amount greater than zero.');
       return;
     }
     setError(null);
+    const signedAmount = mode === 'deduct' ? -magnitude : magnitude;
     try {
-      await onSubmit(parsed, remark.trim());
+      await onSubmit(signedAmount, remark.trim());
       setAmount('');
       setRemark('');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to top up wallet.');
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : `Failed to ${mode === 'deduct' ? 'deduct from' : 'top up'} wallet.`,
+      );
     }
   }
 
@@ -56,11 +69,33 @@ export function WalletTopupDialog({
         onSubmit={handleSubmit}
         className="animate-fade-in-up relative w-full max-w-sm rounded-xl bg-white p-6 shadow-2xl"
       >
-        <h2 className="text-base font-semibold text-gray-900">Top up wallet</h2>
+        <h2 className="text-base font-semibold text-gray-900">Adjust wallet balance</h2>
         <p className="mt-1 text-sm text-gray-500">
-          Add funds to <span className="font-medium text-gray-700">{resellerName}</span>&rsquo;s
-          wallet balance.
+          Add or deduct funds from{' '}
+          <span className="font-medium text-gray-700">{resellerName}</span>&rsquo;s wallet
+          balance.
         </p>
+
+        <div className="mt-4 flex rounded-lg border border-gray-300 p-0.5 text-sm font-medium">
+          <button
+            type="button"
+            onClick={() => setMode('add')}
+            className={`flex-1 rounded-md py-1.5 transition ${
+              mode === 'add' ? 'bg-flu-pink text-white' : 'text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            Add funds
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('deduct')}
+            className={`flex-1 rounded-md py-1.5 transition ${
+              mode === 'deduct' ? 'bg-red-600 text-white' : 'text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            Deduct funds
+          </button>
+        </div>
 
         <div className="mt-4">
           <label className="mb-1 block text-sm font-medium text-gray-700">Amount</label>
@@ -85,7 +120,7 @@ export function WalletTopupDialog({
             maxLength={255}
             value={remark}
             onChange={(e) => setRemark(e.target.value)}
-            placeholder="e.g. Bank transfer topup"
+            placeholder={mode === 'deduct' ? 'e.g. Correction' : 'e.g. Bank transfer topup'}
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 transition focus:border-flu-pink focus:outline-none focus:ring-2 focus:ring-flu-pink/20"
           />
         </div>
@@ -104,9 +139,19 @@ export function WalletTopupDialog({
           <button
             type="submit"
             disabled={isBusy}
-            className="rounded-full bg-flu-pink px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-flu-pink/30 transition hover:bg-flu-pink-dark disabled:cursor-not-allowed disabled:opacity-60"
+            className={`rounded-full px-4 py-2 text-sm font-semibold text-white shadow-lg transition disabled:cursor-not-allowed disabled:opacity-60 ${
+              mode === 'deduct'
+                ? 'bg-red-600 shadow-red-600/30 hover:bg-red-700'
+                : 'bg-flu-pink shadow-flu-pink/30 hover:bg-flu-pink-dark'
+            }`}
           >
-            {isBusy ? 'Adding…' : 'Add funds'}
+            {isBusy
+              ? mode === 'deduct'
+                ? 'Deducting…'
+                : 'Adding…'
+              : mode === 'deduct'
+                ? 'Deduct funds'
+                : 'Add funds'}
           </button>
         </div>
       </form>

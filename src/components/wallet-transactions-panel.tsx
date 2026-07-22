@@ -16,7 +16,8 @@ function formatTime(unixSeconds: number): string {
 }
 
 function formatAmount(amount: string): string {
-  return Number(amount).toFixed(2);
+  const n = Number(amount);
+  return `${n > 0 ? '+' : ''}${n.toFixed(2)}`;
 }
 
 export function WalletTransactionsPanel({
@@ -118,8 +119,14 @@ export function WalletTransactionsPanel({
                     <span className="text-sm font-medium text-gray-900">
                       {formatTime(txn.created_at)}
                     </span>
-                    <span className="inline-block rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
-                      +{formatAmount(txn.amount)}
+                    <span
+                      className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
+                        Number(txn.amount) < 0
+                          ? 'bg-red-50 text-red-700'
+                          : 'bg-green-50 text-green-700'
+                      }`}
+                    >
+                      {formatAmount(txn.amount)}
                     </span>
                   </div>
                   <p className="mt-1 text-xs text-gray-500">
