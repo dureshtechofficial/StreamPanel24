@@ -11,6 +11,8 @@ export interface Reseller {
   city: string | null;
   state: string | null;
   pincode: string | null;
+  /** DECIMAL(10,2) as a string, mutated only via the wallet topup endpoint. */
+  wallet_balance: string;
   status: ResellerStatus;
   /** UTC unix timestamp (seconds) */
   created_at: number;

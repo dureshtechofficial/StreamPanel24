@@ -288,3 +288,15 @@ export function TagIcon(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+export function WalletIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.8} stroke="currentColor" {...props}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M21 12v4.5a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 16.5v-9a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5V9m0 3h-4.5a1.5 1.5 0 0 0 0 3H21v-3Z"
+      />
+    </svg>
+  );
+}
