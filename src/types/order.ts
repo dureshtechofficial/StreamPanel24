@@ -13,6 +13,17 @@ export interface Order {
   max_streams: number;
   max_connections: number;
   playback_protocols: string[] | null;
+  /** Plan/customer details snapshotted at purchase time, for invoicing — frozen even if the plan/customer is later edited or renamed. */
+  plan_name: string;
+  plan_description: string | null;
+  customer_name: string;
+  customer_email: string | null;
+  customer_phone: string;
+  customer_company_name: string | null;
+  customer_address: string | null;
+  customer_city: string | null;
+  customer_state: string | null;
+  customer_pincode: string | null;
   /** UTC unix timestamp (seconds) */
   effective_from: number;
   /** UTC unix timestamp (seconds) */
@@ -45,10 +56,8 @@ export interface UpdateOrderStatusInput {
   remark?: string;
 }
 
-/** Order enriched with readable labels — returned by the admin reports endpoint only. */
+/** Order enriched with readable stream/server/reseller labels — returned by the admin reports endpoint only. Customer/plan names are already on `Order` itself (the invoicing snapshot). */
 export interface OrderReportEntry extends Order {
-  customer_name: string;
-  plan_name: string;
   stream_name: string;
   server_name: string;
   reseller_name: string | null;

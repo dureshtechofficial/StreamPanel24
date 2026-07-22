@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ProtectedRoute } from "@/components/protected-route";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { ArrowPathIcon, ChevronLeftIcon, ChevronRightIcon } from "@/components/icons";
+import { OrderInvoiceDialog } from "@/components/order-invoice-dialog";
 import { listOrderReports } from "@/lib/orders-api";
 import type { OrderReportEntry, OrderStatus, OrdersSummary, PaymentStatus } from "@/types/order";
 import { ApiError } from "@/lib/api-error";
@@ -42,6 +43,7 @@ function ReportsContent() {
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus | "">("");
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [invoiceOrder, setInvoiceOrder] = useState<OrderReportEntry | null>(null);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -179,7 +181,15 @@ function ReportsContent() {
                 <tbody className="divide-y divide-gray-100">
                   {items.map((order) => (
                     <tr key={order.id} className="transition-colors hover:bg-gray-50">
-                      <td className="px-4 py-3 font-medium text-gray-900">{order.order_number}</td>
+                      <td className="px-4 py-3 font-medium text-gray-900">
+                        <button
+                          onClick={() => setInvoiceOrder(order)}
+                          className="underline decoration-dotted underline-offset-2 hover:text-flu-pink"
+                          title="View invoice"
+                        >
+                          {order.order_number}
+                        </button>
+                      </td>
                       <td className="px-4 py-3 text-gray-600">
                         {order.customer_name}
                         {order.reseller_name && (
@@ -223,7 +233,12 @@ function ReportsContent() {
                 <div key={order.id} className="p-4">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="truncate font-medium text-gray-900">{order.order_number}</p>
+                      <button
+                        onClick={() => setInvoiceOrder(order)}
+                        className="truncate font-medium text-gray-900 underline decoration-dotted underline-offset-2"
+                      >
+                        {order.order_number}
+                      </button>
                       <p className="truncate text-xs text-gray-500">
                         {order.customer_name} · {order.plan_name}
                       </p>
@@ -282,6 +297,8 @@ function ReportsContent() {
           </div>
         </div>
       </div>
+
+      <OrderInvoiceDialog order={invoiceOrder} onClose={() => setInvoiceOrder(null)} />
     </div>
   );
 }
