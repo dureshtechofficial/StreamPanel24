@@ -93,7 +93,7 @@ export class PlansService {
       customer_price: dto.customer_price.toFixed(2),
       reseller_percentage: dto.reseller_percentage.toFixed(2),
       reseller_price: this.computeResellerPrice(
-        dto.mrp,
+        dto.customer_price,
         dto.reseller_percentage,
       ),
     });
@@ -113,9 +113,9 @@ export class PlansService {
     if (reseller_percentage !== undefined) {
       plan.reseller_percentage = reseller_percentage.toFixed(2);
     }
-    if (mrp !== undefined || reseller_percentage !== undefined) {
+    if (customer_price !== undefined || reseller_percentage !== undefined) {
       plan.reseller_price = this.computeResellerPrice(
-        mrp ?? Number(plan.mrp),
+        customer_price ?? Number(plan.customer_price),
         reseller_percentage ?? Number(plan.reseller_percentage),
       );
     }
@@ -130,11 +130,12 @@ export class PlansService {
     await this.plansRepository.save(plan);
   }
 
+  /** Discount is off customer_price, not mrp — mrp is just the list/ceiling price shown for comparison. */
   private computeResellerPrice(
-    mrp: number,
+    customerPrice: number,
     resellerPercentage: number,
   ): string {
-    const price = mrp * (1 - resellerPercentage / 100);
+    const price = customerPrice * (1 - resellerPercentage / 100);
     return Math.max(0, price).toFixed(2);
   }
 

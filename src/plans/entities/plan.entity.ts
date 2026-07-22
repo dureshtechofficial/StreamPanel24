@@ -31,11 +31,11 @@ export class Plan {
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   customer_price: string;
 
-  /** Source of truth for the reseller discount — reseller_price is recomputed from this + mrp on every save. */
+  /** Source of truth for the reseller discount — reseller_price is recomputed from this + customer_price on every save. */
   @Column({ type: 'decimal', precision: 5, scale: 2, default: 0 })
   reseller_percentage: string;
 
-  /** = mrp * (1 - reseller_percentage / 100). Never client-settable directly — see PlansService. */
+  /** = customer_price * (1 - reseller_percentage / 100). Never client-settable directly — see PlansService. */
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   reseller_price: string;
 
