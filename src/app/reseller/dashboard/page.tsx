@@ -7,6 +7,7 @@ import { CustomerFormPanel } from '@/components/customer-form-panel';
 import { CustomerStreamsPanel, type CustomerStreamsPanelApi } from '@/components/customer-streams-panel';
 import { OrdersPanel, type OrdersPanelApi } from '@/components/orders-panel';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { WalletTransactionsPanel } from '@/components/wallet-transactions-panel';
 import {
   BroadcastIcon,
   ChevronLeftIcon,
@@ -16,6 +17,7 @@ import {
   ReceiptIcon,
   SearchIcon,
   TrashIcon,
+  WalletIcon,
 } from '@/components/icons';
 import {
   createMyCustomer,
@@ -34,6 +36,7 @@ import {
   listMyCustomerOrders,
 } from '@/lib/reseller-orders-api';
 import { listMyVisiblePlans } from '@/lib/reseller-plans-api';
+import { listMyWalletTransactions } from '@/lib/reseller-wallet-api';
 import type { Customer, CustomerInput, CustomerStatus } from '@/types/customer';
 import { ApiError } from '@/lib/api-error';
 import { useResellerAuth } from '@/lib/reseller-auth-context';
@@ -87,6 +90,12 @@ function ResellerDashboardContent() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [streamsCustomer, setStreamsCustomer] = useState<Customer | null>(null);
   const [ordersCustomer, setOrdersCustomer] = useState<Customer | null>(null);
+  const [walletHistoryOpen, setWalletHistoryOpen] = useState(false);
+
+  const loadWalletHistory = useCallback(
+    (p: number, limit: number) => listMyWalletTransactions({ page: p, limit }),
+    [],
+  );
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -175,6 +184,31 @@ function ResellerDashboardContent() {
         >
           <PlusIcon className="h-4 w-4" />
           Add customer
+        </button>
+      </div>
+
+      <div
+        className="animate-fade-in-up mb-6 flex items-center justify-between gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
+        style={{ animationDelay: '30ms' }}
+      >
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-flu-pink/10 text-flu-pink">
+            <WalletIcon className="h-5 w-5" />
+          </span>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+              Wallet balance
+            </p>
+            <p className="text-2xl font-semibold text-gray-900">
+              {reseller ? Number(reseller.wallet_balance).toFixed(2) : '—'}
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={() => setWalletHistoryOpen(true)}
+          className="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+        >
+          View history
         </button>
       </div>
 
@@ -413,6 +447,13 @@ function ResellerDashboardContent() {
         api={ORDERS_API}
         priceField="reseller_price"
         cancelEnabled={orderCancelEnabled}
+      />
+
+      <WalletTransactionsPanel
+        open={walletHistoryOpen}
+        title="Wallet history"
+        loadPage={loadWalletHistory}
+        onClose={() => setWalletHistoryOpen(false)}
       />
     </div>
   );
