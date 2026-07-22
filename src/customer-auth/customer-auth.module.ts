@@ -7,11 +7,13 @@ import { CustomersModule } from '../customers/customers.module';
 import { FlussonicServersModule } from '../flussonic-servers/flussonic-servers.module';
 import { PlansModule } from '../plans/plans.module';
 import { OrdersModule } from '../orders/orders.module';
+import { SettingsModule } from '../settings/settings.module';
 import { CustomerAuthService } from './customer-auth.service';
 import { CustomerAuthController } from './customer-auth.controller';
 import { CustomerStreamsPortalController } from './customer-streams.controller';
 import { CustomerPlansController } from './customer-plans.controller';
 import { CustomerOrdersController } from './customer-orders.controller';
+import { CustomerSettingsController } from './customer-settings.controller';
 import { CustomerJwtAccessStrategy } from './strategies/customer-jwt-access.strategy';
 import { CustomerJwtRefreshStrategy } from './strategies/customer-jwt-refresh.strategy';
 
@@ -21,6 +23,7 @@ import { CustomerJwtRefreshStrategy } from './strategies/customer-jwt-refresh.st
     FlussonicServersModule,
     PlansModule,
     OrdersModule,
+    SettingsModule,
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -40,6 +43,7 @@ import { CustomerJwtRefreshStrategy } from './strategies/customer-jwt-refresh.st
     CustomerStreamsPortalController,
     CustomerPlansController,
     CustomerOrdersController,
+    CustomerSettingsController,
   ],
   providers: [
     CustomerAuthService,

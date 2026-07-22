@@ -17,6 +17,7 @@ import { CustomersService } from '../customers/customers.service';
 import { OrdersService } from '../orders/orders.service';
 import { CreateOrderDto } from '../orders/dto/create-order.dto';
 import { UpdateOrderStatusDto } from '../orders/dto/update-order-status.dto';
+import { OrderCancelActor } from '../settings/enums/order-cancel-actor.enum';
 
 @ApiTags('reseller-auth')
 @ApiBearerAuth('access-token')
@@ -70,6 +71,11 @@ export class ResellerOrdersController {
     @Body() dto: UpdateOrderStatusDto,
   ) {
     await this.customersService.findOneForReseller(reseller.id, customerId);
-    return this.ordersService.updateStatusForCustomer(customerId, id, dto);
+    return this.ordersService.updateStatusForCustomer(
+      customerId,
+      id,
+      dto,
+      OrderCancelActor.RESELLER,
+    );
   }
 }

@@ -24,6 +24,7 @@ import { FlussonicStreamSession } from './flussonic-servers/entities/flussonic-s
 import { FlussonicServersModule } from './flussonic-servers/flussonic-servers.module';
 import { SyncSchedule } from './settings/entities/sync-schedule.entity';
 import { SyncScheduleRun } from './settings/entities/sync-schedule-run.entity';
+import { OrderCancelSetting } from './settings/entities/order-cancel-setting.entity';
 import { SettingsModule } from './settings/settings.module';
 import { Plan } from './plans/entities/plan.entity';
 import { PlansModule } from './plans/plans.module';
@@ -60,6 +61,7 @@ import { OrdersModule } from './orders/orders.module';
           FlussonicStreamSession,
           SyncSchedule,
           SyncScheduleRun,
+          OrderCancelSetting,
           Reseller,
           Plan,
           Order,

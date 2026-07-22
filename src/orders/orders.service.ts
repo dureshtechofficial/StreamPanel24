@@ -11,6 +11,8 @@ import { PlansService } from '../plans/plans.service';
 import { CustomersService } from '../customers/customers.service';
 import { ResellersService } from '../resellers/resellers.service';
 import { FlussonicStreamsService } from '../flussonic-servers/flussonic-streams.service';
+import { OrderCancelSettingsService } from '../settings/order-cancel-settings.service';
+import { OrderCancelActor } from '../settings/enums/order-cancel-actor.enum';
 import { nowUnixSeconds } from '../common/utils/unix-timestamp.util';
 import type { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 
@@ -44,6 +46,7 @@ export class OrdersService {
     private readonly customersService: CustomersService,
     private readonly resellersService: ResellersService,
     private readonly streamsService: FlussonicStreamsService,
+    private readonly orderCancelSettingsService: OrderCancelSettingsService,
   ) {}
 
   async findAll(query: QueryOrderDto): Promise<PaginatedResult<Order>> {
@@ -285,26 +288,39 @@ export class OrdersService {
    */
   async updateStatus(id: string, dto: UpdateOrderStatusDto): Promise<Order> {
     const order = await this.findOne(id);
-    return this.applyStatusUpdate(order, dto);
+    return this.applyStatusUpdate(order, dto, OrderCancelActor.ADMIN);
   }
 
   async updateStatusForCustomer(
     customerId: string,
     id: string,
     dto: UpdateOrderStatusDto,
+    actorType: OrderCancelActor,
   ): Promise<Order> {
     const order = await this.findOneForCustomer(customerId, id);
-    return this.applyStatusUpdate(order, dto);
+    return this.applyStatusUpdate(order, dto, actorType);
+  }
+
+  /** Convenience wrapper: a customer can only ever cancel their own order, nothing else about it. */
+  cancelForCustomer(customerId: string, id: string): Promise<Order> {
+    return this.updateStatusForCustomer(
+      customerId,
+      id,
+      { status: OrderStatus.CANCELLED },
+      OrderCancelActor.CUSTOMER,
+    );
   }
 
   private async applyStatusUpdate(
     order: Order,
     dto: UpdateOrderStatusDto,
+    actorType: OrderCancelActor,
   ): Promise<Order> {
     if (
       dto.status === OrderStatus.CANCELLED &&
       order.status !== OrderStatus.CANCELLED
     ) {
+      await this.orderCancelSettingsService.assertCancelEnabled(actorType);
       await this.streamsService.unassignSingleStreamFromCustomer(
         order.stream_id,
         order.customer_id,

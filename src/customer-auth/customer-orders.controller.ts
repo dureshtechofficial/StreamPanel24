@@ -1,4 +1,12 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CustomerJwtAccessGuard } from './guards/customer-jwt-access.guard';
 import { CurrentCustomer } from './decorators/current-customer.decorator';
@@ -19,5 +27,15 @@ export class CustomerOrdersController {
   @Get()
   findMine(@CurrentCustomer() customer: Customer) {
     return this.ordersService.findAllForCustomer(customer.id);
+  }
+
+  @ApiOperation({
+    summary:
+      "Cancel one of the current customer's own orders — nothing else about an order is customer-editable",
+  })
+  @Patch(':id/cancel')
+  @HttpCode(HttpStatus.OK)
+  cancel(@CurrentCustomer() customer: Customer, @Param('id') id: string) {
+    return this.ordersService.cancelForCustomer(customer.id, id);
   }
 }
