@@ -45,6 +45,17 @@ export class WalletTransaction {
   @Column({ type: 'varchar', length: 36, nullable: true })
   created_by_admin_id: string | null;
 
+  /**
+   * The order this charge/refund belongs to (type = order_payment only).
+   * Nullable because the charge is written *before* the order row exists —
+   * `OrdersService.create` patches this in via `WalletService.attachOrder`
+   * once the order is actually persisted, so a failed order creation never
+   * leaves an order_id pointing at nothing.
+   */
+  @Index()
+  @Column({ type: 'bigint', unsigned: true, nullable: true })
+  order_id: string | null;
+
   /** UTC unix timestamp (seconds). Set by the app, not MySQL. */
   @Index()
   @Column({

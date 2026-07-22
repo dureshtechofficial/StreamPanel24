@@ -39,6 +39,10 @@ export class Plan {
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   reseller_price: string;
 
+  /** Subscription length in days — snapshotted onto every order created from this plan; Order.duration_days is no longer client-supplied. */
+  @Column({ type: 'int', unsigned: true, default: 30 })
+  duration_days: number;
+
   @Column({ type: 'int', unsigned: true, default: 1 })
   max_streams: number;
 

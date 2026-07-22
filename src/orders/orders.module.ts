@@ -8,6 +8,7 @@ import { CustomersModule } from '../customers/customers.module';
 import { ResellersModule } from '../resellers/resellers.module';
 import { FlussonicServersModule } from '../flussonic-servers/flussonic-servers.module';
 import { SettingsModule } from '../settings/settings.module';
+import { WalletModule } from '../wallet/wallet.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { SettingsModule } from '../settings/settings.module';
     ResellersModule,
     FlussonicServersModule,
     SettingsModule,
+    WalletModule,
   ],
   controllers: [OrdersController],
   providers: [OrdersService],

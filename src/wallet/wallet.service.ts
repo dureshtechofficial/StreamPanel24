@@ -50,6 +50,77 @@ export class WalletService {
     return this.transactionsRepository.save(transaction);
   }
 
+  /**
+   * Debits the reseller's wallet for an order purchase — called by
+   * OrdersService.create *before* the order row exists (stream assignment
+   * and order insert can still fail), so `order_id` starts null here and is
+   * patched in via `attachOrder` once the order is actually persisted.
+   * Throws (via adjustWalletBalance) if the balance would go negative.
+   */
+  async chargeForOrder(
+    resellerId: string,
+    amount: number,
+    remark: string | null,
+  ): Promise<WalletTransaction> {
+    const reseller = await this.resellersService.adjustWalletBalance(
+      resellerId,
+      -amount,
+    );
+    const transaction = this.transactionsRepository.create({
+      reseller_id: resellerId,
+      type: WalletTransactionType.ORDER_PAYMENT,
+      amount: (-amount).toFixed(2),
+      balance_after: reseller.wallet_balance,
+      remark,
+      created_by_admin_id: null,
+      order_id: null,
+    });
+    return this.transactionsRepository.save(transaction);
+  }
+
+  async attachOrder(transactionId: string, orderId: string): Promise<void> {
+    await this.transactionsRepository.update(transactionId, {
+      order_id: orderId,
+    });
+  }
+
+  /**
+   * Refunds an order's wallet charge on cancellation. Looks up the original
+   * `order_payment` debit for this order rather than trusting the order's
+   * live `price` — if no charge exists (the order was never actually billed
+   * to a wallet, e.g. created via the admin route), this is a silent no-op
+   * rather than crediting money that was never taken.
+   */
+  async refundForOrder(
+    resellerId: string,
+    orderId: string,
+    remark: string | null,
+  ): Promise<WalletTransaction | null> {
+    const charge = await this.transactionsRepository.findOne({
+      where: { order_id: orderId, type: WalletTransactionType.ORDER_PAYMENT },
+      order: { created_at: 'ASC' },
+    });
+    if (!charge || Number(charge.amount) >= 0) {
+      return null;
+    }
+
+    const refundAmount = -Number(charge.amount);
+    const reseller = await this.resellersService.adjustWalletBalance(
+      resellerId,
+      refundAmount,
+    );
+    const transaction = this.transactionsRepository.create({
+      reseller_id: resellerId,
+      type: WalletTransactionType.ORDER_PAYMENT,
+      amount: refundAmount.toFixed(2),
+      balance_after: reseller.wallet_balance,
+      remark,
+      created_by_admin_id: null,
+      order_id: orderId,
+    });
+    return this.transactionsRepository.save(transaction);
+  }
+
   async findTransactions(
     resellerId: string,
     query: QueryWalletTransactionDto,

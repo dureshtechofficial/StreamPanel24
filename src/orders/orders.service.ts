@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
 import { Order } from './entities/order.entity';
@@ -13,6 +17,7 @@ import { ResellersService } from '../resellers/resellers.service';
 import { FlussonicStreamsService } from '../flussonic-servers/flussonic-streams.service';
 import { OrderCancelSettingsService } from '../settings/order-cancel-settings.service';
 import { OrderCancelActor } from '../settings/enums/order-cancel-actor.enum';
+import { WalletService } from '../wallet/wallet.service';
 import { nowUnixSeconds } from '../common/utils/unix-timestamp.util';
 import type { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 
@@ -47,6 +52,7 @@ export class OrdersService {
     private readonly resellersService: ResellersService,
     private readonly streamsService: FlussonicStreamsService,
     private readonly orderCancelSettingsService: OrderCancelSettingsService,
+    private readonly walletService: WalletService,
   ) {}
 
   async findAll(query: QueryOrderDto): Promise<PaginatedResult<Order>> {
@@ -235,8 +241,25 @@ export class OrdersService {
     resellerId: string | null;
     priceField: 'customer_price' | 'reseller_price';
     dto: CreateOrderDto;
+    /** Only the reseller-scoped controller sets this — bills the order to the reseller's own wallet instead of an external payment method. */
+    chargeResellerWallet?: boolean;
   }): Promise<Order> {
-    const { customerId, resellerId, priceField, dto } = params;
+    const { customerId, resellerId, priceField, dto, chargeResellerWallet } =
+      params;
+
+    if (chargeResellerWallet) {
+      if (!resellerId) {
+        throw new BadRequestException(
+          'A wallet-billed order requires a reseller',
+        );
+      }
+      if (dto.payment_method !== 'wallet') {
+        throw new BadRequestException(
+          'Resellers can only pay for orders via wallet',
+        );
+      }
+    }
+
     const plan = await this.plansService.findOne(dto.plan_id);
 
     const price = dto.price ?? Number(plan[priceField]);
@@ -248,7 +271,15 @@ export class OrdersService {
       dto.stream_id,
       requestedFrom,
     );
-    const effectiveTo = effectiveFrom + dto.duration_days * SECONDS_PER_DAY;
+    const effectiveTo = effectiveFrom + plan.duration_days * SECONDS_PER_DAY;
+
+    // Streams are now only ever picked from what's already assigned to the
+    // customer (see FlussonicStreamsService usage on the frontend), so this
+    // is normally a no-op re-save — capture whether it was a *new* assignment
+    // so a wallet-charge failure below only undoes an assignment this call
+    // itself made, never a pre-existing one the customer already had.
+    const streamBefore = await this.streamsService.findOneById(dto.stream_id);
+    const isNewAssignment = streamBefore?.customer_id !== customerId;
 
     // Assign first — if the stream is already taken by a different customer,
     // no order row (and no payment record) should ever be created for it.
@@ -257,6 +288,30 @@ export class OrdersService {
       dto.stream_id,
     );
 
+    // Charge next, before the order row exists — if the reseller's balance
+    // can't cover it, undo the assignment above (only if it was new) so a
+    // failed payment never leaves a stream held without a corresponding
+    // order, but also never strips a pre-existing assignment it didn't make.
+    let chargeTransactionId: string | null = null;
+    if (chargeResellerWallet && resellerId) {
+      try {
+        const charge = await this.walletService.chargeForOrder(
+          resellerId,
+          price,
+          `Order for plan "${plan.name}"`,
+        );
+        chargeTransactionId = charge.id;
+      } catch (err) {
+        if (isNewAssignment) {
+          await this.streamsService.unassignSingleStreamFromCustomer(
+            dto.stream_id,
+            customerId,
+          );
+        }
+        throw err;
+      }
+    }
+
     const order = this.ordersRepository.create({
       order_number: 'PENDING', // replaced right below, once the id is known
       plan_id: dto.plan_id,
@@ -264,7 +319,7 @@ export class OrdersService {
       customer_id: customerId,
       reseller_id: resellerId,
       price: price.toFixed(2),
-      duration_days: dto.duration_days,
+      duration_days: plan.duration_days,
       max_streams: maxStreams,
       max_connections: maxConnections,
       playback_protocols: playbackProtocols,
@@ -278,7 +333,13 @@ export class OrdersService {
     await this.ordersRepository.save(order);
 
     order.order_number = this.buildOrderNumber(order.id);
-    return this.ordersRepository.save(order);
+    await this.ordersRepository.save(order);
+
+    if (chargeTransactionId) {
+      await this.walletService.attachOrder(chargeTransactionId, order.id);
+    }
+
+    return order;
   }
 
   /**
@@ -325,6 +386,16 @@ export class OrdersService {
         order.stream_id,
         order.customer_id,
       );
+      // No-ops if this order was never actually charged to a wallet (e.g. it
+      // was created via the admin route) — refundForOrder checks for a real
+      // charge transaction rather than trusting payment_method alone.
+      if (order.reseller_id) {
+        await this.walletService.refundForOrder(
+          order.reseller_id,
+          order.id,
+          `Refund for cancelled order ${order.order_number}`,
+        );
+      }
     }
 
     if (dto.status !== undefined) order.status = dto.status;

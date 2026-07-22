@@ -25,10 +25,6 @@ export class CreateOrderDto {
   @IsString()
   customer_id?: string;
 
-  @IsInt()
-  @Min(1)
-  duration_days: number;
-
   /** Overrides the plan's price for this order — defaults to the plan's customer_price/reseller_price if omitted. */
   @IsOptional()
   @Type(() => Number)

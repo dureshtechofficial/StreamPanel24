@@ -42,6 +42,12 @@ export class CreatePlanDto {
   @Max(100)
   reseller_percentage: number;
 
+  /** Subscription length in days, snapshotted onto every order created from this plan. */
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  duration_days: number;
+
   @IsOptional()
   @IsInt()
   @Min(1)

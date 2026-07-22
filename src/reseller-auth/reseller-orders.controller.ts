@@ -41,7 +41,7 @@ export class ResellerOrdersController {
 
   @ApiOperation({
     summary:
-      "Create an order for one of the reseller's own customers — priced at the plan's reseller_price by default",
+      "Create an order for one of the reseller's own customers — priced at the plan's reseller_price by default, always billed to the reseller's own wallet",
   })
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -56,6 +56,7 @@ export class ResellerOrdersController {
       resellerId: reseller.id,
       priceField: 'reseller_price',
       dto,
+      chargeResellerWallet: true,
     });
   }
 
