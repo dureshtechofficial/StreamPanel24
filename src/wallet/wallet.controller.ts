@@ -34,7 +34,10 @@ export class WalletController {
       .then((wallet_balance) => ({ wallet_balance }));
   }
 
-  @ApiOperation({ summary: "Top up a reseller's wallet balance" })
+  @ApiOperation({
+    summary:
+      "Adjust a reseller's wallet balance — a positive amount tops up, a negative amount deducts (rejected with 400 if it would take the balance below zero)",
+  })
   @Post('topup')
   topUp(
     @Param('resellerId') resellerId: string,

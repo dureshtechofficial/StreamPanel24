@@ -22,9 +22,12 @@ export class WalletService {
   }
 
   /**
-   * Credits the reseller's wallet and logs the transaction in the same
-   * operation — the two always happen together, never one without the other,
-   * so the ledger can never drift from the actual balance.
+   * Applies a signed delta to the reseller's wallet and logs the transaction
+   * in the same operation — the two always happen together, never one
+   * without the other, so the ledger can never drift from the actual
+   * balance. A negative `dto.amount` debits the wallet; `adjustWalletBalance`
+   * throws before either write happens if that would take the balance below
+   * zero.
    */
   async topUp(
     resellerId: string,

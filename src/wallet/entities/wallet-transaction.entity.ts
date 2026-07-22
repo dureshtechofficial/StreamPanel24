@@ -30,7 +30,7 @@ export class WalletTransaction {
   @Column({ type: 'enum', enum: WalletTransactionType })
   type: WalletTransactionType;
 
-  /** Always positive — what this transaction changed the balance by. */
+  /** Signed — what this transaction changed the balance by (negative for an admin-initiated deduction). */
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   amount: string;
 

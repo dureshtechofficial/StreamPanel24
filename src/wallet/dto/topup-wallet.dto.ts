@@ -3,14 +3,15 @@ import {
   IsNumber,
   IsOptional,
   IsString,
-  Min,
+  NotEquals,
   MaxLength,
 } from 'class-validator';
 
 export class TopupWalletDto {
+  /** Positive credits the wallet; negative debits it — `WalletService.topUp` rejects a negative that would take the balance below zero. */
   @Type(() => Number)
   @IsNumber()
-  @Min(0.01, { message: 'Amount must be greater than zero' })
+  @NotEquals(0, { message: 'Amount cannot be zero' })
   amount: number;
 
   @IsOptional()
