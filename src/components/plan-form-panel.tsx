@@ -6,7 +6,7 @@ import { ApiError } from '@/lib/api-error';
 import { groupFieldErrors } from '@/lib/form-errors';
 import { XIcon } from './icons';
 
-const FIELDS = ['name', 'description', 'mrp', 'customer_price', 'reseller_percentage', 'max_streams', 'max_connections'];
+const FIELDS = ['name', 'description', 'mrp', 'customer_price', 'reseller_percentage', 'duration_days', 'max_streams', 'max_connections'];
 
 const PROTOCOL_KEYS = [
   'hls',
@@ -33,6 +33,7 @@ type FormState = {
   mrp: string;
   customer_price: string;
   reseller_percentage: string;
+  duration_days: string;
   max_streams: string;
   max_connections: string;
   playback_protocols: string[];
@@ -47,6 +48,7 @@ const EMPTY_FORM: FormState = {
   mrp: '',
   customer_price: '',
   reseller_percentage: '0',
+  duration_days: '30',
   max_streams: '1',
   max_connections: '1',
   playback_protocols: [],
@@ -63,6 +65,7 @@ function toFormState(plan: Plan | null): FormState {
     mrp: plan.mrp,
     customer_price: plan.customer_price,
     reseller_percentage: plan.reseller_percentage,
+    duration_days: String(plan.duration_days),
     max_streams: String(plan.max_streams),
     max_connections: String(plan.max_connections),
     playback_protocols: plan.playback_protocols ?? [],
@@ -79,6 +82,7 @@ function toPayload(form: FormState): PlanInput {
     mrp: Number(form.mrp),
     customer_price: Number(form.customer_price),
     reseller_percentage: Number(form.reseller_percentage),
+    duration_days: Number(form.duration_days) || 1,
     max_streams: Number(form.max_streams) || 1,
     max_connections: Number(form.max_connections) || 1,
     playback_protocols: form.playback_protocols.length > 0 ? form.playback_protocols : undefined,
@@ -124,11 +128,19 @@ export function PlanFormPanel({
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
 
-    const clientErrors: Record<string, string[]> = { name: [], mrp: [], customer_price: [] };
+    const clientErrors: Record<string, string[]> = {
+      name: [],
+      mrp: [],
+      customer_price: [],
+      duration_days: [],
+    };
     if (form.name.trim().length < 2) clientErrors.name.push('Name must be at least 2 characters long');
     if (!form.mrp || Number(form.mrp) < 0) clientErrors.mrp.push('Enter a valid MRP');
     if (!form.customer_price || Number(form.customer_price) < 0) {
       clientErrors.customer_price.push('Enter a valid customer price');
+    }
+    if (!form.duration_days || Number(form.duration_days) < 1) {
+      clientErrors.duration_days.push('Enter a duration of at least 1 day');
     }
     if (Object.values(clientErrors).some((v) => v.length > 0)) {
       setErrors(clientErrors);
@@ -247,6 +259,20 @@ export function PlanFormPanel({
               {previewReseller !== null && (
                 <p className="mt-1 text-xs text-gray-400">Reseller price ≈ {previewReseller}</p>
               )}
+            </div>
+
+            <div>
+              <label className={labelClass}>Duration (days) *</label>
+              <input
+                type="number"
+                min="1"
+                value={form.duration_days}
+                onChange={(e) => setField('duration_days', e.target.value)}
+                className={inputClass}
+              />
+              {errors.duration_days?.map((msg) => (
+                <p key={msg} className="mt-1 text-xs text-red-600">{msg}</p>
+              ))}
             </div>
 
             <div className="grid grid-cols-2 gap-3">

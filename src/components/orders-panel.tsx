@@ -3,29 +3,24 @@
 import { useCallback, useEffect, useState } from 'react';
 import { listOrdersForCustomer, createOrder, cancelOrder } from '@/lib/orders-api';
 import { listPlans } from '@/lib/plans-api';
-import { searchAvailableStreams } from '@/lib/customer-streams-api';
+import { listCustomerStreams } from '@/lib/customer-streams-api';
 import type { CreateOrderInput, Order } from '@/types/order';
 import type { Plan } from '@/types/plan';
 import type { FlussonicStreamDirectoryEntry } from '@/types/flussonic-stream-directory';
-import type { PaginatedResult } from '@/types/pagination';
-import type { SearchAvailableStreamsParams } from '@/lib/customer-streams-api';
 import type { Customer } from '@/types/customer';
 import { ApiError } from '@/lib/api-error';
 import { ArrowPathIcon, PlusIcon, XIcon } from './icons';
 import { ConfirmDialog } from './confirm-dialog';
 
-const DURATION_PRESETS = [30, 90, 180, 365];
-
-const PAYMENT_METHODS = ['cash', 'bank_transfer', 'upi', 'wallet', 'other'];
+const ALL_PAYMENT_METHODS = ['cash', 'bank_transfer', 'upi', 'wallet', 'other'];
 
 export interface OrdersPanelApi {
   listOrders: (customerId: string) => Promise<Order[]>;
   createOrder: (customerId: string, input: CreateOrderInput) => Promise<Order>;
   cancelOrder: (customerId: string, orderId: string) => Promise<Order>;
   listPlans: () => Promise<Plan[]>;
-  searchStreams: (
-    params: SearchAvailableStreamsParams,
-  ) => Promise<PaginatedResult<FlussonicStreamDirectoryEntry>>;
+  /** Streams already assigned to this customer — an order can only provision from those, not any unassigned stream. */
+  listAssignedStreams: (customerId: string) => Promise<FlussonicStreamDirectoryEntry[]>;
 }
 
 const DEFAULT_API: OrdersPanelApi = {
@@ -33,7 +28,7 @@ const DEFAULT_API: OrdersPanelApi = {
   createOrder,
   cancelOrder: (_customerId, orderId) => cancelOrder(orderId),
   listPlans: () => listPlans({ status: 'active', limit: 100 }).then((r) => r.items),
-  searchStreams: searchAvailableStreams,
+  listAssignedStreams: listCustomerStreams,
 };
 
 function formatDate(unixSeconds: number): string {
@@ -64,6 +59,7 @@ export function OrdersPanel({
   api = DEFAULT_API,
   priceField = 'customer_price',
   cancelEnabled = true,
+  paymentMethods = ALL_PAYMENT_METHODS,
 }: {
   open: boolean;
   customer: Customer | null;
@@ -74,6 +70,8 @@ export function OrdersPanel({
   priceField?: 'customer_price' | 'reseller_price';
   /** Whether the current actor (admin/reseller) is currently allowed to cancel an order — set from Settings' per-role toggle. */
   cancelEnabled?: boolean;
+  /** Payment methods selectable when creating an order — defaults to every method (admin); the reseller portal passes ['wallet'] only. */
+  paymentMethods?: string[];
 }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -84,8 +82,7 @@ export function OrdersPanel({
   const [showForm, setShowForm] = useState(false);
   const [planId, setPlanId] = useState('');
   const [streamId, setStreamId] = useState('');
-  const [durationDays, setDurationDays] = useState(30);
-  const [paymentMethod, setPaymentMethod] = useState(PAYMENT_METHODS[0]);
+  const [paymentMethod, setPaymentMethod] = useState(paymentMethods[0]);
   const [remark, setRemark] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -102,8 +99,7 @@ export function OrdersPanel({
     setShowForm(false);
     setPlanId('');
     setStreamId('');
-    setDurationDays(30);
-    setPaymentMethod(PAYMENT_METHODS[0]);
+    setPaymentMethod(paymentMethods[0]);
     setRemark('');
     setSubmitError(null);
     setSubmitInfo(null);
@@ -117,11 +113,11 @@ export function OrdersPanel({
       const [ordersResult, plansResult, streamsResult] = await Promise.all([
         api.listOrders(customer.id),
         api.listPlans(),
-        api.searchStreams({ availableForCustomerId: customer.id, limit: 100 }),
+        api.listAssignedStreams(customer.id),
       ]);
       setOrders(ordersResult);
       setPlans(plansResult);
-      setStreams(streamsResult.items);
+      setStreams(streamsResult);
     } catch (err) {
       setLoadError(err instanceof ApiError ? err.message : 'Failed to load orders.');
     } finally {
@@ -150,7 +146,6 @@ export function OrdersPanel({
       const created = await api.createOrder(customer.id, {
         plan_id: planId,
         stream_id: streamId,
-        duration_days: durationDays,
         payment_method: paymentMethod,
         remark: remark.trim() || undefined,
       });
@@ -259,7 +254,9 @@ export function OrdersPanel({
                       ))}
                     </select>
                     {previewPrice !== null && (
-                      <p className="mt-1 text-xs text-gray-400">Price: {previewPrice}</p>
+                      <p className="mt-1 text-xs text-gray-400">
+                        Price: {previewPrice} · {selectedPlan?.duration_days} days
+                      </p>
                     )}
                   </div>
 
@@ -268,7 +265,8 @@ export function OrdersPanel({
                     <select
                       value={streamId}
                       onChange={(e) => setStreamId(e.target.value)}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-flu-pink focus:outline-none focus:ring-2 focus:ring-flu-pink/20"
+                      disabled={streams.length === 0}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-flu-pink focus:outline-none focus:ring-2 focus:ring-flu-pink/20 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400"
                     >
                       <option value="">Choose a stream…</option>
                       {streams.map((stream) => (
@@ -277,54 +275,34 @@ export function OrdersPanel({
                         </option>
                       ))}
                     </select>
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-gray-700">
-                      Duration (days)
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        min={1}
-                        value={durationDays}
-                        onChange={(e) => setDurationDays(Number(e.target.value) || 1)}
-                        className="w-24 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-flu-pink focus:outline-none focus:ring-2 focus:ring-flu-pink/20"
-                      />
-                      <div className="flex gap-1">
-                        {DURATION_PRESETS.map((d) => (
-                          <button
-                            key={d}
-                            type="button"
-                            onClick={() => setDurationDays(d)}
-                            className={`rounded-full px-2.5 py-1 text-xs font-medium transition ${
-                              durationDays === d
-                                ? 'bg-flu-pink text-white'
-                                : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                            }`}
-                          >
-                            {d}d
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                    {streams.length === 0 && (
+                      <p className="mt-1 text-xs text-gray-400">
+                        This customer has no assigned streams yet — assign one first.
+                      </p>
+                    )}
                   </div>
 
                   <div>
                     <label className="mb-1 block text-xs font-medium text-gray-700">
                       Payment method
                     </label>
-                    <select
-                      value={paymentMethod}
-                      onChange={(e) => setPaymentMethod(e.target.value)}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-flu-pink focus:outline-none focus:ring-2 focus:ring-flu-pink/20"
-                    >
-                      {PAYMENT_METHODS.map((m) => (
-                        <option key={m} value={m}>
-                          {m.replace('_', ' ')}
-                        </option>
-                      ))}
-                    </select>
+                    {paymentMethods.length === 1 ? (
+                      <p className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm capitalize text-gray-700">
+                        {paymentMethods[0].replace('_', ' ')}
+                      </p>
+                    ) : (
+                      <select
+                        value={paymentMethod}
+                        onChange={(e) => setPaymentMethod(e.target.value)}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-flu-pink focus:outline-none focus:ring-2 focus:ring-flu-pink/20"
+                      >
+                        {paymentMethods.map((m) => (
+                          <option key={m} value={m}>
+                            {m.replace('_', ' ')}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
 
                   <div>

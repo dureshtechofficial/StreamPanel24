@@ -64,8 +64,10 @@ const ORDERS_API: OrdersPanelApi = {
   createOrder: createMyCustomerOrder,
   cancelOrder: cancelMyCustomerOrder,
   listPlans: listMyVisiblePlans,
-  searchStreams: searchMyAvailableStreams,
+  listAssignedStreams: listMyCustomerStreams,
 };
+
+const RESELLER_PAYMENT_METHODS = ['wallet'];
 
 function ResellerDashboardContent() {
   usePageTitle('My Customers');
@@ -447,6 +449,7 @@ function ResellerDashboardContent() {
         api={ORDERS_API}
         priceField="reseller_price"
         cancelEnabled={orderCancelEnabled}
+        paymentMethods={RESELLER_PAYMENT_METHODS}
       />
 
       <WalletTransactionsPanel

@@ -8,6 +8,8 @@ export interface Plan {
   customer_price: string;
   reseller_percentage: string;
   reseller_price: string;
+  /** Subscription length in days, snapshotted onto every order created from this plan. */
+  duration_days: number;
   max_streams: number;
   max_connections: number;
   playback_protocols: string[] | null;
@@ -26,6 +28,7 @@ export interface PlanInput {
   mrp: number;
   customer_price: number;
   reseller_percentage: number;
+  duration_days: number;
   max_streams?: number;
   max_connections?: number;
   playback_protocols?: string[];

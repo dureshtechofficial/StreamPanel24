@@ -33,7 +33,6 @@ export interface CreateOrderInput {
   plan_id: string;
   stream_id: string;
   customer_id?: string;
-  duration_days: number;
   price?: number;
   payment_method: string;
   payment_status?: PaymentStatus;
