@@ -12,6 +12,10 @@ export class UpdateSyncScheduleDto {
   enabled?: boolean;
 
   @IsOptional()
+  @IsBoolean()
+  manual_sync_enabled?: boolean;
+
+  @IsOptional()
   @IsString()
   @MinLength(1)
   @MaxLength(100)

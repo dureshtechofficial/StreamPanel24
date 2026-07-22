@@ -92,6 +92,9 @@ export class SyncScheduleService implements OnModuleInit {
     if (dto.enabled !== undefined) {
       schedule.enabled = dto.enabled;
     }
+    if (dto.manual_sync_enabled !== undefined) {
+      schedule.manual_sync_enabled = dto.manual_sync_enabled;
+    }
 
     await this.scheduleRepository.save(schedule);
     this.applySchedule(schedule);

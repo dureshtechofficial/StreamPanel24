@@ -4,6 +4,7 @@ import { FlussonicServer } from './entities/flussonic-server.entity';
 import { FlussonicServerStat } from './entities/flussonic-server-stat.entity';
 import { FlussonicStream } from './entities/flussonic-stream.entity';
 import { FlussonicStreamSession } from './entities/flussonic-stream-session.entity';
+import { SyncSchedule } from '../settings/entities/sync-schedule.entity';
 import { FlussonicServersService } from './flussonic-servers.service';
 import { FlussonicServersController } from './flussonic-servers.controller';
 import { FlussonicServerStatsService } from './flussonic-server-stats.service';
@@ -14,6 +15,7 @@ import { FlussonicStreamsDirectoryController } from './flussonic-streams-directo
 import { FlussonicStreamSessionsService } from './flussonic-stream-sessions.service';
 import { FlussonicStreamSessionsController } from './flussonic-stream-sessions.controller';
 import { FlussonicSyncAllService } from './flussonic-sync-all.service';
+import { SyncScheduleGateService } from './sync-schedule-gate.service';
 
 @Module({
   imports: [
@@ -22,6 +24,7 @@ import { FlussonicSyncAllService } from './flussonic-sync-all.service';
       FlussonicServerStat,
       FlussonicStream,
       FlussonicStreamSession,
+      SyncSchedule,
     ]),
   ],
   controllers: [
@@ -37,6 +40,7 @@ import { FlussonicSyncAllService } from './flussonic-sync-all.service';
     FlussonicStreamsService,
     FlussonicStreamSessionsService,
     FlussonicSyncAllService,
+    SyncScheduleGateService,
   ],
   exports: [
     FlussonicServersService,

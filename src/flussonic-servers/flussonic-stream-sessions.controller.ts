@@ -15,6 +15,8 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../users/enums/user-role.enum';
 import { FlussonicStreamSessionsService } from './flussonic-stream-sessions.service';
 import { QueryFlussonicStreamSessionDto } from './dto/query-flussonic-stream-session.dto';
+import { SyncScheduleGateService } from './sync-schedule-gate.service';
+import { SyncType } from '../settings/enums/sync-type.enum';
 
 @ApiTags('flussonic-stream-sessions')
 @ApiBearerAuth('access-token')
@@ -24,6 +26,7 @@ import { QueryFlussonicStreamSessionDto } from './dto/query-flussonic-stream-ses
 export class FlussonicStreamSessionsController {
   constructor(
     private readonly sessionsService: FlussonicStreamSessionsService,
+    private readonly syncGate: SyncScheduleGateService,
   ) {}
 
   @ApiOperation({
@@ -44,7 +47,8 @@ export class FlussonicStreamSessionsController {
   })
   @Post('sync')
   @HttpCode(HttpStatus.OK)
-  sync(@Param('serverId') serverId: string) {
+  async sync(@Param('serverId') serverId: string) {
+    await this.syncGate.assertManualSyncEnabled(SyncType.SESSIONS);
     return this.sessionsService.syncFromFlussonic(serverId);
   }
 }

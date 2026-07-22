@@ -27,6 +27,10 @@ export class SyncSchedule {
   @Column({ type: 'boolean', default: false })
   enabled: boolean;
 
+  /** Gates the frontend's manual "Sync"/"Sync all" buttons for this type — independent of `enabled`, which only gates the cron. */
+  @Column({ type: 'boolean', default: true })
+  manual_sync_enabled: boolean;
+
   @Column({ type: 'varchar', length: 100, default: '*/15 * * * *' })
   cron_expression: string;
 

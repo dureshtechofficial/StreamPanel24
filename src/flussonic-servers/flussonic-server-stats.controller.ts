@@ -17,6 +17,8 @@ import { UserRole } from '../users/enums/user-role.enum';
 import { FlussonicServerStatsService } from './flussonic-server-stats.service';
 import { CreateFlussonicServerStatDto } from './dto/create-flussonic-server-stat.dto';
 import { QueryFlussonicServerStatDto } from './dto/query-flussonic-server-stat.dto';
+import { SyncScheduleGateService } from './sync-schedule-gate.service';
+import { SyncType } from '../settings/enums/sync-type.enum';
 
 @ApiTags('flussonic-server-stats')
 @ApiBearerAuth('access-token')
@@ -24,7 +26,10 @@ import { QueryFlussonicServerStatDto } from './dto/query-flussonic-server-stat.d
 @Roles(UserRole.ADMIN)
 @Controller('flussonic-servers/:serverId/stats')
 export class FlussonicServerStatsController {
-  constructor(private readonly statsService: FlussonicServerStatsService) {}
+  constructor(
+    private readonly statsService: FlussonicServerStatsService,
+    private readonly syncGate: SyncScheduleGateService,
+  ) {}
 
   @ApiOperation({
     summary: "List a server's recorded stats samples (paginated, newest first)",
@@ -53,7 +58,8 @@ export class FlussonicServerStatsController {
   })
   @Post('sync')
   @HttpCode(HttpStatus.CREATED)
-  sync(@Param('serverId') serverId: string) {
+  async sync(@Param('serverId') serverId: string) {
+    await this.syncGate.assertManualSyncEnabled(SyncType.SERVER_STATS);
     return this.statsService.sync(serverId);
   }
 }

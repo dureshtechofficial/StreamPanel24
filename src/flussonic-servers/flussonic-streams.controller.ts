@@ -20,6 +20,8 @@ import { FlussonicStreamsService } from './flussonic-streams.service';
 import { CreateFlussonicStreamDto } from './dto/create-flussonic-stream.dto';
 import { UpdateFlussonicStreamDto } from './dto/update-flussonic-stream.dto';
 import { QueryFlussonicStreamDto } from './dto/query-flussonic-stream.dto';
+import { SyncScheduleGateService } from './sync-schedule-gate.service';
+import { SyncType } from '../settings/enums/sync-type.enum';
 
 @ApiTags('flussonic-streams')
 @ApiBearerAuth('access-token')
@@ -27,7 +29,10 @@ import { QueryFlussonicStreamDto } from './dto/query-flussonic-stream.dto';
 @Roles(UserRole.ADMIN)
 @Controller('flussonic-servers/:serverId/streams')
 export class FlussonicStreamsController {
-  constructor(private readonly streamsService: FlussonicStreamsService) {}
+  constructor(
+    private readonly streamsService: FlussonicStreamsService,
+    private readonly syncGate: SyncScheduleGateService,
+  ) {}
 
   @ApiOperation({
     summary:
@@ -56,7 +61,8 @@ export class FlussonicStreamsController {
   })
   @Post('sync')
   @HttpCode(HttpStatus.OK)
-  sync(@Param('serverId') serverId: string) {
+  async sync(@Param('serverId') serverId: string) {
+    await this.syncGate.assertManualSyncEnabled(SyncType.STREAMS);
     return this.streamsService.syncFromFlussonic(serverId);
   }
 
