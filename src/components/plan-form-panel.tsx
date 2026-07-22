@@ -121,8 +121,8 @@ export function PlanFormPanel({
   }
 
   const previewReseller =
-    form.mrp && form.reseller_percentage
-      ? (Number(form.mrp) * (1 - Number(form.reseller_percentage) / 100)).toFixed(2)
+    form.customer_price && form.reseller_percentage
+      ? (Number(form.customer_price) * (1 - Number(form.reseller_percentage) / 100)).toFixed(2)
       : null;
 
   async function handleSubmit(e: FormEvent) {
