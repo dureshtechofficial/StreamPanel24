@@ -1,7 +1,10 @@
 'use client';
 
-import type { OrderReportEntry } from '@/types/order';
+import type { Order, OrderReportEntry } from '@/types/order';
 import { XIcon } from './icons';
+
+/** The dialog only needs the invoicing-snapshot fields already on `Order` (customer/plan/stream) — server/reseller names are a bonus when the caller has them (the reports page's enriched `OrderReportEntry`), optional everywhere else (the plain order lists in OrdersPanel/customer dashboard). */
+export type InvoiceOrder = Order & Partial<Pick<OrderReportEntry, 'server_name' | 'reseller_name'>>;
 
 function formatDate(unixSeconds: number): string {
   return new Date(unixSeconds * 1000).toLocaleDateString(undefined, { dateStyle: 'medium' });
@@ -11,7 +14,7 @@ export function OrderInvoiceDialog({
   order,
   onClose,
 }: {
-  order: OrderReportEntry | null;
+  order: InvoiceOrder | null;
   onClose: () => void;
 }) {
   if (!order) return null;
@@ -61,9 +64,20 @@ export function OrderInvoiceDialog({
             {order.plan_description && (
               <p className="text-sm text-gray-600">{order.plan_description}</p>
             )}
-            <p className="mt-1 text-xs text-gray-500">
-              Stream: {order.stream_name} ({order.server_name})
+          </div>
+
+          <div>
+            <p className="mb-1 text-xs font-medium uppercase tracking-wide text-gray-400">Stream</p>
+            <p className="text-sm font-medium text-gray-900">
+              {order.stream_name}
+              {order.server_name ? ` (${order.server_name})` : ''}
             </p>
+            {order.stream_title && <p className="text-sm text-gray-600">{order.stream_title}</p>}
+            {order.stream_ingest_domain && (
+              <p className="mt-1 text-xs text-gray-500">
+                Ingest domain: {order.stream_ingest_domain}
+              </p>
+            )}
           </div>
 
           <div className="rounded-lg border border-gray-100 p-3">

@@ -5,13 +5,20 @@ import { ResellerProtectedRoute } from '@/components/reseller-protected-route';
 import { ResellerShell } from '@/components/reseller-shell';
 import { CustomerFormPanel } from '@/components/customer-form-panel';
 import { CustomerStreamsPanel, type CustomerStreamsPanelApi } from '@/components/customer-streams-panel';
+import {
+  CustomerAssignedStreamsPanel,
+  type CustomerAssignedStreamsPanelApi,
+} from '@/components/customer-assigned-streams-panel';
 import { OrdersPanel, type OrdersPanelApi } from '@/components/orders-panel';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { WalletTransactionsPanel } from '@/components/wallet-transactions-panel';
+import { RazorpayTopupDialog } from '@/components/razorpay-topup-dialog';
 import {
+  ArrowPathIcon,
   BroadcastIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  EyeIcon,
   PencilIcon,
   PlusIcon,
   ReceiptIcon,
@@ -27,8 +34,11 @@ import {
 } from '@/lib/reseller-customers-api';
 import {
   assignMyCustomerStreams,
+  getMyStreamDetails,
   listMyCustomerStreams,
+  listMyStreamSessions,
   searchMyAvailableStreams,
+  setMyStreamDisabled,
 } from '@/lib/reseller-customer-streams-api';
 import {
   createMyCustomerOrder,
@@ -36,13 +46,19 @@ import {
   listMyCustomerOrders,
 } from '@/lib/reseller-orders-api';
 import { listMyVisiblePlans } from '@/lib/reseller-plans-api';
-import { listMyWalletTransactions } from '@/lib/reseller-wallet-api';
+import {
+  getMyWalletBalance,
+  listMyWalletTransactions,
+  createMyRazorpayOrder,
+  verifyMyRazorpayPayment,
+} from '@/lib/reseller-wallet-api';
 import type { Customer, CustomerInput, CustomerStatus } from '@/types/customer';
 import { ApiError } from '@/lib/api-error';
 import { useResellerAuth } from '@/lib/reseller-auth-context';
 import { usePageTitle } from '@/lib/use-page-title';
 import { useResellerOrderCancelEnabled } from '@/lib/use-order-cancel-enabled';
 import { useResellerCustomerActionFlags } from '@/lib/use-customer-action-flags';
+import { useResellerWalletTopupSettings } from '@/lib/use-wallet-topup-settings';
 
 const PAGE_SIZE = 10;
 
@@ -65,15 +81,23 @@ const ORDERS_API: OrdersPanelApi = {
   cancelOrder: cancelMyCustomerOrder,
   listPlans: listMyVisiblePlans,
   listAssignedStreams: listMyCustomerStreams,
+  getWalletBalance: getMyWalletBalance,
 };
 
 const RESELLER_PAYMENT_METHODS = ['wallet'];
+
+const VIEW_STREAMS_API: CustomerAssignedStreamsPanelApi = {
+  listCustomerStreams: listMyCustomerStreams,
+  getStreamDetails: getMyStreamDetails,
+  setStreamDisabled: setMyStreamDisabled,
+};
 
 function ResellerDashboardContent() {
   usePageTitle('My Customers');
   const { reseller } = useResellerAuth();
   const orderCancelEnabled = useResellerOrderCancelEnabled();
   const customerActionFlags = useResellerCustomerActionFlags();
+  const walletTopupSettings = useResellerWalletTopupSettings();
 
   const [items, setItems] = useState<Customer[]>([]);
   const [total, setTotal] = useState(0);
@@ -83,6 +107,7 @@ function ResellerDashboardContent() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [status, setStatus] = useState<CustomerStatus | ''>('');
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [panelOpen, setPanelOpen] = useState(false);
@@ -92,7 +117,10 @@ function ResellerDashboardContent() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [streamsCustomer, setStreamsCustomer] = useState<Customer | null>(null);
   const [ordersCustomer, setOrdersCustomer] = useState<Customer | null>(null);
+  const [viewStreamsCustomer, setViewStreamsCustomer] = useState<Customer | null>(null);
   const [walletHistoryOpen, setWalletHistoryOpen] = useState(false);
+  const [topupDialogOpen, setTopupDialogOpen] = useState(false);
+  const [walletBalanceOverride, setWalletBalanceOverride] = useState<string | null>(null);
 
   const loadWalletHistory = useCallback(
     (p: number, limit: number) => listMyWalletTransactions({ page: p, limit }),
@@ -107,23 +135,32 @@ function ResellerDashboardContent() {
     return () => clearTimeout(timeout);
   }, [search]);
 
-  const load = useCallback(async () => {
-    setIsLoading(true);
+  const load = useCallback(async (silent = false) => {
+    if (silent) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
     setLoadError(null);
     try {
-      const result = await listMyCustomers({
-        search: debouncedSearch || undefined,
-        status: status || undefined,
-        page,
-        limit: PAGE_SIZE,
-      });
+      const [result, walletResult] = await Promise.all([
+        listMyCustomers({
+          search: debouncedSearch || undefined,
+          status: status || undefined,
+          page,
+          limit: PAGE_SIZE,
+        }),
+        getMyWalletBalance(),
+      ]);
       setItems(result.items);
       setTotal(result.total);
       setTotalPages(result.totalPages);
+      setWalletBalanceOverride(walletResult.wallet_balance);
     } catch (err) {
       setLoadError(err instanceof ApiError ? err.message : 'Failed to load customers.');
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   }, [debouncedSearch, status, page]);
 
@@ -180,13 +217,25 @@ function ResellerDashboardContent() {
           </h1>
           <p className="mt-1 text-sm text-gray-500">Manage your own customers and their streams.</p>
         </div>
-        <button
-          onClick={openCreate}
-          className="flex items-center justify-center gap-1.5 rounded-full bg-flu-pink px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-flu-pink/30 transition hover:bg-flu-pink-dark"
-        >
-          <PlusIcon className="h-4 w-4" />
-          Add customer
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => load(true)}
+            disabled={isLoading || isRefreshing}
+            className="flex shrink-0 items-center gap-1.5 rounded-full border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+            aria-label="Refresh wallet balance and customer list"
+            title="Refresh"
+          >
+            <ArrowPathIcon className={`h-4 w-4 ${isLoading || isRefreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+          <button
+            onClick={openCreate}
+            className="flex items-center justify-center gap-1.5 rounded-full bg-flu-pink px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-flu-pink/30 transition hover:bg-flu-pink-dark"
+          >
+            <PlusIcon className="h-4 w-4" />
+            Add customer
+          </button>
+        </div>
       </div>
 
       <div
@@ -202,16 +251,27 @@ function ResellerDashboardContent() {
               Wallet balance
             </p>
             <p className="text-2xl font-semibold text-gray-900">
-              {reseller ? Number(reseller.wallet_balance).toFixed(2) : '—'}
+              {walletBalanceOverride ??
+                (reseller ? Number(reseller.wallet_balance).toFixed(2) : '—')}
             </p>
           </div>
         </div>
-        <button
-          onClick={() => setWalletHistoryOpen(true)}
-          className="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
-        >
-          View history
-        </button>
+        <div className="flex items-center gap-2">
+          {walletTopupSettings.enabled && (
+            <button
+              onClick={() => setTopupDialogOpen(true)}
+              className="rounded-full bg-flu-pink px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-flu-pink/30 transition hover:bg-flu-pink-dark"
+            >
+              Add money
+            </button>
+          )}
+          {/* <button
+            onClick={() => setWalletHistoryOpen(true)}
+            className="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+          >
+            View history
+          </button> */}
+        </div>
       </div>
 
       <div className="animate-fade-in-up mb-4 flex flex-col gap-3 sm:flex-row" style={{ animationDelay: '60ms' }}>
@@ -265,6 +325,7 @@ function ResellerDashboardContent() {
                     <th className="px-4 py-3 font-medium">Name</th>
                     <th className="px-4 py-3 font-medium">Contact</th>
                     <th className="px-4 py-3 font-medium">Company</th>
+                    <th className="px-4 py-3 font-medium">Location</th>
                     <th className="px-4 py-3 font-medium">Status</th>
                     <th className="px-4 py-3 font-medium text-right">Actions</th>
                   </tr>
@@ -278,6 +339,9 @@ function ResellerDashboardContent() {
                         {customer.email && <div className="text-xs text-gray-400">{customer.email}</div>}
                       </td>
                       <td className="px-4 py-3 text-gray-600">{customer.company_name ?? '—'}</td>
+                      <td className="px-4 py-3 text-gray-600">
+                        {[customer.city, customer.state].filter(Boolean).join(', ') || '—'}
+                      </td>
                       <td className="px-4 py-3">
                         <span
                           className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium capitalize ${STATUS_STYLES[customer.status]}`}
@@ -293,6 +357,13 @@ function ResellerDashboardContent() {
                             aria-label={`View orders for ${customer.name}`}
                           >
                             <ReceiptIcon className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => setViewStreamsCustomer(customer)}
+                            className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
+                            aria-label={`View streams assigned to ${customer.name}`}
+                          >
+                            <EyeIcon className="h-4 w-4" />
                           </button>
                           {customerActionFlags.assign && (
                             <button
@@ -347,6 +418,13 @@ function ResellerDashboardContent() {
                       >
                         <ReceiptIcon className="h-4 w-4" />
                       </button>
+                      <button
+                        onClick={() => setViewStreamsCustomer(customer)}
+                        className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
+                        aria-label={`View streams assigned to ${customer.name}`}
+                      >
+                        <EyeIcon className="h-4 w-4" />
+                      </button>
                       {customerActionFlags.assign && (
                         <button
                           onClick={() => setStreamsCustomer(customer)}
@@ -384,6 +462,9 @@ function ResellerDashboardContent() {
                       {customer.status}
                     </span>
                     {customer.company_name && <span>{customer.company_name}</span>}
+                    {[customer.city, customer.state].filter(Boolean).length > 0 && (
+                      <span>{[customer.city, customer.state].filter(Boolean).join(', ')}</span>
+                    )}
                   </div>
                 </div>
               ))}
@@ -442,6 +523,15 @@ function ResellerDashboardContent() {
         api={STREAMS_API}
       />
 
+      <CustomerAssignedStreamsPanel
+        open={viewStreamsCustomer !== null}
+        customer={viewStreamsCustomer}
+        onClose={() => setViewStreamsCustomer(null)}
+        api={VIEW_STREAMS_API}
+        sessionsApi={listMyStreamSessions}
+        showRawData={false}
+      />
+
       <OrdersPanel
         open={ordersCustomer !== null}
         customer={ordersCustomer}
@@ -449,6 +539,7 @@ function ResellerDashboardContent() {
         api={ORDERS_API}
         priceField="reseller_price"
         cancelEnabled={orderCancelEnabled}
+        showCancelDisabledNotice={false}
         paymentMethods={RESELLER_PAYMENT_METHODS}
       />
 
@@ -457,6 +548,15 @@ function ResellerDashboardContent() {
         title="Wallet history"
         loadPage={loadWalletHistory}
         onClose={() => setWalletHistoryOpen(false)}
+      />
+
+      <RazorpayTopupDialog
+        open={topupDialogOpen}
+        minimumAmount={walletTopupSettings.minimum_amount}
+        onClose={() => setTopupDialogOpen(false)}
+        createOrder={createMyRazorpayOrder}
+        verifyPayment={verifyMyRazorpayPayment}
+        onSuccess={setWalletBalanceOverride}
       />
     </div>
   );

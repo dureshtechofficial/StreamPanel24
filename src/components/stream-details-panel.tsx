@@ -3,6 +3,8 @@
 import type { FlussonicStream, StreamMediaTrack, StreamProtocols } from '@/types/flussonic-stream';
 import { formatUptime } from '@/lib/format';
 import { XIcon } from './icons';
+import { StreamPlayer } from './stream-player';
+import { CopyButton } from './copy-button';
 
 const labelClass = 'text-xs font-medium uppercase tracking-wide text-gray-400';
 
@@ -27,6 +29,32 @@ const PROTOCOL_KEYS: (keyof StreamProtocols)[] = [
   'whitelist',
 ];
 
+interface StreamUrlEntry {
+  label: string;
+  url: string;
+}
+
+function buildInputUrls(domain: string, name: string, protocols: StreamProtocols | undefined): StreamUrlEntry[] {
+  const urls: StreamUrlEntry[] = [];
+  if (protocols?.rtmp) urls.push({ label: 'RTMP', url: `rtmp://${domain}:1935/${name}` });
+  if (protocols?.srt) {
+    urls.push({ label: 'SRT', url: `srt://${domain}:1234?streamid=#!::r=${name},m=publish` });
+  }
+  return urls;
+}
+
+function buildOutputUrls(domain: string, name: string, protocols: StreamProtocols | undefined): StreamUrlEntry[] {
+  const urls: StreamUrlEntry[] = [];
+  if (protocols?.rtmp) urls.push({ label: 'RTMP', url: `rtmp://${domain}:1935/${name}` });
+  if (protocols?.hls) urls.push({ label: 'HLS', url: `https://${domain}/${name}/index.m3u8` });
+  if (protocols?.dash) urls.push({ label: 'DASH', url: `https://${domain}/${name}/index.mpd` });
+  if (protocols?.srt) {
+    urls.push({ label: 'SRT', url: `srt://${domain}:1234?streamid=#!::r=${name},m=request` });
+  }
+  return urls;
+}
+
+
 function formatBitrate(kbps: number | undefined): string {
   if (kbps === undefined) return '—';
   return kbps >= 1000 ? `${(kbps / 1000).toFixed(2)} Mbps` : `${kbps} kbps`;
@@ -50,10 +78,13 @@ export function StreamDetailsPanel({
   open,
   stream,
   onClose,
+  showRawData = true,
 }: {
   open: boolean;
   stream: FlussonicStream | null;
   onClose: () => void;
+  /** The raw sync JSON is internal debugging info — the reseller/customer portals hide it. */
+  showRawData?: boolean;
 }) {
   const live = stream?.live_stats_json ?? null;
   const stats = live?.stats;
@@ -87,24 +118,112 @@ export function StreamDetailsPanel({
         </div>
 
         <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
-          {stream && (
+          {stream?.ingest_domain && stream.config_json.protocols?.hls && (
             <div>
-              <p className={`${labelClass} mb-2`}>Protocols</p>
-              <div className="flex flex-wrap gap-1.5">
-                {PROTOCOL_KEYS.map((key) => {
-                  const enabled = stream.config_json.protocols?.[key] ?? false;
-                  return (
-                    <span
-                      key={key}
-                      className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
-                        enabled ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-400'
-                      }`}
-                    >
-                      {key}
-                    </span>
-                  );
-                })}
-              </div>
+              <p className={`${labelClass} mb-2`}>Preview</p>
+              <StreamPlayer
+                src={`https://${stream.ingest_domain}/${stream.config_json.name}/index.m3u8`}
+              />
+            </div>
+          )}
+
+          {stream &&
+            (() => {
+              const activeProtocols = PROTOCOL_KEYS.filter(
+                (key) => stream.config_json.protocols?.[key],
+              );
+              return (
+                <div>
+                  <p className={`${labelClass} mb-2`}>Protocols</p>
+                  {activeProtocols.length === 0 ? (
+                    <p className="text-sm text-gray-400">No protocols enabled.</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5">
+                      {activeProtocols.map((key) => (
+                        <span
+                          key={key}
+                          className="inline-block rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700"
+                        >
+                          {key}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+          {stream && (
+            <div className="border-t border-gray-100 pt-4">
+              <p className={`${labelClass} mb-2`}>Input / output URLs</p>
+              {!stream.ingest_domain ? (
+                <p className="text-sm text-gray-400">
+                  Set an ingest domain on this stream to see input/output URLs.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {(() => {
+                    const inputUrls = buildInputUrls(
+                      stream.ingest_domain,
+                      stream.config_json.name,
+                      stream.config_json.protocols,
+                    );
+                    const outputUrls = buildOutputUrls(
+                      stream.ingest_domain,
+                      stream.config_json.name,
+                      stream.config_json.protocols,
+                    );
+                    return (
+                      <>
+                        <div>
+                          <p className="mb-1 text-xs font-medium text-gray-500">Input</p>
+                          {inputUrls.length === 0 ? (
+                            <p className="text-xs text-gray-400">
+                              No input protocols (RTMP/SRT) enabled.
+                            </p>
+                          ) : (
+                            <ul className="space-y-2">
+                              {inputUrls.map((entry) => (
+                                <li key={entry.label} className="rounded-md bg-gray-50 px-3 py-2">
+                                  <p className="text-xs font-semibold text-gray-500">{entry.label}</p>
+                                  <div className="mt-0.5 flex items-start justify-between gap-2">
+                                    <span className="break-all font-mono text-xs text-gray-700">
+                                      {entry.url}
+                                    </span>
+                                    <CopyButton text={entry.url} />
+                                  </div>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                        <div>
+                          <p className="mb-1 text-xs font-medium text-gray-500">Output</p>
+                          {outputUrls.length === 0 ? (
+                            <p className="text-xs text-gray-400">
+                              No output protocols (RTMP/HLS/DASH/SRT) enabled.
+                            </p>
+                          ) : (
+                            <ul className="space-y-2">
+                              {outputUrls.map((entry) => (
+                                <li key={entry.label} className="rounded-md bg-gray-50 px-3 py-2">
+                                  <p className="text-xs font-semibold text-gray-500">{entry.label}</p>
+                                  <div className="mt-0.5 flex items-start justify-between gap-2">
+                                    <span className="break-all font-mono text-xs text-gray-700">
+                                      {entry.url}
+                                    </span>
+                                    <CopyButton text={entry.url} />
+                                  </div>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
             </div>
           )}
 
@@ -189,14 +308,16 @@ export function StreamDetailsPanel({
                 </div>
               )}
 
-              <details className="border-t border-gray-100 pt-4">
-                <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-gray-400 hover:text-gray-600">
-                  Raw sync data
-                </summary>
-                <pre className="mt-2 max-h-96 overflow-auto rounded-md bg-gray-900 p-3 text-xs text-gray-100">
-                  {JSON.stringify(live, null, 2)}
-                </pre>
-              </details>
+              {showRawData && (
+                <details className="border-t border-gray-100 pt-4">
+                  <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-gray-400 hover:text-gray-600">
+                    Raw sync data
+                  </summary>
+                  <pre className="mt-2 max-h-96 overflow-auto rounded-md bg-gray-900 p-3 text-xs text-gray-100">
+                    {JSON.stringify(live, null, 2)}
+                  </pre>
+                </details>
+              )}
             </>
           )}
         </div>

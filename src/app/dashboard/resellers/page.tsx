@@ -421,7 +421,7 @@ function ResellersContent() {
 
       <WalletTopupDialog
         open={topupTarget !== null}
-        resellerName={topupTarget?.name ?? ""}
+        entityName={topupTarget?.name ?? ""}
         isBusy={isToppingUp}
         onSubmit={handleTopup}
         onCancel={() => setTopupTarget(null)}

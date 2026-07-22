@@ -17,6 +17,7 @@ export function useSyncManualFlags(): Record<SyncType, boolean> {
     server_stats: true,
     streams: true,
     sessions: true,
+    order_expiry: true,
   });
 
   useEffect(() => {

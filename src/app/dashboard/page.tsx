@@ -39,6 +39,32 @@ function DashboardContent() {
           Here&apos;s a quick look at your servers.
         </p>
       </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {cards.map(({ label, value, icon: Icon, badge }, i) => (
+          <div
+            key={label}
+            className="animate-fade-in-up flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
+            style={{ animationDelay: `${(i + 1) * 30}ms` }}
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-flu-pink/10 text-flu-pink">
+              <Icon className="h-5 w-5" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                {label}
+              </p>
+              {badge ? (
+                <span className="mt-0.5 inline-block rounded-full bg-flu-pink/10 px-2 py-0.5 text-sm font-semibold capitalize text-flu-pink">
+                  {value}
+                </span>
+              ) : (
+                <p className="truncate text-lg font-semibold text-gray-900">{value}</p>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

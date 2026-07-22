@@ -28,5 +28,6 @@ export interface FlussonicStreamSession {
   /** UTC unix timestamp (seconds) — Flussonic's own session updated_at */
   updated_at: number | null;
   country: string | null;
-  ipwhois_json: IpWhoIsInfo | null;
+  /** Computed by the backend, never stored — null when `ip` is null. */
+  ip_lookup_url: string | null;
 }

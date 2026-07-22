@@ -1,12 +1,20 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import type { WalletTransaction } from '@/types/wallet';
 import type { PaginatedResult } from '@/types/pagination';
 import { ApiError } from '@/lib/api-error';
 import { ArrowPathIcon, ChevronLeftIcon, ChevronRightIcon, XIcon } from './icons';
 
 const PAGE_SIZE = 20;
+
+/** The panel only needs these fields to render — works for both the reseller (`WalletTransaction`) and customer (`CustomerWalletTransaction`) ledgers without caring which. */
+interface WalletTransactionLike {
+  id: string;
+  amount: string;
+  balance_after: string;
+  remark: string | null;
+  created_at: number;
+}
 
 function formatTime(unixSeconds: number): string {
   return new Date(unixSeconds * 1000).toLocaleString(undefined, {
@@ -20,7 +28,7 @@ function formatAmount(amount: string): string {
   return `${n > 0 ? '+' : ''}${n.toFixed(2)}`;
 }
 
-export function WalletTransactionsPanel({
+export function WalletTransactionsPanel<T extends WalletTransactionLike>({
   open,
   title,
   loadPage,
@@ -28,10 +36,10 @@ export function WalletTransactionsPanel({
 }: {
   open: boolean;
   title: string;
-  loadPage: (page: number, limit: number) => Promise<PaginatedResult<WalletTransaction>>;
+  loadPage: (page: number, limit: number) => Promise<PaginatedResult<T>>;
   onClose: () => void;
 }) {
-  const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
+  const [transactions, setTransactions] = useState<T[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(true);

@@ -5,17 +5,22 @@ import { ProtectedRoute } from "@/components/protected-route";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { CustomerFormPanel } from "@/components/customer-form-panel";
 import { CustomerStreamsPanel } from "@/components/customer-streams-panel";
+import { CustomerAssignedStreamsPanel } from "@/components/customer-assigned-streams-panel";
 import { OrdersPanel } from "@/components/orders-panel";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { WalletTopupDialog } from "@/components/wallet-topup-dialog";
+import { WalletTransactionsPanel } from "@/components/wallet-transactions-panel";
 import {
   BroadcastIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  EyeIcon,
   PencilIcon,
   PlusIcon,
   ReceiptIcon,
   SearchIcon,
   TrashIcon,
+  WalletIcon,
 } from "@/components/icons";
 import {
   createCustomer,
@@ -23,6 +28,10 @@ import {
   listCustomers,
   updateCustomer,
 } from "@/lib/customers-api";
+import {
+  listCustomerWalletTransactions,
+  topUpCustomerWallet,
+} from "@/lib/customer-wallet-api";
 import type { Customer, CustomerInput, CustomerStatus } from "@/types/customer";
 import { ApiError } from "@/lib/api-error";
 import { usePageTitle } from "@/lib/use-page-title";
@@ -58,6 +67,10 @@ function CustomersContent() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [streamsCustomer, setStreamsCustomer] = useState<Customer | null>(null);
   const [ordersCustomer, setOrdersCustomer] = useState<Customer | null>(null);
+  const [viewStreamsCustomer, setViewStreamsCustomer] = useState<Customer | null>(null);
+  const [topupTarget, setTopupTarget] = useState<Customer | null>(null);
+  const [isToppingUp, setIsToppingUp] = useState(false);
+  const [historyTarget, setHistoryTarget] = useState<Customer | null>(null);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -129,6 +142,29 @@ function CustomersContent() {
       setLoadError("Failed to delete customer.");
     } finally {
       setIsDeleting(false);
+    }
+  }
+
+  const loadWalletHistory = useCallback(
+    (p: number, limit: number) => {
+      if (!historyTarget) return Promise.reject(new Error("No customer selected"));
+      return listCustomerWalletTransactions(historyTarget.id, { page: p, limit });
+    },
+    [historyTarget],
+  );
+
+  async function handleTopup(amount: number, remark: string) {
+    if (!topupTarget) return;
+    setIsToppingUp(true);
+    try {
+      await topUpCustomerWallet(topupTarget.id, {
+        amount,
+        remark: remark || undefined,
+      });
+      setTopupTarget(null);
+      await load();
+    } finally {
+      setIsToppingUp(false);
     }
   }
 
@@ -210,6 +246,7 @@ function CustomersContent() {
                     <th className="px-4 py-3 font-medium">Contact</th>
                     <th className="px-4 py-3 font-medium">Company</th>
                     <th className="px-4 py-3 font-medium">Location</th>
+                    <th className="px-4 py-3 font-medium">Wallet</th>
                     <th className="px-4 py-3 font-medium">Status</th>
                     <th className="px-4 py-3 font-medium text-right">Actions</th>
                   </tr>
@@ -240,6 +277,15 @@ function CustomersContent() {
                           .join(", ") || "—"}
                       </td>
                       <td className="px-4 py-3">
+                        <button
+                          onClick={() => setHistoryTarget(customer)}
+                          className="font-medium text-gray-900 underline decoration-dotted underline-offset-2 hover:text-flu-pink"
+                          title="View transaction history"
+                        >
+                          {Number(customer.wallet_balance).toFixed(2)}
+                        </button>
+                      </td>
+                      <td className="px-4 py-3">
                         <span
                           className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium capitalize ${STATUS_STYLES[customer.status]}`}
                         >
@@ -254,6 +300,21 @@ function CustomersContent() {
                             aria-label={`View orders for ${customer.name}`}
                           >
                             <ReceiptIcon className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => setViewStreamsCustomer(customer)}
+                            className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
+                            aria-label={`View streams assigned to ${customer.name}`}
+                          >
+                            <EyeIcon className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => setTopupTarget(customer)}
+                            className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
+                            aria-label={`Top up ${customer.name}'s wallet`}
+                            title="Top up wallet"
+                          >
+                            <WalletIcon className="h-4 w-4" />
                           </button>
                           {customerActionFlags.assign && (
                             <button
@@ -310,6 +371,20 @@ function CustomersContent() {
                       >
                         <ReceiptIcon className="h-4 w-4" />
                       </button>
+                      <button
+                        onClick={() => setViewStreamsCustomer(customer)}
+                        className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
+                        aria-label={`View streams assigned to ${customer.name}`}
+                      >
+                        <EyeIcon className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => setTopupTarget(customer)}
+                        className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
+                        aria-label={`Top up ${customer.name}'s wallet`}
+                      >
+                        <WalletIcon className="h-4 w-4" />
+                      </button>
                       {customerActionFlags.assign && (
                         <button
                           onClick={() => setStreamsCustomer(customer)}
@@ -346,6 +421,12 @@ function CustomersContent() {
                     >
                       {customer.status}
                     </span>
+                    <button
+                      onClick={() => setHistoryTarget(customer)}
+                      className="font-medium text-gray-700 underline decoration-dotted underline-offset-2"
+                    >
+                      Wallet: {Number(customer.wallet_balance).toFixed(2)}
+                    </button>
                     {customer.company_name && <span>{customer.company_name}</span>}
                     {[customer.city, customer.state].filter(Boolean).length > 0 && (
                       <span>{[customer.city, customer.state].filter(Boolean).join(", ")}</span>
@@ -410,11 +491,32 @@ function CustomersContent() {
         onClose={() => setStreamsCustomer(null)}
       />
 
+      <CustomerAssignedStreamsPanel
+        open={viewStreamsCustomer !== null}
+        customer={viewStreamsCustomer}
+        onClose={() => setViewStreamsCustomer(null)}
+      />
+
       <OrdersPanel
         open={ordersCustomer !== null}
         customer={ordersCustomer}
         onClose={() => setOrdersCustomer(null)}
         cancelEnabled={orderCancelEnabled}
+      />
+
+      <WalletTopupDialog
+        open={topupTarget !== null}
+        entityName={topupTarget?.name ?? ""}
+        isBusy={isToppingUp}
+        onSubmit={handleTopup}
+        onCancel={() => setTopupTarget(null)}
+      />
+
+      <WalletTransactionsPanel
+        open={historyTarget !== null}
+        title={`${historyTarget?.name ?? ""} — Wallet history`}
+        loadPage={loadWalletHistory}
+        onClose={() => setHistoryTarget(null)}
       />
     </div>
   );

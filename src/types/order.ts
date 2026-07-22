@@ -24,6 +24,10 @@ export interface Order {
   customer_city: string | null;
   customer_state: string | null;
   customer_pincode: string | null;
+  /** Stream identity snapshotted at purchase time, for invoicing — frozen even if the stream is later renamed, reconfigured, or reassigned. */
+  stream_name: string;
+  stream_title: string | null;
+  stream_ingest_domain: string | null;
   /** UTC unix timestamp (seconds) */
   effective_from: number;
   /** UTC unix timestamp (seconds) */
@@ -56,9 +60,8 @@ export interface UpdateOrderStatusInput {
   remark?: string;
 }
 
-/** Order enriched with readable stream/server/reseller labels — returned by the admin reports endpoint only. Customer/plan names are already on `Order` itself (the invoicing snapshot). */
+/** Order enriched with a readable server/reseller label — returned by the admin reports endpoint only. Customer/plan/stream names are already on `Order` itself (the invoicing snapshot). */
 export interface OrderReportEntry extends Order {
-  stream_name: string;
   server_name: string;
   reseller_name: string | null;
 }

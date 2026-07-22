@@ -2,6 +2,7 @@
 
 import { use, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { ProtectedRoute } from '@/components/protected-route';
 import { DashboardShell } from '@/components/dashboard-shell';
 import {
@@ -12,14 +13,16 @@ import {
   SearchIcon,
 } from '@/components/icons';
 import { ToggleField } from '@/components/toggle';
+import { ExternalLinkIcon } from '@/components/icons';
 import { getServer } from '@/lib/flussonic-servers-api';
+import { lookupIp } from '@/lib/client-ipwhois';
 import {
   listStreamSessions,
   syncStreamSessions,
   type SyncSessionsSummary,
 } from '@/lib/flussonic-stream-sessions-api';
 import type { FlussonicServer } from '@/types/flussonic-server';
-import type { FlussonicStreamSession } from '@/types/flussonic-stream-session';
+import type { FlussonicStreamSession, IpWhoIsInfo } from '@/types/flussonic-stream-session';
 import { ApiError } from '@/lib/api-error';
 import { useAuth } from '@/lib/auth-context';
 import { usePageTitle } from '@/lib/use-page-title';
@@ -35,26 +38,45 @@ function formatTime(unixSeconds: number | null): string {
   });
 }
 
-function location(session: FlussonicStreamSession): string {
-  const info = session.ipwhois_json;
-  if (!info) return session.country ?? '—';
-  return [info.city, info.region, info.country ?? session.country].filter(Boolean).join(', ') || '—';
+function location(session: FlussonicStreamSession, geo: IpWhoIsInfo | null | undefined): string {
+  if (!geo) return session.country ?? '—';
+  return [geo.city, geo.region, geo.country ?? session.country].filter(Boolean).join(', ') || '—';
 }
 
-function isp(session: FlussonicStreamSession): string {
-  return session.ipwhois_json?.connection?.isp ?? session.ipwhois_json?.connection?.org ?? '—';
+function isp(geo: IpWhoIsInfo | null | undefined): string {
+  return geo?.connection?.isp ?? geo?.connection?.org ?? '—';
+}
+
+function IpCell({ session }: { session: FlussonicStreamSession }) {
+  if (!session.ip) return <span>—</span>;
+  if (!session.ip_lookup_url) return <span>{session.ip}</span>;
+  return (
+    <a
+      href={session.ip_lookup_url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-1 hover:text-flu-pink"
+      title="Look up this IP"
+    >
+      {session.ip}
+      <ExternalLinkIcon className="h-3 w-3" />
+    </a>
+  );
 }
 
 function SessionsContent({ serverId }: { serverId: string }) {
   const [server, setServer] = useState<FlussonicServer | null>(null);
   usePageTitle(server ? `${server.name} Sessions` : 'Stream Sessions');
 
+  const searchParams = useSearchParams();
+  const initialSearch = searchParams.get('stream') ?? '';
+
   const [items, setItems] = useState<FlussonicStreamSession[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [search, setSearch] = useState(initialSearch);
+  const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
   const [latestOnly, setLatestOnly] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -63,6 +85,7 @@ function SessionsContent({ serverId }: { serverId: string }) {
   const [syncSummary, setSyncSummary] = useState<SyncSessionsSummary | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
   const syncManualFlags = useSyncManualFlags();
+  const [geoByIp, setGeoByIp] = useState<Record<string, IpWhoIsInfo | null>>({});
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -102,6 +125,30 @@ function SessionsContent({ serverId }: { serverId: string }) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
+
+  // Client-side geolocation, one lookup per unique IP on the current page —
+  // never routed through our backend (see lib/client-ipwhois.ts for why).
+  useEffect(() => {
+    const ips = [...new Set(items.map((s) => s.ip).filter((ip): ip is string => Boolean(ip)))];
+    const unresolved = ips.filter((ip) => !(ip in geoByIp));
+    if (unresolved.length === 0) return;
+
+    let cancelled = false;
+    Promise.all(unresolved.map((ip) => lookupIp(ip).then((geo) => [ip, geo] as const))).then(
+      (results) => {
+        if (cancelled) return;
+        setGeoByIp((prev) => {
+          const next = { ...prev };
+          for (const [ip, geo] of results) next[ip] = geo;
+          return next;
+        });
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items]);
 
   async function handleSync() {
     setSyncError(null);
@@ -228,56 +275,66 @@ function SessionsContent({ serverId }: { serverId: string }) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {items.map((session) => (
-                    <tr key={session.id} className="transition-colors hover:bg-gray-50">
-                      <td className="px-4 py-3 font-medium text-gray-900">
-                        {session.stream_name}
-                      </td>
-                      <td className="px-4 py-3 text-gray-600 capitalize">
-                        {session.type ?? '—'}
-                      </td>
-                      <td className="px-4 py-3 text-gray-600 uppercase">
-                        {session.proto ?? '—'}
-                      </td>
-                      <td className="px-4 py-3 text-gray-600">{session.ip ?? '—'}</td>
-                      <td className="px-4 py-3 text-gray-600">{location(session)}</td>
-                      <td className="px-4 py-3 text-gray-600">{isp(session)}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-gray-600">
-                        {formatTime(session.started_at)}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-gray-600">
-                        {formatTime(session.updated_at)}
-                      </td>
-                    </tr>
-                  ))}
+                  {items.map((session) => {
+                    const geo = session.ip ? geoByIp[session.ip] : null;
+                    return (
+                      <tr key={session.id} className="transition-colors hover:bg-gray-50">
+                        <td className="px-4 py-3 font-medium text-gray-900">
+                          {session.stream_name}
+                        </td>
+                        <td className="px-4 py-3 text-gray-600 capitalize">
+                          {session.type ?? '—'}
+                        </td>
+                        <td className="px-4 py-3 text-gray-600 uppercase">
+                          {session.proto ?? '—'}
+                        </td>
+                        <td className="px-4 py-3 text-gray-600">
+                          <IpCell session={session} />
+                        </td>
+                        <td className="px-4 py-3 text-gray-600">{location(session, geo)}</td>
+                        <td className="px-4 py-3 text-gray-600">{isp(geo)}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-gray-600">
+                          {formatTime(session.started_at)}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-gray-600">
+                          {formatTime(session.updated_at)}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
 
             {/* Cards — below sm */}
             <div className="divide-y divide-gray-100 sm:hidden">
-              {items.map((session) => (
-                <div key={session.id} className="p-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="truncate font-medium text-gray-900">{session.stream_name}</p>
-                      <p className="truncate text-xs text-gray-500">{session.ip ?? '—'}</p>
+              {items.map((session) => {
+                const geo = session.ip ? geoByIp[session.ip] : null;
+                return (
+                  <div key={session.id} className="p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-gray-900">{session.stream_name}</p>
+                        <p className="truncate text-xs text-gray-500">
+                          <IpCell session={session} />
+                        </p>
+                      </div>
+                      <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium capitalize text-gray-600">
+                        {session.type ?? '—'}
+                      </span>
                     </div>
-                    <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium capitalize text-gray-600">
-                      {session.type ?? '—'}
-                    </span>
+                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
+                      <span className="uppercase">{session.proto ?? '—'}</span>
+                      <span>{location(session, geo)}</span>
+                      <span>{isp(geo)}</span>
+                    </div>
+                    <div className="mt-1 text-xs text-gray-400">
+                      Started {formatTime(session.started_at)} · Updated{' '}
+                      {formatTime(session.updated_at)}
+                    </div>
                   </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
-                    <span className="uppercase">{session.proto ?? '—'}</span>
-                    <span>{location(session)}</span>
-                    <span>{isp(session)}</span>
-                  </div>
-                  <div className="mt-1 text-xs text-gray-400">
-                    Started {formatTime(session.started_at)} · Updated{' '}
-                    {formatTime(session.updated_at)}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </>
         )}

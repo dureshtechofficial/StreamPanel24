@@ -3,13 +3,35 @@
 import { useCallback, useEffect, useState } from "react";
 import { ProtectedRoute } from "@/components/protected-route";
 import { DashboardShell } from "@/components/dashboard-shell";
-import { ArrowPathIcon, ChevronLeftIcon, ChevronRightIcon } from "@/components/icons";
+import {
+  ArrowPathIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  EyeIcon,
+  SearchIcon,
+} from "@/components/icons";
 import { OrderInvoiceDialog } from "@/components/order-invoice-dialog";
 import { listOrderReports } from "@/lib/orders-api";
+import { listResellers } from "@/lib/resellers-api";
 import type { OrderReportEntry, OrderStatus, OrdersSummary, PaymentStatus } from "@/types/order";
+import type { Reseller } from "@/types/reseller";
 import { ApiError } from "@/lib/api-error";
 import { useAuth } from "@/lib/auth-context";
 import { usePageTitle } from "@/lib/use-page-title";
+
+const SECONDS_PER_DAY = 86_400;
+
+/** `<input type="date">` gives "YYYY-MM-DD", which Date parses as UTC midnight — used as-is for the start of the range, plus one whole day (minus a second) for an inclusive end-of-day on the end of the range. */
+function dateStringToUnixStart(value: string): number | undefined {
+  if (!value) return undefined;
+  const ms = new Date(value).getTime();
+  return Number.isNaN(ms) ? undefined : Math.floor(ms / 1000);
+}
+
+function dateStringToUnixEnd(value: string): number | undefined {
+  const start = dateStringToUnixStart(value);
+  return start === undefined ? undefined : start + SECONDS_PER_DAY - 1;
+}
 
 const PAGE_SIZE = 20;
 
@@ -41,9 +63,31 @@ function ReportsContent() {
   const [totalPages, setTotalPages] = useState(1);
   const [status, setStatus] = useState<OrderStatus | "">("");
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus | "">("");
+  const [resellerId, setResellerId] = useState("");
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [resellers, setResellers] = useState<Reseller[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [invoiceOrder, setInvoiceOrder] = useState<OrderReportEntry | null>(null);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 350);
+    return () => clearTimeout(timeout);
+  }, [search]);
+
+  useEffect(() => {
+    listResellers({ status: "active", limit: 100 })
+      .then((result) => setResellers(result.items))
+      .catch(() => {
+        // best-effort; the filter still works, just starts with an empty list
+      });
+  }, []);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -52,6 +96,10 @@ function ReportsContent() {
       const result = await listOrderReports({
         status: status || undefined,
         paymentStatus: paymentStatus || undefined,
+        resellerId: resellerId || undefined,
+        search: debouncedSearch || undefined,
+        dateFrom: dateStringToUnixStart(dateFrom),
+        dateTo: dateStringToUnixEnd(dateTo),
         page,
         limit: PAGE_SIZE,
       });
@@ -64,7 +112,7 @@ function ReportsContent() {
     } finally {
       setIsLoading(false);
     }
-  }, [status, paymentStatus, page]);
+  }, [status, paymentStatus, resellerId, debouncedSearch, dateFrom, dateTo, page]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -107,10 +155,38 @@ function ReportsContent() {
         </div>
       )}
 
+      <div className="animate-fade-in-up mb-3" style={{ animationDelay: "60ms" }}>
+        <div className="relative">
+          <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by order number, customer, or stream…"
+            className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm text-gray-900 transition focus:border-flu-pink focus:outline-none focus:ring-2 focus:ring-flu-pink/20"
+          />
+        </div>
+      </div>
+
       <div
-        className="animate-fade-in-up mb-4 flex flex-col gap-3 sm:flex-row"
-        style={{ animationDelay: "60ms" }}
+        className="animate-fade-in-up mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6"
+        style={{ animationDelay: "80ms" }}
       >
+        <select
+          value={resellerId}
+          onChange={(e) => {
+            setResellerId(e.target.value);
+            setPage(1);
+          }}
+          className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 transition focus:border-flu-pink focus:outline-none focus:ring-2 focus:ring-flu-pink/20"
+        >
+          <option value="">All resellers</option>
+          <option value="none">Direct customers only</option>
+          {resellers.map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.name}
+            </option>
+          ))}
+        </select>
         <select
           value={status}
           onChange={(e) => {
@@ -140,6 +216,46 @@ function ReportsContent() {
           <option value="refunded">Refunded</option>
           <option value="cancelled">Cancelled</option>
         </select>
+        <label className="col-span-2 flex items-center gap-2 sm:col-span-1">
+          <span className="shrink-0 text-xs font-medium text-gray-500">From</span>
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => {
+              setDateFrom(e.target.value);
+              setPage(1);
+            }}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 transition focus:border-flu-pink focus:outline-none focus:ring-2 focus:ring-flu-pink/20"
+          />
+        </label>
+        <label className="col-span-2 flex items-center gap-2 sm:col-span-1">
+          <span className="shrink-0 text-xs font-medium text-gray-500">To</span>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => {
+              setDateTo(e.target.value);
+              setPage(1);
+            }}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 transition focus:border-flu-pink focus:outline-none focus:ring-2 focus:ring-flu-pink/20"
+          />
+        </label>
+        {(resellerId || status || paymentStatus || search || dateFrom || dateTo) && (
+          <button
+            onClick={() => {
+              setResellerId("");
+              setStatus("");
+              setPaymentStatus("");
+              setSearch("");
+              setDateFrom("");
+              setDateTo("");
+              setPage(1);
+            }}
+            className="col-span-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50 sm:col-span-1"
+          >
+            Clear filters
+          </button>
+        )}
       </div>
 
       <div
@@ -182,13 +298,17 @@ function ReportsContent() {
                   {items.map((order) => (
                     <tr key={order.id} className="transition-colors hover:bg-gray-50">
                       <td className="px-4 py-3 font-medium text-gray-900">
-                        <button
-                          onClick={() => setInvoiceOrder(order)}
-                          className="underline decoration-dotted underline-offset-2 hover:text-flu-pink"
-                          title="View invoice"
-                        >
-                          {order.order_number}
-                        </button>
+                        <div className="flex items-center gap-1.5">
+                          <span>{order.order_number}</span>
+                          <button
+                            onClick={() => setInvoiceOrder(order)}
+                            className="rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
+                            aria-label={`View invoice for ${order.order_number}`}
+                            title="View invoice"
+                          >
+                            <EyeIcon className="h-4 w-4" />
+                          </button>
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-gray-600">
                         {order.customer_name}

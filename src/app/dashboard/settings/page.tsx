@@ -18,6 +18,11 @@ import {
   listCustomerActionSettings,
   updateCustomerActionSetting,
 } from "@/lib/customer-action-settings-api";
+import {
+  listWalletTopupSettings,
+  updateWalletTopupSetting,
+} from "@/lib/wallet-topup-settings-api";
+import { CopyButton } from "@/components/copy-button";
 import type { SyncSchedule, SyncType } from "@/types/sync-schedule";
 import type { OrderCancelActor, OrderCancelSetting } from "@/types/order-cancel-setting";
 import type {
@@ -25,25 +30,38 @@ import type {
   CustomerActionActor,
   CustomerActionSetting,
 } from "@/types/customer-action-setting";
+import type { WalletTopupActor, WalletTopupSetting } from "@/types/razorpay";
 import { ApiError } from "@/lib/api-error";
 import { useAuth } from "@/lib/auth-context";
 import { usePageTitle } from "@/lib/use-page-title";
 
-const TYPE_INFO: Record<SyncType, { title: string; description: string }> = {
+const TYPE_INFO: Record<
+  SyncType,
+  { title: string; description: string; hasManualSync: boolean }
+> = {
   server_stats: {
     title: "Server stats sync",
     description:
       "Polls every server's real config/stats endpoint and records a sample.",
+    hasManualSync: true,
   },
   streams: {
     title: "Streams sync",
     description:
       "Pulls every server's real stream list (GET streams) and refreshes live data.",
+    hasManualSync: true,
   },
   sessions: {
     title: "Sessions sync",
     description:
-      "Pulls every server's real session list (GET sessions); new IPs are enriched via ipwho.is.",
+      "Pulls every server's real session list (GET sessions). IP geolocation is looked up client-side when sessions are viewed, not during this sync.",
+    hasManualSync: true,
+  },
+  order_expiry: {
+    title: "Order expiry sweep",
+    description:
+      "Flips active orders whose service period has ended to expired. Doesn't affect stream assignment or wallet balances.",
+    hasManualSync: false,
   },
 };
 
@@ -88,6 +106,10 @@ function summarizeLastRun(
       `${succeeded}/${total} server${total === 1 ? "" : "s"} synced` +
       (typeof failed === "number" && failed > 0 ? `, ${failed} failed` : "")
     );
+  }
+  const expired = summary.expired;
+  if (typeof expired === "number") {
+    return `${expired} order${expired === 1 ? "" : "s"} expired`;
   }
   return null;
 }
@@ -326,6 +348,166 @@ function CustomerActionsSection() {
   );
 }
 
+const WALLET_TOPUP_ACTOR_ORDER: WalletTopupActor[] = ["reseller", "customer"];
+const WALLET_TOPUP_ACTOR_LABELS: Record<WalletTopupActor, string> = {
+  reseller: "Reseller",
+  customer: "Customer",
+};
+
+function WalletTopupSection() {
+  const [settings, setSettings] = useState<WalletTopupSetting[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [savingActor, setSavingActor] = useState<WalletTopupActor | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [minimumDrafts, setMinimumDrafts] = useState<Record<string, string>>({});
+
+  const load = useCallback(async () => {
+    setIsLoading(true);
+    setLoadError(null);
+    try {
+      const result = await listWalletTopupSettings();
+      setSettings(result);
+      setMinimumDrafts(
+        Object.fromEntries(result.map((s) => [s.actor_type, s.minimum_amount])),
+      );
+    } catch (err) {
+      setLoadError(
+        err instanceof ApiError ? err.message : "Failed to load wallet top-up settings.",
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load();
+  }, [load]);
+
+  async function handleToggle(actorType: WalletTopupActor, enabled: boolean) {
+    setSavingActor(actorType);
+    setError(null);
+    try {
+      const updated = await updateWalletTopupSetting(actorType, { enabled });
+      setSettings((prev) => prev.map((s) => (s.actor_type === actorType ? updated : s)));
+    } catch (err) {
+      setError(
+        err instanceof ApiError ? err.message : "Failed to save wallet top-up setting.",
+      );
+    } finally {
+      setSavingActor(null);
+    }
+  }
+
+  async function handleSaveMinimum(actorType: WalletTopupActor) {
+    const draft = minimumDrafts[actorType];
+    const value = Number(draft);
+    if (!draft || Number.isNaN(value) || value <= 0) {
+      setError("Enter a minimum amount greater than zero.");
+      return;
+    }
+    setSavingActor(actorType);
+    setError(null);
+    try {
+      const updated = await updateWalletTopupSetting(actorType, { minimum_amount: value });
+      setSettings((prev) => prev.map((s) => (s.actor_type === actorType ? updated : s)));
+      setMinimumDrafts((prev) => ({ ...prev, [actorType]: updated.minimum_amount }));
+    } catch (err) {
+      setError(
+        err instanceof ApiError ? err.message : "Failed to save wallet top-up setting.",
+      );
+    } finally {
+      setSavingActor(null);
+    }
+  }
+
+  const webhookUrl = `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api/v1"}/razorpay/webhook`;
+
+  return (
+    <div className="animate-fade-in-up mb-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+      <h2 className="text-base font-semibold text-gray-900">Wallet top-up (Razorpay)</h2>
+      <p className="mt-1 text-sm text-gray-500">
+        Let resellers/customers add money to their own wallet online, and set the minimum
+        amount allowed per top-up.
+      </p>
+
+      {isLoading && (
+        <p className="mt-4 flex items-center gap-2 text-sm text-gray-400">
+          <ArrowPathIcon className="h-4 w-4 animate-spin" />
+          Loading…
+        </p>
+      )}
+
+      {!isLoading && loadError && (
+        <p className="mt-4 text-sm text-red-600">{loadError}</p>
+      )}
+
+      {!isLoading && !loadError && (
+        <div className="mt-4 divide-y divide-gray-100">
+          {WALLET_TOPUP_ACTOR_ORDER.map((actorType) => {
+            const setting = settings.find((s) => s.actor_type === actorType);
+            if (!setting) return null;
+            const draft = minimumDrafts[actorType] ?? setting.minimum_amount;
+            const isDirty = draft !== setting.minimum_amount;
+            return (
+              <div
+                key={actorType}
+                className="flex flex-wrap items-center justify-between gap-3 py-3"
+              >
+                <ToggleField
+                  label={`${WALLET_TOPUP_ACTOR_LABELS[actorType]}s can top up their own wallet`}
+                  checked={setting.enabled}
+                  onChange={(v) => handleToggle(actorType, v)}
+                />
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-gray-500">Minimum</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    value={draft}
+                    onChange={(e) =>
+                      setMinimumDrafts((prev) => ({ ...prev, [actorType]: e.target.value }))
+                    }
+                    className="w-24 rounded-lg border border-gray-300 px-2 py-1 text-sm text-gray-900 transition focus:border-flu-pink focus:outline-none focus:ring-2 focus:ring-flu-pink/20"
+                  />
+                  <button
+                    onClick={() => handleSaveMinimum(actorType)}
+                    disabled={!isDirty || savingActor === actorType}
+                    className="rounded-full border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Save
+                  </button>
+                  {savingActor === actorType && (
+                    <ArrowPathIcon className="h-4 w-4 animate-spin text-gray-400" />
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+
+      <div className="mt-4 border-t border-gray-100 pt-4">
+        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-gray-400">
+          Razorpay webhook URL
+        </p>
+        <p className="mb-2 text-xs text-gray-500">
+          Paste this into the Razorpay dashboard&apos;s webhook settings (event:
+          payment.captured).
+        </p>
+        <div className="flex items-center gap-2 rounded-md bg-gray-50 px-3 py-2">
+          <span className="flex-1 truncate font-mono text-xs text-gray-700">{webhookUrl}</span>
+          <CopyButton text={webhookUrl} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ScheduleCard({
   type,
   schedule,
@@ -383,13 +565,15 @@ function ScheduleCard({
             checked={draft.enabled}
             onChange={(v) => setDraft((prev) => ({ ...prev, enabled: v }))}
           />
-          <ToggleField
-            label="Manual sync button"
-            checked={draft.manual_sync_enabled}
-            onChange={(v) =>
-              setDraft((prev) => ({ ...prev, manual_sync_enabled: v }))
-            }
-          />
+          {info.hasManualSync && (
+            <ToggleField
+              label="Manual sync button"
+              checked={draft.manual_sync_enabled}
+              onChange={(v) =>
+                setDraft((prev) => ({ ...prev, manual_sync_enabled: v }))
+              }
+            />
+          )}
         </div>
       </div>
 
@@ -502,13 +686,14 @@ function SettingsContent() {
           Settings
         </h1>
         <p className="mt-1 text-sm text-gray-500">
-          Schedule automatic syncing for each sync type, applied across every
-          registered server.
+          Schedule automatic syncing across every registered server, plus
+          background jobs like the order expiry sweep.
         </p>
       </div>
 
       <OrderCancelSection />
       <CustomerActionsSection />
+      <WalletTopupSection />
 
       {isLoading && (
         <p className="flex items-center gap-2 text-sm text-gray-400">

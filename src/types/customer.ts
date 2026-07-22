@@ -11,6 +11,8 @@ export interface Customer {
   city: string | null;
   state: string | null;
   pincode: string | null;
+  /** DECIMAL(10,2) as a string, mutated only via the wallet topup endpoint. */
+  wallet_balance: string;
   /** Which reseller manages this customer, if any — admin-only field. */
   reseller_id: string | null;
   status: CustomerStatus;

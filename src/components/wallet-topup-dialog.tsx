@@ -7,13 +7,14 @@ type Mode = 'add' | 'deduct';
 
 export function WalletTopupDialog({
   open,
-  resellerName,
+  entityName,
   isBusy,
   onSubmit,
   onCancel,
 }: {
   open: boolean;
-  resellerName: string;
+  /** Display name of whoever's wallet this is — a reseller or a customer. */
+  entityName: string;
   isBusy?: boolean;
   onSubmit: (amount: number, remark: string) => Promise<void>;
   onCancel: () => void;
@@ -72,7 +73,7 @@ export function WalletTopupDialog({
         <h2 className="text-base font-semibold text-gray-900">Adjust wallet balance</h2>
         <p className="mt-1 text-sm text-gray-500">
           Add or deduct funds from{' '}
-          <span className="font-medium text-gray-700">{resellerName}</span>&rsquo;s wallet
+          <span className="font-medium text-gray-700">{entityName}</span>&rsquo;s wallet
           balance.
         </p>
 

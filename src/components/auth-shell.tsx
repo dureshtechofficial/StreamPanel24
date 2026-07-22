@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { APP_NAME } from '@/lib/app-config';
 
 export function AuthShell({
   title,
@@ -16,7 +17,7 @@ export function AuthShell({
       <header className="flex h-16 items-center bg-flu-navy px-6">
         <Link href="/" className="flex items-center gap-2">
           <span className="h-2 w-2 rounded-full bg-flu-pink" />
-          <span className="text-lg font-semibold tracking-tight text-white">project7</span>
+          <span className="text-lg font-semibold tracking-tight text-white">{APP_NAME}</span>
         </Link>
       </header>
 

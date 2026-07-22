@@ -1,11 +1,37 @@
 import { resellerApiFetch } from './reseller-api-client';
 import type { FlussonicStreamDirectoryEntry } from '@/types/flussonic-stream-directory';
+import type { FlussonicStream } from '@/types/flussonic-stream';
+import type { FlussonicStreamSession } from '@/types/flussonic-stream-session';
 import type { PaginatedResult } from '@/types/pagination';
 
 export function listMyCustomerStreams(customerId: string) {
   return resellerApiFetch<FlussonicStreamDirectoryEntry[]>(
     `/reseller-auth/customers/${customerId}/streams`,
   );
+}
+
+/**
+ * Full details (protocols, live stats, media tracks, inputs) for one stream —
+ * the backend 404s unless it's currently assigned to one of the reseller's
+ * own customers. Takes `serverId` only to match the admin-scoped `getStream`
+ * signature (`CustomerAssignedStreamsPanelApi.getStreamDetails`); unused here
+ * since the reseller-scoped route resolves the stream directly by id.
+ */
+export function getMyStreamDetails(_serverId: string, streamId: string) {
+  return resellerApiFetch<FlussonicStream>(`/reseller-auth/streams/${streamId}`);
+}
+
+/**
+ * Disable/re-enable one stream (used for the "Disable"/"Restart" actions) —
+ * the backend 404s unless it's currently assigned to one of the reseller's
+ * own customers. `serverId` is unused, kept only to match the shared action
+ * button signature used across portals.
+ */
+export function setMyStreamDisabled(_serverId: string, streamId: string, disabled: boolean) {
+  return resellerApiFetch<FlussonicStream>(`/reseller-auth/streams/${streamId}/disabled`, {
+    method: 'PATCH',
+    body: { disabled },
+  });
 }
 
 export function assignMyCustomerStreams(customerId: string, streamIds: string[]) {
@@ -33,5 +59,24 @@ export function searchMyAvailableStreams(params: SearchAvailableStreamsParams) {
 
   return resellerApiFetch<PaginatedResult<FlussonicStreamDirectoryEntry>>(
     `/reseller-auth/streams?${query.toString()}`,
+  );
+}
+
+export interface ListStreamSessionsParams {
+  page?: number;
+  limit?: number;
+  /** Only sessions touched by the server's most recent sync (i.e. still live as of last check). */
+  latestOnly?: boolean;
+}
+
+/** Sessions for one stream — the backend 404s unless it's currently assigned to one of the reseller's own customers. */
+export function listMyStreamSessions(streamId: string, params: ListStreamSessionsParams = {}) {
+  const query = new URLSearchParams();
+  query.set('page', String(params.page ?? 1));
+  query.set('limit', String(params.limit ?? 20));
+  if (params.latestOnly) query.set('latestOnly', 'true');
+
+  return resellerApiFetch<PaginatedResult<FlussonicStreamSession>>(
+    `/reseller-auth/streams/${streamId}/sessions?${query.toString()}`,
   );
 }

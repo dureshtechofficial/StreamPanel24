@@ -14,7 +14,9 @@ import {
   ChevronRightIcon,
   EyeIcon,
   PencilIcon,
+  PlayIcon,
   PlusIcon,
+  PowerIcon,
   SearchIcon,
   TrashIcon,
   UsersIcon,
@@ -29,6 +31,7 @@ import {
   type SyncStreamsSummary,
 } from '@/lib/flussonic-streams-api';
 import { useSyncManualFlags } from '@/lib/use-sync-manual-flags';
+import { useStreamDisableActions } from '@/lib/use-stream-disable-actions';
 import type { FlussonicServer } from '@/types/flussonic-server';
 import type {
   FlussonicStream,
@@ -38,6 +41,7 @@ import type {
 import { ApiError } from '@/lib/api-error';
 import { useAuth } from '@/lib/auth-context';
 import { usePageTitle } from '@/lib/use-page-title';
+import { liveStatusStyle } from '@/lib/live-status-style';
 
 const PAGE_SIZE = 10;
 
@@ -45,13 +49,6 @@ const STATUS_STYLES: Record<FlussonicStreamStatus, string> = {
   active: 'bg-green-50 text-green-700',
   inactive: 'bg-gray-100 text-gray-600',
 };
-
-function liveStatusStyle(status: string | undefined): string {
-  if (status === 'running') return 'bg-green-50 text-green-700';
-  if (status === 'error') return 'bg-red-50 text-red-700';
-  if (status === 'waiting') return 'bg-amber-50 text-amber-700';
-  return 'bg-gray-100 text-gray-600';
-}
 
 function StreamsContent({ serverId }: { serverId: string }) {
   const [server, setServer] = useState<FlussonicServer | null>(null);
@@ -119,6 +116,11 @@ function StreamsContent({ serverId }: { serverId: string }) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
+
+  const streamActions = useStreamDisableActions(
+    (streamId, disabled) => updateStream(serverId, streamId, { disabled }),
+    load,
+  );
 
   function openCreate() {
     setEditingStream(null);
@@ -225,6 +227,12 @@ function StreamsContent({ serverId }: { serverId: string }) {
       {syncError && (
         <div className="animate-fade-in-up mb-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
           {syncError}
+        </div>
+      )}
+
+      {streamActions.error && (
+        <div className="animate-fade-in-up mb-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
+          {streamActions.error}
         </div>
       )}
 
@@ -350,6 +358,59 @@ function StreamsContent({ serverId }: { serverId: string }) {
                           >
                             <PencilIcon className="h-4 w-4" />
                           </button>
+                          {stream.config_json.disabled ? (
+                            <button
+                              onClick={() => streamActions.start(stream.id)}
+                              disabled={streamActions.busyId === stream.id}
+                              className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-green-50 hover:text-green-600 disabled:opacity-60"
+                              aria-label={`Start ${stream.config_json.name}`}
+                              title="Start"
+                            >
+                              <PlayIcon
+                                className={`h-4 w-4 ${
+                                  streamActions.busyId === stream.id &&
+                                  streamActions.busyAction === 'start'
+                                    ? 'animate-pulse'
+                                    : ''
+                                }`}
+                              />
+                            </button>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => streamActions.disable(stream.id)}
+                                disabled={streamActions.busyId === stream.id}
+                                className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-60"
+                                aria-label={`Disable ${stream.config_json.name}`}
+                                title="Disable"
+                              >
+                                <PowerIcon
+                                  className={`h-4 w-4 ${
+                                    streamActions.busyId === stream.id &&
+                                    streamActions.busyAction === 'disable'
+                                      ? 'animate-pulse'
+                                      : ''
+                                  }`}
+                                />
+                              </button>
+                              <button
+                                onClick={() => streamActions.restart(stream.id)}
+                                disabled={streamActions.busyId === stream.id}
+                                className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink disabled:opacity-60"
+                                aria-label={`Restart ${stream.config_json.name}`}
+                                title="Restart"
+                              >
+                                <ArrowPathIcon
+                                  className={`h-4 w-4 ${
+                                    streamActions.busyId === stream.id &&
+                                    streamActions.busyAction === 'restart'
+                                      ? 'animate-spin'
+                                      : ''
+                                  }`}
+                                />
+                              </button>
+                            </>
+                          )}
                           <button
                             onClick={() => setPendingDelete(stream)}
                             className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
@@ -394,6 +455,56 @@ function StreamsContent({ serverId }: { serverId: string }) {
                       >
                         <PencilIcon className="h-4 w-4" />
                       </button>
+                      {stream.config_json.disabled ? (
+                        <button
+                          onClick={() => streamActions.start(stream.id)}
+                          disabled={streamActions.busyId === stream.id}
+                          className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-green-50 hover:text-green-600 disabled:opacity-60"
+                          aria-label={`Start ${stream.config_json.name}`}
+                          title="Start"
+                        >
+                          <PlayIcon
+                            className={`h-4 w-4 ${
+                              streamActions.busyId === stream.id && streamActions.busyAction === 'start'
+                                ? 'animate-pulse'
+                                : ''
+                            }`}
+                          />
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => streamActions.disable(stream.id)}
+                            disabled={streamActions.busyId === stream.id}
+                            className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-60"
+                            aria-label={`Disable ${stream.config_json.name}`}
+                            title="Disable"
+                          >
+                            <PowerIcon
+                              className={`h-4 w-4 ${
+                                streamActions.busyId === stream.id && streamActions.busyAction === 'disable'
+                                  ? 'animate-pulse'
+                                  : ''
+                              }`}
+                            />
+                          </button>
+                          <button
+                            onClick={() => streamActions.restart(stream.id)}
+                            disabled={streamActions.busyId === stream.id}
+                            className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink disabled:opacity-60"
+                            aria-label={`Restart ${stream.config_json.name}`}
+                            title="Restart"
+                          >
+                            <ArrowPathIcon
+                              className={`h-4 w-4 ${
+                                streamActions.busyId === stream.id && streamActions.busyAction === 'restart'
+                                  ? 'animate-spin'
+                                  : ''
+                              }`}
+                            />
+                          </button>
+                        </>
+                      )}
                       <button
                         onClick={() => setPendingDelete(stream)}
                         className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"

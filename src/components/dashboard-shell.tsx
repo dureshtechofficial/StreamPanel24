@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import { getInitials } from '@/lib/get-initials';
+import { APP_NAME } from '@/lib/app-config';
 import {
   ChartBarIcon,
   ChevronDownIcon,
@@ -39,12 +41,6 @@ const SETTINGS_NAV_ITEM_ADMIN = {
   href: '/dashboard/settings',
 };
 
-function getInitials(name: string | undefined) {
-  if (!name) return '?';
-  const parts = name.trim().split(/\s+/);
-  const initials = parts.length === 1 ? parts[0].slice(0, 2) : parts[0][0] + parts[parts.length - 1][0];
-  return initials.toUpperCase();
-}
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
@@ -96,7 +92,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         <div className="flex h-16 items-center justify-between border-b border-gray-200 px-5">
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-flu-pink" />
-            <span className="text-base font-semibold tracking-tight text-flu-navy">project7</span>
+            <span className="text-base font-semibold tracking-tight text-flu-navy">{APP_NAME}</span>
           </div>
           <button
             onClick={() => setSidebarOpen(false)}

@@ -4,13 +4,15 @@ import { useCallback, useEffect, useState } from 'react';
 import { listOrdersForCustomer, createOrder, cancelOrder } from '@/lib/orders-api';
 import { listPlans } from '@/lib/plans-api';
 import { listCustomerStreams } from '@/lib/customer-streams-api';
+import { getCustomerWalletBalance } from '@/lib/customer-wallet-api';
 import type { CreateOrderInput, Order } from '@/types/order';
 import type { Plan } from '@/types/plan';
 import type { FlussonicStreamDirectoryEntry } from '@/types/flussonic-stream-directory';
 import type { Customer } from '@/types/customer';
 import { ApiError } from '@/lib/api-error';
-import { ArrowPathIcon, PlusIcon, XIcon } from './icons';
+import { ArrowPathIcon, EyeIcon, PlusIcon, XIcon } from './icons';
 import { ConfirmDialog } from './confirm-dialog';
+import { OrderInvoiceDialog } from './order-invoice-dialog';
 
 const ALL_PAYMENT_METHODS = ['cash', 'bank_transfer', 'upi', 'wallet', 'other'];
 
@@ -21,6 +23,15 @@ export interface OrdersPanelApi {
   listPlans: () => Promise<Plan[]>;
   /** Streams already assigned to this customer — an order can only provision from those, not any unassigned stream. */
   listAssignedStreams: (customerId: string) => Promise<FlussonicStreamDirectoryEntry[]>;
+  /**
+   * Shows a "Current balance" line under the payment-method field whenever
+   * 'wallet' is selected. Admin passes the customer's own balance
+   * (`getCustomerWalletBalance`, keyed by the `customerId` arg); the
+   * reseller portal passes its own balance instead (`getMyWalletBalance`,
+   * which ignores the arg — reseller orders are always wallet-billed to the
+   * reseller, never the customer).
+   */
+  getWalletBalance?: (customerId: string) => Promise<{ wallet_balance: string }>;
 }
 
 const DEFAULT_API: OrdersPanelApi = {
@@ -29,6 +40,7 @@ const DEFAULT_API: OrdersPanelApi = {
   cancelOrder: (_customerId, orderId) => cancelOrder(orderId),
   listPlans: () => listPlans({ status: 'active', limit: 100 }).then((r) => r.items),
   listAssignedStreams: listCustomerStreams,
+  getWalletBalance: getCustomerWalletBalance,
 };
 
 function formatDate(unixSeconds: number): string {
@@ -59,6 +71,7 @@ export function OrdersPanel({
   api = DEFAULT_API,
   priceField = 'customer_price',
   cancelEnabled = true,
+  showCancelDisabledNotice = true,
   paymentMethods = ALL_PAYMENT_METHODS,
 }: {
   open: boolean;
@@ -70,12 +83,15 @@ export function OrdersPanel({
   priceField?: 'customer_price' | 'reseller_price';
   /** Whether the current actor (admin/reseller) is currently allowed to cancel an order — set from Settings' per-role toggle. */
   cancelEnabled?: boolean;
+  /** Whether to show the "cancellation is currently disabled" notice when cancelEnabled is false — the reseller portal hides it. */
+  showCancelDisabledNotice?: boolean;
   /** Payment methods selectable when creating an order — defaults to every method (admin); the reseller portal passes ['wallet'] only. */
   paymentMethods?: string[];
 }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [streams, setStreams] = useState<FlussonicStreamDirectoryEntry[]>([]);
+  const [walletBalance, setWalletBalance] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -91,6 +107,8 @@ export function OrdersPanel({
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [pendingCancel, setPendingCancel] = useState<Order | null>(null);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const [invoiceOrder, setInvoiceOrder] = useState<Order | null>(null);
+  const [pendingQueuedOrder, setPendingQueuedOrder] = useState<Order | null>(null);
 
   // Reset transient state whenever the panel is (re)opened for a customer.
   const [initializedFor, setInitializedFor] = useState<string | null>(null);
@@ -103,6 +121,7 @@ export function OrdersPanel({
     setRemark('');
     setSubmitError(null);
     setSubmitInfo(null);
+    setPendingQueuedOrder(null);
   }
 
   const load = useCallback(async () => {
@@ -110,14 +129,16 @@ export function OrdersPanel({
     setIsLoading(true);
     setLoadError(null);
     try {
-      const [ordersResult, plansResult, streamsResult] = await Promise.all([
+      const [ordersResult, plansResult, streamsResult, walletResult] = await Promise.all([
         api.listOrders(customer.id),
         api.listPlans(),
         api.listAssignedStreams(customer.id),
+        api.getWalletBalance?.(customer.id) ?? Promise.resolve(null),
       ]);
       setOrders(ordersResult);
       setPlans(plansResult);
       setStreams(streamsResult);
+      setWalletBalance(walletResult?.wallet_balance ?? null);
     } catch (err) {
       setLoadError(err instanceof ApiError ? err.message : 'Failed to load orders.');
     } finally {
@@ -133,6 +154,26 @@ export function OrdersPanel({
 
   const selectedPlan = plans.find((p) => p.id === planId) ?? null;
   const previewPrice = selectedPlan ? selectedPlan[priceField] : null;
+
+  function handleCreateClick() {
+    if (!customer || !planId || !streamId) {
+      setSubmitError('Select a plan and a stream.');
+      return;
+    }
+    // Same overlap rule the backend applies (resolveEffectiveFrom): a stream
+    // can only be under one active order's date window at a time, so a new
+    // order on a stream that already has one gets queued to start once it
+    // ends rather than overlapping it — confirm that's expected before
+    // actually creating it, instead of surprising the admin after the fact.
+    const existingActive = orders.find(
+      (o) => o.stream_id === streamId && o.status === 'active',
+    );
+    if (existingActive) {
+      setPendingQueuedOrder(existingActive);
+      return;
+    }
+    handleCreate();
+  }
 
   async function handleCreate() {
     if (!customer || !planId || !streamId) {
@@ -303,6 +344,11 @@ export function OrdersPanel({
                         ))}
                       </select>
                     )}
+                    {walletBalance !== null && paymentMethod === 'wallet' && (
+                      <p className="mt-1 text-xs text-gray-400">
+                        Current balance: {walletBalance}
+                      </p>
+                    )}
                   </div>
 
                   <div>
@@ -333,7 +379,7 @@ export function OrdersPanel({
                     </button>
                     <button
                       type="button"
-                      onClick={handleCreate}
+                      onClick={handleCreateClick}
                       disabled={isSubmitting}
                       className="rounded-full bg-flu-pink px-4 py-1.5 text-sm font-semibold text-white shadow-lg shadow-flu-pink/30 transition hover:bg-flu-pink-dark disabled:cursor-not-allowed disabled:opacity-60"
                     >
@@ -355,7 +401,7 @@ export function OrdersPanel({
                         <span className="text-sm font-medium text-gray-900">
                           {order.order_number}
                         </span>
-                        <div className="flex gap-1.5">
+                        <div className="flex items-center gap-1.5">
                           <span
                             className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium capitalize ${
                               ORDER_STATUS_STYLES[order.status] ?? 'bg-gray-100 text-gray-600'
@@ -363,19 +409,37 @@ export function OrdersPanel({
                           >
                             {order.status}
                           </span>
-                          <span
+                          {/* <span
                             className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium capitalize ${
                               PAYMENT_STATUS_STYLES[order.payment_status] ?? 'bg-gray-100 text-gray-600'
                             }`}
                           >
                             {order.payment_status}
-                          </span>
+                          </span> */}
+                          <button
+                            onClick={() => setInvoiceOrder(order)}
+                            className="rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
+                            aria-label={`View invoice for ${order.order_number}`}
+                            title="View invoice"
+                          >
+                            <EyeIcon className="h-4 w-4" />
+                          </button>
                         </div>
                       </div>
                       <p className="mt-1 text-xs text-gray-500">
                         {order.currency} {order.price} · {order.duration_days} days ·{' '}
                         {formatDate(order.effective_from)} – {formatDate(order.effective_to)}
                       </p>
+                      <p className="text-xs text-gray-500">{order.customer_name}</p>
+                      <p className="text-xs text-gray-500">
+                        {order.stream_name}
+                        {order.stream_title ? ` — ${order.stream_title}` : ''}
+                      </p>
+                      {order.stream_ingest_domain && (
+                        <p className="text-xs text-gray-400">
+                          Ingest domain: {order.stream_ingest_domain}
+                        </p>
+                      )}
                       <p className="text-xs text-gray-400">
                         {order.payment_method.replace('_', ' ')}
                         {order.remark ? ` — ${order.remark}` : ''}
@@ -389,7 +453,7 @@ export function OrdersPanel({
                           Cancel order
                         </button>
                       )}
-                      {order.status === 'active' && !cancelEnabled && (
+                      {order.status === 'active' && !cancelEnabled && showCancelDisabledNotice && (
                         <p className="mt-2 text-xs text-gray-400">
                           Order cancellation is currently disabled
                         </p>
@@ -412,6 +476,39 @@ export function OrdersPanel({
         isBusy={cancellingId === pendingCancel?.id}
         onConfirm={handleConfirmCancel}
         onCancel={() => setPendingCancel(null)}
+      />
+
+      <ConfirmDialog
+        open={pendingQueuedOrder !== null}
+        title="Stream already has an active order"
+        message={
+          pendingQueuedOrder
+            ? `This stream already has an active order ("${pendingQueuedOrder.order_number}") ending ${formatDate(pendingQueuedOrder.effective_to)} — the new one will be queued to start right after it ends, not today. Continue?`
+            : ''
+        }
+        confirmLabel="Create order"
+        busyLabel="Creating…"
+        isBusy={isSubmitting}
+        onConfirm={() => {
+          setPendingQueuedOrder(null);
+          handleCreate();
+        }}
+        onCancel={() => setPendingQueuedOrder(null)}
+      />
+
+      <OrderInvoiceDialog
+        order={
+          invoiceOrder && {
+            ...invoiceOrder,
+            // server_name isn't part of the invoicing snapshot (a stream's
+            // hosting server doesn't affect billing terms) — enrich it
+            // best-effort from the currently-assigned streams list, but
+            // never touch stream_name/stream_title, which must stay exactly
+            // what was frozen at purchase time.
+            server_name: streams.find((s) => s.id === invoiceOrder.stream_id)?.server_name,
+          }
+        }
+        onClose={() => setInvoiceOrder(null)}
       />
     </div>
   );

@@ -12,6 +12,13 @@ import type { PaginatedResult } from '@/types/pagination';
 
 export interface ListOrdersParams {
   customerId?: string;
+  /** A specific reseller's id, or the literal 'none' for direct (no-reseller) orders only. */
+  resellerId?: string;
+  /** Matches against order number, customer name, or stream name. */
+  search?: string;
+  /** created_at range, unix seconds. */
+  dateFrom?: number;
+  dateTo?: number;
   status?: OrderStatus;
   paymentStatus?: PaymentStatus;
   page?: number;
@@ -58,6 +65,10 @@ export type OrderReportsResult = PaginatedResult<OrderReportEntry> & {
 export function listOrderReports(params: ListOrdersParams = {}) {
   const query = new URLSearchParams();
   if (params.customerId) query.set('customerId', params.customerId);
+  if (params.resellerId) query.set('resellerId', params.resellerId);
+  if (params.search) query.set('search', params.search);
+  if (params.dateFrom !== undefined) query.set('dateFrom', String(params.dateFrom));
+  if (params.dateTo !== undefined) query.set('dateTo', String(params.dateTo));
   if (params.status) query.set('status', params.status);
   if (params.paymentStatus) query.set('paymentStatus', params.paymentStatus);
   query.set('page', String(params.page ?? 1));

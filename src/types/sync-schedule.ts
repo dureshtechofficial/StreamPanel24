@@ -1,4 +1,4 @@
-export type SyncType = 'server_stats' | 'streams' | 'sessions';
+export type SyncType = 'server_stats' | 'streams' | 'sessions' | 'order_expiry';
 
 export interface SyncSchedule {
   id: string;
