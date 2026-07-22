@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCustomerAuth } from '@/lib/customer-auth-context';
 import { ApiError } from '@/lib/api-error';
@@ -13,13 +13,28 @@ const labelClass = 'mb-1 block text-sm font-medium text-gray-700';
 
 export default function CustomerLoginPage() {
   usePageTitle('Customer Login');
-  const { login } = useCustomerAuth();
+  const { login, customer, isLoading } = useCustomerAuth();
   const router = useRouter();
 
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Already has a valid session (restored via silent refresh) — skip the form.
+  useEffect(() => {
+    if (!isLoading && customer) {
+      router.replace('/customer/dashboard');
+    }
+  }, [isLoading, customer, router]);
+
+  if (isLoading || customer) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-sm text-gray-500">Loading…</p>
+      </div>
+    );
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();

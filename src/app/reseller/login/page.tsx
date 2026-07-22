@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useResellerAuth } from '@/lib/reseller-auth-context';
 import { ApiError } from '@/lib/api-error';
@@ -13,13 +13,28 @@ const labelClass = 'mb-1 block text-sm font-medium text-gray-700';
 
 export default function ResellerLoginPage() {
   usePageTitle('Reseller Login');
-  const { login } = useResellerAuth();
+  const { login, reseller, isLoading } = useResellerAuth();
   const router = useRouter();
 
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Already has a valid session (restored via silent refresh) — skip the form.
+  useEffect(() => {
+    if (!isLoading && reseller) {
+      router.replace('/reseller/dashboard');
+    }
+  }, [isLoading, reseller, router]);
+
+  if (isLoading || reseller) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-sm text-gray-500">Loading…</p>
+      </div>
+    );
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
