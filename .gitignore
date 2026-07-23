@@ -1,0 +1,13 @@
+# Generated / tooling output
+/graphify-out/
+/.claude/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Note: backend/ and frontend/ keep their own .gitignore files,
+# which cover node_modules, build output, and .env files.
