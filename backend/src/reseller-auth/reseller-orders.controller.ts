@@ -1,0 +1,85 @@
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ResellerJwtAccessGuard } from './guards/reseller-jwt-access.guard';
+import { CurrentReseller } from './decorators/current-reseller.decorator';
+import { Reseller } from '../resellers/entities/reseller.entity';
+import { CustomersService } from '../customers/customers.service';
+import { OrdersService } from '../orders/orders.service';
+import { CreateOrderDto } from '../orders/dto/create-order.dto';
+import { UpdateOrderStatusDto } from '../orders/dto/update-order-status.dto';
+import { OrderCancelActor } from '../settings/enums/order-cancel-actor.enum';
+
+@ApiTags('reseller-auth')
+@ApiBearerAuth('access-token')
+@UseGuards(ResellerJwtAccessGuard)
+@Controller('reseller-auth/customers/:customerId/orders')
+export class ResellerOrdersController {
+  constructor(
+    private readonly ordersService: OrdersService,
+    private readonly customersService: CustomersService,
+  ) {}
+
+  @ApiOperation({ summary: "List one of the reseller's customers' orders" })
+  @Get()
+  async findAll(
+    @CurrentReseller() reseller: Reseller,
+    @Param('customerId') customerId: string,
+  ) {
+    await this.customersService.findOneForReseller(reseller.id, customerId);
+    return this.ordersService.findAllForCustomer(customerId);
+  }
+
+  @ApiOperation({
+    summary:
+      "Create an order for one of the reseller's own customers — priced at the plan's reseller_price by default, always billed to the reseller's own wallet",
+  })
+  @Post()
+  @HttpCode(HttpStatus.CREATED)
+  async create(
+    @CurrentReseller() reseller: Reseller,
+    @Param('customerId') customerId: string,
+    @Body() dto: CreateOrderDto,
+  ) {
+    const customer = await this.customersService.findOneForReseller(
+      reseller.id,
+      customerId,
+    );
+    return this.ordersService.create({
+      customer,
+      resellerId: reseller.id,
+      priceField: 'reseller_price',
+      dto,
+      chargeResellerWallet: true,
+    });
+  }
+
+  @ApiOperation({
+    summary:
+      "Update the status/remark of one of the reseller's customers' orders",
+  })
+  @Patch(':id')
+  async update(
+    @CurrentReseller() reseller: Reseller,
+    @Param('customerId') customerId: string,
+    @Param('id') id: string,
+    @Body() dto: UpdateOrderStatusDto,
+  ) {
+    await this.customersService.findOneForReseller(reseller.id, customerId);
+    return this.ordersService.updateStatusForCustomer(
+      customerId,
+      id,
+      dto,
+      OrderCancelActor.RESELLER,
+    );
+  }
+}
