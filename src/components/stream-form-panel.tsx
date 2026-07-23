@@ -136,7 +136,7 @@ function splitName(name: string): { applicationName: string; key: string } {
 function toAuthHookState(hook: FlussonicStream['config_json']['on_play']): AuthHookState {
   if (!hook) return EMPTY_AUTH_HOOK;
   return {
-    url: hook.url,
+    url: hook.url ?? '',
     max_sessions: hook.max_sessions !== undefined ? String(hook.max_sessions) : '5',
     domains: (hook.domains ?? []).join(','),
     allowed_countries: (hook.allowed_countries ?? []).join(','),
@@ -334,12 +334,6 @@ export function StreamFormPanel({
     }
     if (!form.inputs.some((i) => resolveInputUrl(i))) {
       clientErrors.inputs.push('At least one input URL is required');
-    }
-    if (form.onPlayEnabled && !form.onPlay.url.trim()) {
-      clientErrors.inputs.push('on_play URL is required when enabled');
-    }
-    if (form.onPublishEnabled && !form.onPublish.url.trim()) {
-      clientErrors.inputs.push('on_publish URL is required when enabled');
     }
     if (Object.values(clientErrors).some((v) => v.length > 0)) {
       setErrors(clientErrors);
@@ -710,7 +704,7 @@ function AuthHookFields({
   return (
     <div className="mt-3 space-y-3 rounded-lg border border-gray-200 p-3">
       <div>
-        <label className={labelClass}>Callback URL *</label>
+        <label className={labelClass}>Callback URL</label>
         <input
           value={value.url}
           onChange={(e) => setField('url', e.target.value)}
