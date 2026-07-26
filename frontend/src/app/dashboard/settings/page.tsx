@@ -167,26 +167,26 @@ function OrderCancelSection() {
   }
 
   return (
-    <div className="animate-fade-in-up mb-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-      <h2 className="text-base font-semibold text-gray-900">Order cancellation</h2>
-      <p className="mt-1 text-sm text-gray-500">
+    <div className="animate-fade-in-up mb-6 rounded-xl border border-border bg-card p-5 shadow-sm">
+      <h2 className="text-base font-semibold text-foreground">Order cancellation</h2>
+      <p className="mt-1 text-sm text-muted-foreground">
         Control who is currently allowed to cancel an order, independently for
         each role.
       </p>
 
       {isLoading && (
-        <p className="mt-4 flex items-center gap-2 text-sm text-gray-400">
+        <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground/70">
           <ArrowPathIcon className="h-4 w-4 animate-spin" />
           Loading…
         </p>
       )}
 
       {!isLoading && loadError && (
-        <p className="mt-4 text-sm text-red-600">{loadError}</p>
+        <p className="mt-4 text-sm text-danger">{loadError}</p>
       )}
 
       {!isLoading && !loadError && (
-        <div className="mt-4 divide-y divide-gray-100">
+        <div className="mt-4 divide-y divide-border">
           {ORDER_CANCEL_ACTOR_ORDER.map((actorType) => {
             const setting = settings.find((s) => s.actor_type === actorType);
             if (!setting) return null;
@@ -198,7 +198,7 @@ function OrderCancelSection() {
                   onChange={(v) => handleToggle(actorType, v)}
                 />
                 {savingActor === actorType && (
-                  <ArrowPathIcon className="h-4 w-4 animate-spin text-gray-400" />
+                  <ArrowPathIcon className="h-4 w-4 animate-spin text-muted-foreground/70" />
                 )}
               </div>
             );
@@ -206,7 +206,7 @@ function OrderCancelSection() {
         </div>
       )}
 
-      {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+      {error && <p className="mt-2 text-xs text-danger">{error}</p>}
     </div>
   );
 }
@@ -275,22 +275,22 @@ function CustomerActionsSection() {
   }
 
   return (
-    <div className="animate-fade-in-up mb-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-      <h2 className="text-base font-semibold text-gray-900">Customer management</h2>
-      <p className="mt-1 text-sm text-gray-500">
+    <div className="animate-fade-in-up mb-6 rounded-xl border border-border bg-card p-5 shadow-sm">
+      <h2 className="text-base font-semibold text-foreground">Customer management</h2>
+      <p className="mt-1 text-sm text-muted-foreground">
         Control who is currently allowed to edit, delete, or assign streams to
         a customer, independently for admin and resellers.
       </p>
 
       {isLoading && (
-        <p className="mt-4 flex items-center gap-2 text-sm text-gray-400">
+        <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground/70">
           <ArrowPathIcon className="h-4 w-4 animate-spin" />
           Loading…
         </p>
       )}
 
       {!isLoading && loadError && (
-        <p className="mt-4 text-sm text-red-600">{loadError}</p>
+        <p className="mt-4 text-sm text-danger">{loadError}</p>
       )}
 
       {!isLoading && !loadError && (
@@ -298,21 +298,21 @@ function CustomerActionsSection() {
           <table className="w-full text-left text-sm">
             <thead>
               <tr>
-                <th className="pb-2 pr-4 font-medium text-gray-500"></th>
+                <th className="pb-2 pr-4 font-medium text-muted-foreground"></th>
                 {CUSTOMER_ACTION_ACTOR_ORDER.map((actorType) => (
                   <th
                     key={actorType}
-                    className="pb-2 px-3 text-center text-xs font-medium uppercase tracking-wide text-gray-400"
+                    className="pb-2 px-3 text-center text-xs font-medium uppercase tracking-wide text-muted-foreground/70"
                   >
                     {CUSTOMER_ACTION_ACTOR_LABELS[actorType]}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-border">
               {CUSTOMER_ACTION_ORDER.map((action) => (
                 <tr key={action}>
-                  <td className="py-2 pr-4 text-gray-700">
+                  <td className="py-2 pr-4 text-foreground">
                     {CUSTOMER_ACTION_LABELS[action]}
                   </td>
                   {CUSTOMER_ACTION_ACTOR_ORDER.map((actorType) => {
@@ -330,7 +330,7 @@ function CustomerActionsSection() {
                             onChange={(v) => handleToggle(actorType, action, v)}
                           />
                           {savingKey === key && (
-                            <ArrowPathIcon className="h-3.5 w-3.5 animate-spin text-gray-400" />
+                            <ArrowPathIcon className="h-3.5 w-3.5 animate-spin text-muted-foreground/70" />
                           )}
                         </div>
                       </td>
@@ -343,7 +343,7 @@ function CustomerActionsSection() {
         </div>
       )}
 
-      {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+      {error && <p className="mt-2 text-xs text-danger">{error}</p>}
     </div>
   );
 }
@@ -425,26 +425,26 @@ function WalletTopupSection() {
   const webhookUrl = `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api/v1"}/razorpay/webhook`;
 
   return (
-    <div className="animate-fade-in-up mb-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-      <h2 className="text-base font-semibold text-gray-900">Wallet top-up (Razorpay)</h2>
-      <p className="mt-1 text-sm text-gray-500">
+    <div className="animate-fade-in-up mb-6 rounded-xl border border-border bg-card p-5 shadow-sm">
+      <h2 className="text-base font-semibold text-foreground">Wallet top-up (Razorpay)</h2>
+      <p className="mt-1 text-sm text-muted-foreground">
         Let resellers/customers add money to their own wallet online, and set the minimum
         amount allowed per top-up.
       </p>
 
       {isLoading && (
-        <p className="mt-4 flex items-center gap-2 text-sm text-gray-400">
+        <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground/70">
           <ArrowPathIcon className="h-4 w-4 animate-spin" />
           Loading…
         </p>
       )}
 
       {!isLoading && loadError && (
-        <p className="mt-4 text-sm text-red-600">{loadError}</p>
+        <p className="mt-4 text-sm text-danger">{loadError}</p>
       )}
 
       {!isLoading && !loadError && (
-        <div className="mt-4 divide-y divide-gray-100">
+        <div className="mt-4 divide-y divide-border">
           {WALLET_TOPUP_ACTOR_ORDER.map((actorType) => {
             const setting = settings.find((s) => s.actor_type === actorType);
             if (!setting) return null;
@@ -461,7 +461,7 @@ function WalletTopupSection() {
                   onChange={(v) => handleToggle(actorType, v)}
                 />
                 <div className="flex items-center gap-2">
-                  <label className="text-xs text-gray-500">Minimum</label>
+                  <label className="text-xs text-muted-foreground">Minimum</label>
                   <input
                     type="number"
                     step="0.01"
@@ -470,17 +470,17 @@ function WalletTopupSection() {
                     onChange={(e) =>
                       setMinimumDrafts((prev) => ({ ...prev, [actorType]: e.target.value }))
                     }
-                    className="w-24 rounded-lg border border-gray-300 px-2 py-1 text-sm text-gray-900 transition focus:border-flu-pink focus:outline-none focus:ring-2 focus:ring-flu-pink/20"
+                    className="w-24 rounded-lg border border-input px-2 py-1 text-sm text-foreground transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/20"
                   />
                   <button
                     onClick={() => handleSaveMinimum(actorType)}
                     disabled={!isDirty || savingActor === actorType}
-                    className="rounded-full border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="rounded-full border border-input px-3 py-1 text-xs font-medium text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     Save
                   </button>
                   {savingActor === actorType && (
-                    <ArrowPathIcon className="h-4 w-4 animate-spin text-gray-400" />
+                    <ArrowPathIcon className="h-4 w-4 animate-spin text-muted-foreground/70" />
                   )}
                 </div>
               </div>
@@ -489,18 +489,18 @@ function WalletTopupSection() {
         </div>
       )}
 
-      {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+      {error && <p className="mt-2 text-xs text-danger">{error}</p>}
 
-      <div className="mt-4 border-t border-gray-100 pt-4">
-        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-gray-400">
+      <div className="mt-4 border-t border-border pt-4">
+        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground/70">
           Razorpay webhook URL
         </p>
-        <p className="mb-2 text-xs text-gray-500">
+        <p className="mb-2 text-xs text-muted-foreground">
           Paste this into the Razorpay dashboard&apos;s webhook settings (event:
           payment.captured).
         </p>
-        <div className="flex items-center gap-2 rounded-md bg-gray-50 px-3 py-2">
-          <span className="flex-1 truncate font-mono text-xs text-gray-700">{webhookUrl}</span>
+        <div className="flex items-center gap-2 rounded-md bg-muted px-3 py-2">
+          <span className="flex-1 truncate font-mono text-xs text-foreground">{webhookUrl}</span>
           <CopyButton text={webhookUrl} />
         </div>
       </div>
@@ -551,13 +551,13 @@ function ScheduleCard({
   const lastRunText = summarizeLastRun(schedule.last_run_summary);
 
   return (
-    <div className="animate-fade-in-up rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+    <div className="animate-fade-in-up rounded-xl border border-border bg-card p-5 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-base font-semibold text-gray-900">
+          <h2 className="text-base font-semibold text-foreground">
             {info.title}
           </h2>
-          <p className="mt-1 text-sm text-gray-500">{info.description}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{info.description}</p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-2">
           <ToggleField
@@ -579,7 +579,7 @@ function ScheduleCard({
 
       <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-700">
+          <label className="mb-1 block text-xs font-medium text-foreground">
             Cron expression
           </label>
           <input
@@ -588,11 +588,11 @@ function ScheduleCard({
               setDraft((prev) => ({ ...prev, cron_expression: e.target.value }))
             }
             placeholder="*/15 * * * *"
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm text-gray-900 transition focus:border-flu-pink focus:outline-none focus:ring-2 focus:ring-flu-pink/20"
+            className="w-full rounded-lg border border-input px-3 py-2 font-mono text-sm text-foreground transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/20"
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-700">
+          <label className="mb-1 block text-xs font-medium text-foreground">
             Quick presets
           </label>
           <select
@@ -605,7 +605,7 @@ function ScheduleCard({
                 }));
               }
             }}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 transition focus:border-flu-pink focus:outline-none focus:ring-2 focus:ring-flu-pink/20"
+            className="w-full rounded-lg border border-input px-3 py-2 text-sm text-foreground transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/20"
           >
             <option value="">Choose a preset…</option>
             {CRON_PRESETS.map((preset) => (
@@ -617,24 +617,24 @@ function ScheduleCard({
         </div>
       </div>
 
-      {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+      {error && <p className="mt-2 text-xs text-danger">{error}</p>}
 
-      <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3">
-        <p className="text-xs text-gray-400">
+      <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
+        <p className="text-xs text-muted-foreground/70">
           Last run: {formatRelativeTime(schedule.last_run_at)}
           {lastRunText ? ` — ${lastRunText}` : ""}
         </p>
         <div className="flex items-center gap-2">
           <button
             onClick={() => onViewHistory(type)}
-            className="rounded-full border border-gray-300 px-4 py-1.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+            className="rounded-full border border-input px-4 py-1.5 text-sm font-semibold text-foreground transition hover:bg-muted"
           >
             History
           </button>
           <button
             onClick={handleSave}
             disabled={!isDirty || isSaving}
-            className="rounded-full bg-flu-pink px-4 py-1.5 text-sm font-semibold text-white shadow-lg shadow-flu-pink/30 transition hover:bg-flu-pink-dark disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-lg bg-primary px-4 py-1.5 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSaving ? "Saving…" : "Save"}
           </button>
@@ -682,10 +682,10 @@ function SettingsContent() {
   return (
     <div className="w-full max-w-3xl">
       <div className="animate-fade-in-up mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
           Settings
         </h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <p className="mt-1 text-sm text-muted-foreground">
           Schedule automatic syncing across every registered server, plus
           background jobs like the order expiry sweep.
         </p>
@@ -696,14 +696,14 @@ function SettingsContent() {
       <WalletTopupSection />
 
       {isLoading && (
-        <p className="flex items-center gap-2 text-sm text-gray-400">
+        <p className="flex items-center gap-2 text-sm text-muted-foreground/70">
           <ArrowPathIcon className="h-4 w-4 animate-spin" />
           Loading schedules…
         </p>
       )}
 
       {!isLoading && loadError && (
-        <p className="text-sm text-red-600">{loadError}</p>
+        <p className="text-sm text-danger">{loadError}</p>
       )}
 
       {!isLoading && !loadError && (
@@ -732,9 +732,9 @@ function SettingsContent() {
 
 function RestrictedNotice() {
   return (
-    <div className="mx-auto max-w-lg rounded-xl border border-gray-200 bg-white p-8 text-center shadow-sm">
-      <h1 className="text-lg font-semibold text-gray-900">Access restricted</h1>
-      <p className="mt-2 text-sm text-gray-500">
+    <div className="mx-auto max-w-lg rounded-xl border border-border bg-card p-8 text-center shadow-sm">
+      <h1 className="text-lg font-semibold text-foreground">Access restricted</h1>
+      <p className="mt-2 text-sm text-muted-foreground">
         Managing sync schedules requires an admin account. Contact an
         administrator if you need access.
       </p>

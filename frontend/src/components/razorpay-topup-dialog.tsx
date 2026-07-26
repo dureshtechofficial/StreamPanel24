@@ -94,19 +94,19 @@ export function RazorpayTopupDialog({
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
       <div
         onClick={handleClose}
-        className="animate-fade-in absolute inset-0 bg-gray-900/40 backdrop-blur-sm"
+        className="animate-fade-in absolute inset-0 bg-slate-950/50 backdrop-blur-sm"
       />
       <form
         onSubmit={handlePay}
-        className="animate-fade-in-up relative w-full max-w-sm rounded-xl bg-white p-6 shadow-2xl"
+        className="animate-fade-in-up relative w-full max-w-sm rounded-xl bg-card p-6 shadow-2xl"
       >
-        <h2 className="text-base font-semibold text-gray-900">Add money to wallet</h2>
-        <p className="mt-1 text-sm text-gray-500">
+        <h2 className="text-base font-semibold text-foreground">Add money to wallet</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
           Pay securely via Razorpay — your wallet is credited as soon as the payment succeeds.
         </p>
 
         <div className="mt-4">
-          <label className="mb-1 block text-sm font-medium text-gray-700">Amount</label>
+          <label className="mb-1 block text-sm font-medium text-foreground">Amount</label>
           <input
             type="number"
             step="0.01"
@@ -115,26 +115,26 @@ export function RazorpayTopupDialog({
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0.00"
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 transition focus:border-flu-pink focus:outline-none focus:ring-2 focus:ring-flu-pink/20"
+            className="w-full rounded-lg border border-input px-3 py-2 text-sm text-foreground transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/20"
           />
-          <p className="mt-1 text-xs text-gray-400">Minimum {minimumAmount.toFixed(2)}</p>
+          <p className="mt-1 text-xs text-muted-foreground/70">Minimum {minimumAmount.toFixed(2)}</p>
         </div>
 
-        {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+        {error && <p className="mt-3 text-sm text-danger">{error}</p>}
 
         <div className="mt-6 flex justify-end gap-2">
           <button
             type="button"
             onClick={handleClose}
             disabled={isProcessing}
-            className="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-60"
+            className="rounded-full border border-input px-4 py-2 text-sm font-medium text-foreground transition hover:bg-muted disabled:opacity-60"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={isProcessing}
-            className="rounded-full bg-flu-pink px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-flu-pink/30 transition hover:bg-flu-pink-dark disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isProcessing ? 'Processing…' : 'Pay now'}
           </button>

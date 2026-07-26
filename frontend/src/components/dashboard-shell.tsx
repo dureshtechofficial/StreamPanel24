@@ -1,12 +1,23 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { getInitials } from '@/lib/get-initials';
 import { APP_NAME } from '@/lib/app-config';
+import { cn } from '@/lib/cn';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
+import { Badge } from '@/components/ui/badge';
+import {
+  BroadcastIcon,
   ChartBarIcon,
   ChevronDownIcon,
   HomeIcon,
@@ -21,186 +32,218 @@ import {
   XIcon,
 } from './icons';
 
-const BASE_NAV_ITEMS = [
-  { label: 'Dashboard', icon: HomeIcon, href: '/dashboard' },
-  { label: 'Customers', icon: UsersIcon, href: '/dashboard/customers' },
-];
+type NavItem = { label: string; icon: typeof HomeIcon; href: string | null; soon?: boolean };
+type NavSection = { title: string; items: NavItem[] };
 
-const ADMIN_NAV_ITEMS = [
-  { label: 'Resellers', icon: ShieldIcon, href: '/dashboard/resellers' },
-  { label: 'Plans', icon: TagIcon, href: '/dashboard/plans' },
-  { label: 'Reports', icon: ChartBarIcon, href: '/dashboard/reports' },
-  { label: 'Servers', icon: ServerIcon, href: '/dashboard/servers' },
-];
+function buildSections(isAdmin: boolean): NavSection[] {
+  const sections: NavSection[] = [
+    {
+      title: 'Overview',
+      items: [
+        { label: 'Dashboard', icon: HomeIcon, href: '/dashboard' },
+        { label: 'Customers', icon: UsersIcon, href: '/dashboard/customers' },
+      ],
+    },
+  ];
 
-const PROFILE_NAV_ITEM = { label: 'Profile', icon: UserIcon, href: null };
-const SETTINGS_NAV_ITEM_DISABLED = { label: 'Settings', icon: SettingsIcon, href: null };
-const SETTINGS_NAV_ITEM_ADMIN = {
-  label: 'Settings',
-  icon: SettingsIcon,
-  href: '/dashboard/settings',
-};
+  if (isAdmin) {
+    sections.push({
+      title: 'Management',
+      items: [
+        { label: 'Resellers', icon: ShieldIcon, href: '/dashboard/resellers' },
+        { label: 'Plans', icon: TagIcon, href: '/dashboard/plans' },
+        { label: 'Reports', icon: ChartBarIcon, href: '/dashboard/reports' },
+        { label: 'Servers', icon: ServerIcon, href: '/dashboard/servers' },
+      ],
+    });
+  }
 
+  sections.push({
+    title: 'Account',
+    items: [
+      { label: 'Profile', icon: UserIcon, href: null, soon: true },
+      isAdmin
+        ? { label: 'Settings', icon: SettingsIcon, href: '/dashboard/settings' }
+        : { label: 'Settings', icon: SettingsIcon, href: null, soon: true },
+    ],
+  });
+
+  return sections;
+}
+
+function isActive(pathname: string, href: string) {
+  if (href === '/dashboard') return pathname === '/dashboard';
+  return pathname === href || pathname.startsWith(href + '/');
+}
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const userMenuRef = useRef<HTMLDivElement>(null);
 
-  const navItems = [
-    ...BASE_NAV_ITEMS,
-    ...(user?.role === 'admin' ? ADMIN_NAV_ITEMS : []),
-    PROFILE_NAV_ITEM,
-    user?.role === 'admin' ? SETTINGS_NAV_ITEM_ADMIN : SETTINGS_NAV_ITEM_DISABLED,
-  ];
+  const sections = buildSections(user?.role === 'admin');
 
+  // Lock body scroll when the mobile drawer is open
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
-        setUserMenuOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    document.body.style.overflow = sidebarOpen ? 'hidden' : '';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [sidebarOpen]);
+
+  // Close the drawer on route change
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
 
   async function handleLogout() {
-    setUserMenuOpen(false);
     await logout();
     router.push('/login');
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Mobile backdrop */}
       <div
         onClick={() => setSidebarOpen(false)}
-        className={`fixed inset-0 z-30 bg-gray-900/40 backdrop-blur-sm transition-opacity duration-300 md:hidden ${
-          sidebarOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
-        }`}
+        className={cn(
+          'fixed inset-0 z-30 bg-slate-950/50 backdrop-blur-sm transition-opacity duration-300 lg:hidden',
+          sidebarOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0',
+        )}
       />
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-gray-200 bg-white transition-transform duration-300 ease-in-out md:translate-x-0 ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        className={cn(
+          'fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-border bg-card transition-transform duration-300 ease-in-out lg:translate-x-0',
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full',
+        )}
       >
-        <div className="flex h-16 items-center justify-between border-b border-gray-200 px-5">
-          <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-flu-pink" />
-            <span className="text-base font-semibold tracking-tight text-flu-navy">{APP_NAME}</span>
-          </div>
+        <div className="flex h-16 items-center justify-between border-b border-border px-5">
+          <Link href="/dashboard" className="flex items-center gap-2.5">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg flu-brand-gradient text-white">
+              <BroadcastIcon className="h-[18px] w-[18px]" />
+            </span>
+            <span className="text-base font-semibold tracking-tight text-foreground">{APP_NAME}</span>
+          </Link>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 md:hidden"
+            className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground lg:hidden"
             aria-label="Close sidebar"
           >
             <XIcon className="h-5 w-5" />
           </button>
         </div>
 
-        <nav className="flex-1 space-y-1 px-3 py-4">
-          {navItems.map(({ label, icon: Icon, href }) => {
-            const active = href !== null && pathname === href;
-
-            if (!href) {
-              return (
-                <button
-                  key={label}
-                  disabled
-                  title="Coming soon"
-                  className="flex w-full cursor-not-allowed items-center gap-3 rounded-md border-l-2 border-transparent px-3 py-2 text-sm font-medium text-gray-400"
-                >
-                  <Icon className="h-4.5 w-4.5" />
-                  {label}
-                  <span className="ml-auto rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-400">
-                    Soon
-                  </span>
-                </button>
-              );
-            }
-
-            return (
-              <Link
-                key={label}
-                href={href}
-                onClick={() => setSidebarOpen(false)}
-                className={`flex w-full items-center gap-3 rounded-md border-l-2 px-3 py-2 text-sm font-medium transition-colors ${
-                  active
-                    ? 'border-flu-pink bg-flu-pink/10 text-flu-pink'
-                    : 'border-transparent text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                <Icon className="h-4.5 w-4.5" />
-                {label}
-              </Link>
-            );
-          })}
+        <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
+          {sections.map((section) => (
+            <div key={section.title}>
+              <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                {section.title}
+              </p>
+              <div className="space-y-1">
+                {section.items.map(({ label, icon: Icon, href, soon }) => {
+                  if (!href) {
+                    return (
+                      <button
+                        key={label}
+                        disabled
+                        title="Coming soon"
+                        className="flex w-full cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground/60"
+                      >
+                        <Icon className="h-[18px] w-[18px]" />
+                        {label}
+                        {soon && (
+                          <Badge variant="neutral" className="ml-auto px-1.5 py-0 text-[10px]">
+                            Soon
+                          </Badge>
+                        )}
+                      </button>
+                    );
+                  }
+                  const active = isActive(pathname, href);
+                  return (
+                    <Link
+                      key={label}
+                      href={href}
+                      className={cn(
+                        'group relative flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                        active
+                          ? 'bg-primary/10 text-primary'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                      )}
+                    >
+                      {active && (
+                        <span className="absolute inset-y-1.5 left-0 w-1 rounded-full bg-primary" />
+                      )}
+                      <Icon className="h-[18px] w-[18px]" />
+                      {label}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
-        <div className="border-t border-gray-200 p-3">
+        <div className="border-t border-border p-3">
           <button
             onClick={handleLogout}
-            className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-red-50 hover:text-red-600"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-danger-soft hover:text-danger"
           >
-            <LogOutIcon className="h-4.5 w-4.5" />
+            <LogOutIcon className="h-[18px] w-[18px]" />
             Log out
           </button>
         </div>
       </aside>
 
       {/* Content column */}
-      <div className="flex min-h-screen flex-col md:pl-64">
+      <div className="flex min-h-screen flex-col lg:pl-64">
         {/* Topbar */}
-        <header className="sticky top-0 z-20 flex h-16 items-center justify-between bg-flu-navy px-4 sm:px-6">
+        <header className="glass sticky top-0 z-20 flex h-16 items-center justify-between border-b border-border px-4 sm:px-6">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="rounded-md p-1.5 text-white/70 hover:bg-white/10 hover:text-white md:hidden"
+              className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground lg:hidden"
               aria-label="Open sidebar"
             >
               <MenuIcon className="h-5 w-5" />
             </button>
-            <p className="text-sm text-white/60">
-              Welcome back, <span className="font-medium text-white">{user?.name}</span>
-            </p>
+            <div className="hidden sm:block">
+              <p className="text-sm text-muted-foreground">
+                Welcome back, <span className="font-semibold text-foreground">{user?.name?.split(' ')[0]}</span>
+              </p>
+            </div>
           </div>
 
-          <div className="relative" ref={userMenuRef}>
-            <button
-              onClick={() => setUserMenuOpen((open) => !open)}
-              className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2 text-sm transition-colors hover:bg-white/10"
-            >
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-flu-pink text-xs font-semibold text-white">
-                {getInitials(user?.name)}
-              </span>
-              <span className="hidden font-medium text-white sm:block">{user?.name}</span>
-              <ChevronDownIcon
-                className={`h-4 w-4 text-white/50 transition-transform duration-200 ${
-                  userMenuOpen ? 'rotate-180' : ''
-                }`}
-              />
-            </button>
-
-            {userMenuOpen && (
-              <div className="animate-fade-in-down absolute right-0 mt-2 w-56 origin-top-right rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
-                <div className="border-b border-gray-100 px-4 py-3">
-                  <p className="truncate text-sm font-medium text-gray-900">{user?.name}</p>
-                  <p className="truncate text-xs text-gray-500">{user?.email}</p>
+          <div className="flex items-center gap-1.5">
+            <ThemeToggle className="text-foreground hover:bg-muted" />
+            <DropdownMenu>
+              <DropdownMenuTrigger className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2 text-sm outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full flu-brand-gradient text-xs font-semibold text-white">
+                  {getInitials(user?.name)}
+                </span>
+                <span className="hidden font-medium text-foreground sm:block">{user?.name}</span>
+                <ChevronDownIcon className="hidden h-4 w-4 text-muted-foreground sm:block" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <div className="px-2.5 py-2">
+                  <p className="truncate text-sm font-semibold text-foreground">{user?.name}</p>
+                  <p className="truncate text-xs text-muted-foreground">{user?.email}</p>
+                  {user?.role && (
+                    <Badge variant="brand" className="mt-2 capitalize">
+                      {user.role}
+                    </Badge>
+                  )}
                 </div>
-                <button
-                  onClick={handleLogout}
-                  className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-600 transition-colors hover:bg-red-50"
-                >
+                <DropdownMenuSeparator />
+                <DropdownMenuItem destructive onSelect={handleLogout}>
                   <LogOutIcon className="h-4 w-4" />
                   Log out
-                </button>
-              </div>
-            )}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
 

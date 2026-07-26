@@ -17,8 +17,8 @@ import { ApiError } from '@/lib/api-error';
 import { ArrowPathIcon, EyeIcon, PlayIcon, PowerIcon, UsersIcon, XIcon } from './icons';
 
 const STATUS_STYLES: Record<string, string> = {
-  active: 'bg-green-50 text-green-700',
-  inactive: 'bg-gray-100 text-gray-600',
+  active: 'bg-success-soft text-success',
+  inactive: 'bg-muted text-muted-foreground',
 };
 
 export interface CustomerAssignedStreamsPanelApi {
@@ -130,26 +130,26 @@ export function CustomerAssignedStreamsPanel({
       <div className={`fixed inset-0 z-50 ${open ? '' : 'pointer-events-none'}`}>
         <div
           onClick={onClose}
-          className={`absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity duration-300 ${
+          className={`absolute inset-0 bg-slate-950/50 backdrop-blur-sm transition-opacity duration-300 ${
             open ? 'opacity-100' : 'opacity-0'
           }`}
         />
 
         <div
-          className={`absolute inset-y-0 right-0 flex w-full max-w-lg flex-col bg-white shadow-2xl transition-transform duration-300 ease-in-out ${
+          className={`absolute inset-y-0 right-0 flex w-full max-w-lg flex-col bg-card shadow-2xl transition-transform duration-300 ease-in-out ${
             open ? 'translate-x-0' : 'translate-x-full'
           }`}
         >
-          <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+          <div className="flex items-center justify-between border-b border-border px-6 py-4">
             <div>
-              <h2 className="text-base font-semibold text-gray-900">Assigned streams</h2>
-              <p className="text-xs text-gray-500">{customer?.name}</p>
+              <h2 className="text-base font-semibold text-foreground">Assigned streams</h2>
+              <p className="text-xs text-muted-foreground">{customer?.name}</p>
             </div>
             <div className="flex items-center gap-1">
               <button
                 onClick={load}
                 disabled={isLoading}
-                className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 disabled:cursor-not-allowed"
+                className="rounded-md p-1.5 text-muted-foreground/70 transition-colors hover:bg-muted hover:text-muted-foreground disabled:cursor-not-allowed"
                 aria-label="Refresh streams"
                 title="Refresh"
               >
@@ -157,7 +157,7 @@ export function CustomerAssignedStreamsPanel({
               </button>
               <button
                 onClick={onClose}
-                className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                className="rounded-md p-1 text-muted-foreground/70 hover:bg-muted hover:text-muted-foreground"
                 aria-label="Close panel"
               >
                 <XIcon className="h-5 w-5" />
@@ -166,22 +166,22 @@ export function CustomerAssignedStreamsPanel({
           </div>
 
           <div className="flex-1 overflow-y-auto px-6 py-4">
-            {viewError && <p className="mb-3 text-sm text-red-600">{viewError}</p>}
+            {viewError && <p className="mb-3 text-sm text-danger">{viewError}</p>}
             {streamActions.error && (
-              <p className="mb-3 text-sm text-red-600">{streamActions.error}</p>
+              <p className="mb-3 text-sm text-danger">{streamActions.error}</p>
             )}
 
             {isLoading && (
-              <p className="flex items-center gap-2 text-sm text-gray-400">
+              <p className="flex items-center gap-2 text-sm text-muted-foreground/70">
                 <ArrowPathIcon className="h-4 w-4 animate-spin" />
                 Loading streams…
               </p>
             )}
 
-            {!isLoading && loadError && <p className="text-sm text-red-600">{loadError}</p>}
+            {!isLoading && loadError && <p className="text-sm text-danger">{loadError}</p>}
 
             {!isLoading && !loadError && streams.length === 0 && (
-              <p className="text-sm text-gray-400">No streams assigned to this customer yet.</p>
+              <p className="text-sm text-muted-foreground/70">No streams assigned to this customer yet.</p>
             )}
 
             {!isLoading && !loadError && streams.length > 0 && (
@@ -189,19 +189,19 @@ export function CustomerAssignedStreamsPanel({
                 {streams.map((stream) => (
                   <li
                     key={stream.id}
-                    className="flex items-center justify-between gap-2 rounded-lg px-2 py-2 hover:bg-gray-50"
+                    className="flex items-center justify-between gap-2 rounded-lg px-2 py-2 hover:bg-muted"
                   >
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-gray-900">
+                      <p className="truncate text-sm font-medium text-foreground">
                         {stream.name}
                         {stream.title ? ` — ${stream.title}` : ''}
                       </p>
-                      <p className="truncate text-xs text-gray-400">{stream.server_name}</p>
+                      <p className="truncate text-xs text-muted-foreground/70">{stream.server_name}</p>
                     </div>
                     <div className="flex shrink-0 items-center gap-1">
                       <span
                         className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium capitalize ${
-                          STATUS_STYLES[stream.status] ?? 'bg-gray-100 text-gray-600'
+                          STATUS_STYLES[stream.status] ?? 'bg-muted text-muted-foreground'
                         }`}
                       >
                         {stream.status}
@@ -217,7 +217,7 @@ export function CustomerAssignedStreamsPanel({
                         <button
                           onClick={() => handleView(stream)}
                           disabled={viewLoadingId === stream.id}
-                          className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink disabled:opacity-60"
+                          className="rounded-md p-1.5 text-muted-foreground/70 transition-colors hover:bg-muted hover:text-primary disabled:opacity-60"
                           aria-label={`View ${stream.name}`}
                           title="View stream"
                         >
@@ -227,7 +227,7 @@ export function CustomerAssignedStreamsPanel({
                       {showSessions && stream.has_active_order && (
                         <button
                           onClick={() => handleSessions(stream)}
-                          className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
+                          className="rounded-md p-1.5 text-muted-foreground/70 transition-colors hover:bg-muted hover:text-primary"
                           aria-label={`View sessions for ${stream.name}`}
                           title="View sessions"
                         >
@@ -240,7 +240,7 @@ export function CustomerAssignedStreamsPanel({
                             <button
                               onClick={() => streamActions.start(stream.id)}
                               disabled={streamActions.busyId === stream.id}
-                              className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-green-50 hover:text-green-600 disabled:opacity-60"
+                              className="rounded-md p-1.5 text-muted-foreground/70 transition-colors hover:bg-success-soft hover:text-success disabled:opacity-60"
                               aria-label={`Start ${stream.name}`}
                               title="Start"
                             >
@@ -258,7 +258,7 @@ export function CustomerAssignedStreamsPanel({
                               <button
                                 onClick={() => streamActions.disable(stream.id)}
                                 disabled={streamActions.busyId === stream.id}
-                                className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-60"
+                                className="rounded-md p-1.5 text-muted-foreground/70 transition-colors hover:bg-danger-soft hover:text-danger disabled:opacity-60"
                                 aria-label={`Disable ${stream.name}`}
                                 title="Disable"
                               >
@@ -274,7 +274,7 @@ export function CustomerAssignedStreamsPanel({
                               <button
                                 onClick={() => streamActions.restart(stream.id)}
                                 disabled={streamActions.busyId === stream.id}
-                                className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink disabled:opacity-60"
+                                className="rounded-md p-1.5 text-muted-foreground/70 transition-colors hover:bg-muted hover:text-primary disabled:opacity-60"
                                 aria-label={`Restart ${stream.name}`}
                                 title="Restart"
                               >

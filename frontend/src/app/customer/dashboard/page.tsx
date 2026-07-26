@@ -43,15 +43,15 @@ import { useCustomerAuth } from '@/lib/customer-auth-context';
 import { usePageTitle } from '@/lib/use-page-title';
 
 const STATUS_STYLES: Record<string, string> = {
-  active: 'bg-green-50 text-green-700',
-  disabled: 'bg-gray-100 text-gray-600',
+  active: 'bg-success-soft text-success',
+  disabled: 'bg-muted text-muted-foreground',
 };
 
 const ORDER_STATUS_STYLES: Record<string, string> = {
-  active: 'bg-green-50 text-green-700',
-  expired: 'bg-gray-100 text-gray-600',
-  cancelled: 'bg-red-50 text-red-700',
-  suspended: 'bg-amber-50 text-amber-700',
+  active: 'bg-success-soft text-success',
+  expired: 'bg-muted text-muted-foreground',
+  cancelled: 'bg-danger-soft text-danger',
+  suspended: 'bg-warning-soft text-warning',
 };
 
 const VISIBLE_ORDERS_LIMIT = 5;
@@ -155,15 +155,15 @@ function CustomerDashboardContent() {
     <div className="mx-auto w-full max-w-3xl">
       <div className="animate-fade-in-up mb-6 flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
             Welcome{customer ? `, ${customer.name}` : ''}
           </h1>
-          <p className="mt-1 text-sm text-gray-500">Streams assigned to your account.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Streams assigned to your account.</p>
         </div>
         <button
           onClick={() => load(true)}
           disabled={isLoading || isRefreshing}
-          className="flex shrink-0 items-center gap-1.5 rounded-full border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex shrink-0 items-center gap-1.5 rounded-full border border-input px-3 py-1.5 text-sm font-medium text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
           aria-label="Refresh wallet, streams, and orders"
           title="Refresh"
         >
@@ -174,18 +174,18 @@ function CustomerDashboardContent() {
 
       {customer && customer.reseller_id === null && (
         <div
-          className="animate-fade-in-up mb-6 flex items-center justify-between gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
+          className="animate-fade-in-up mb-6 flex items-center justify-between gap-4 rounded-xl border border-border bg-card p-4 shadow-sm"
           style={{ animationDelay: '30ms' }}
         >
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-flu-pink/10 text-flu-pink">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
               <WalletIcon className="h-5 w-5" />
             </span>
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Wallet balance
               </p>
-              <p className="text-2xl font-semibold text-gray-900">
+              <p className="text-2xl font-semibold text-foreground">
                 {walletBalanceOverride ?? Number(customer.wallet_balance).toFixed(2)}
               </p>
             </div>
@@ -194,14 +194,14 @@ function CustomerDashboardContent() {
             {walletTopupSettings.enabled && (
               <button
                 onClick={() => setTopupDialogOpen(true)}
-                className="rounded-full bg-flu-pink px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-flu-pink/30 transition hover:bg-flu-pink-dark"
+                className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition hover:bg-primary-hover"
               >
                 Add money
               </button>
             )}
             {/* <button
               onClick={() => setWalletHistoryOpen(true)}
-              className="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+              className="rounded-full border border-input px-4 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
             >
               View history
             </button> */}
@@ -209,55 +209,55 @@ function CustomerDashboardContent() {
         </div>
       )}
 
-      <div className="animate-fade-in-up overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+      <div className="animate-fade-in-up overflow-hidden rounded-xl border border-border bg-card shadow-sm">
         {viewError && (
-          <p className="px-4 pt-3 text-sm text-red-600">{viewError}</p>
+          <p className="px-4 pt-3 text-sm text-danger">{viewError}</p>
         )}
         {streamActions.error && (
-          <p className="px-4 pt-3 text-sm text-red-600">{streamActions.error}</p>
+          <p className="px-4 pt-3 text-sm text-danger">{streamActions.error}</p>
         )}
 
         {isLoading && (
-          <p className="flex items-center justify-center gap-2 px-4 py-10 text-sm text-gray-400">
+          <p className="flex items-center justify-center gap-2 px-4 py-10 text-sm text-muted-foreground/70">
             <ArrowPathIcon className="h-4 w-4 animate-spin" />
             Loading your streams…
           </p>
         )}
 
         {!isLoading && loadError && (
-          <p className="px-4 py-10 text-center text-sm text-red-600">{loadError}</p>
+          <p className="px-4 py-10 text-center text-sm text-danger">{loadError}</p>
         )}
 
         {!isLoading && !loadError && streams.length === 0 && (
-          <p className="px-4 py-10 text-center text-sm text-gray-400">
+          <p className="px-4 py-10 text-center text-sm text-muted-foreground/70">
             No streams have been assigned to your account yet.
           </p>
         )}
 
         {!isLoading && !loadError && streams.length > 0 && (
-          <ul className="divide-y divide-gray-100">
+          <ul className="divide-y divide-border">
             {streams.map((stream) => (
               <li key={stream.id} className="flex items-center justify-between gap-3 px-4 py-3">
                 <div className="flex items-center gap-3 min-w-0">
-                  <BroadcastIcon className="h-5 w-5 shrink-0 text-flu-pink" />
+                  <BroadcastIcon className="h-5 w-5 shrink-0 text-primary" />
                   <div className="min-w-0">
-                    <p className="truncate font-medium text-gray-900">
+                    <p className="truncate font-medium text-foreground">
                       {stream.name}
                       {stream.title ? ` — ${stream.title}` : ''}
                     </p>
-                    <p className="truncate text-xs text-gray-500">{stream.server_name}</p>
+                    <p className="truncate text-xs text-muted-foreground">{stream.server_name}</p>
                   </div>
                 </div>
                 <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
                   <span
                     className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium capitalize ${
-                      STATUS_STYLES[stream.status] ?? 'bg-gray-100 text-gray-600'
+                      STATUS_STYLES[stream.status] ?? 'bg-muted text-muted-foreground'
                     }`}
                   >
                     {stream.status}
                   </span>
                   {stream.disabled && (
-                    <span className="inline-block rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
+                    <span className="inline-block rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning">
                       disabled
                     </span>
                   )}
@@ -271,7 +271,7 @@ function CustomerDashboardContent() {
                   <button
                     onClick={() => handleView(stream)}
                     disabled={viewLoadingId === stream.id}
-                    className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink disabled:opacity-60"
+                    className="rounded-md p-1.5 text-muted-foreground/70 transition-colors hover:bg-muted hover:text-primary disabled:opacity-60"
                     aria-label={`View ${stream.name}`}
                     title="View stream"
                   >
@@ -279,7 +279,7 @@ function CustomerDashboardContent() {
                   </button>
                   <button
                     onClick={() => setSessionsStream(stream)}
-                    className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
+                    className="rounded-md p-1.5 text-muted-foreground/70 transition-colors hover:bg-muted hover:text-primary"
                     aria-label={`View sessions for ${stream.name}`}
                     title="View sessions"
                   >
@@ -289,7 +289,7 @@ function CustomerDashboardContent() {
                     <button
                       onClick={() => streamActions.start(stream.id)}
                       disabled={streamActions.busyId === stream.id}
-                      className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-green-50 hover:text-green-600 disabled:opacity-60"
+                      className="rounded-md p-1.5 text-muted-foreground/70 transition-colors hover:bg-success-soft hover:text-success disabled:opacity-60"
                       aria-label={`Start ${stream.name}`}
                       title="Start"
                     >
@@ -306,7 +306,7 @@ function CustomerDashboardContent() {
                       <button
                         onClick={() => streamActions.disable(stream.id)}
                         disabled={streamActions.busyId === stream.id}
-                        className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-60"
+                        className="rounded-md p-1.5 text-muted-foreground/70 transition-colors hover:bg-danger-soft hover:text-danger disabled:opacity-60"
                         aria-label={`Disable ${stream.name}`}
                         title="Disable"
                       >
@@ -321,7 +321,7 @@ function CustomerDashboardContent() {
                       <button
                         onClick={() => streamActions.restart(stream.id)}
                         disabled={streamActions.busyId === stream.id}
-                        className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink disabled:opacity-60"
+                        className="rounded-md p-1.5 text-muted-foreground/70 transition-colors hover:bg-muted hover:text-primary disabled:opacity-60"
                         aria-label={`Restart ${stream.name}`}
                         title="Restart"
                       >
@@ -344,36 +344,36 @@ function CustomerDashboardContent() {
 
       <div className="animate-fade-in-up mt-6">
         <div className="mb-2 flex items-baseline justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             My orders
           </h2>
           {orders.length > VISIBLE_ORDERS_LIMIT && (
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-muted-foreground/70">
               Showing {VISIBLE_ORDERS_LIMIT} most recent of {orders.length}
             </p>
           )}
         </div>
-        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
           {!isLoading && !loadError && orders.length === 0 && (
-            <p className="px-4 py-6 text-center text-sm text-gray-400">No orders yet.</p>
+            <p className="px-4 py-6 text-center text-sm text-muted-foreground/70">No orders yet.</p>
           )}
           {!isLoading && !loadError && orders.length > 0 && (
-            <ul className="divide-y divide-gray-100">
+            <ul className="divide-y divide-border">
               {visibleOrders.map((order) => (
                 <li key={order.id} className="px-4 py-3">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-medium text-gray-900">{order.order_number}</span>
+                    <span className="text-sm font-medium text-foreground">{order.order_number}</span>
                     <div className="flex items-center gap-1.5">
                       <span
                         className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium capitalize ${
-                          ORDER_STATUS_STYLES[order.status] ?? 'bg-gray-100 text-gray-600'
+                          ORDER_STATUS_STYLES[order.status] ?? 'bg-muted text-muted-foreground'
                         }`}
                       >
                         {order.status}
                       </span>
                       <button
                         onClick={() => setInvoiceOrder(order)}
-                        className="rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
+                        className="rounded-md p-1 text-muted-foreground/70 transition-colors hover:bg-muted hover:text-primary"
                         aria-label={`View invoice for ${order.order_number}`}
                         title="View invoice"
                       >
@@ -381,21 +381,21 @@ function CustomerDashboardContent() {
                       </button>
                     </div>
                   </div>
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="mt-1 text-xs text-muted-foreground">
                     {order.plan_name} · {order.currency} {order.price} · {order.duration_days} days
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-muted-foreground">
                     {order.stream_name}
                     {order.stream_title ? ` — ${order.stream_title}` : ''}
                   </p>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-muted-foreground/70">
                     {formatDate(order.effective_from)} – {formatDate(order.effective_to)} ·{' '}
                     {order.payment_method.replace('_', ' ')}
                   </p>
                   {order.status === 'active' && cancelEnabled && (
                     <button
                       onClick={() => setPendingCancel(order)}
-                      className="mt-2 text-xs font-medium text-red-600 hover:text-red-700"
+                      className="mt-2 text-xs font-medium text-danger hover:text-danger"
                     >
                       Cancel order
                     </button>
@@ -405,7 +405,7 @@ function CustomerDashboardContent() {
             </ul>
           )}
         </div>
-        {cancelError && <p className="mt-2 text-xs text-red-600">{cancelError}</p>}
+        {cancelError && <p className="mt-2 text-xs text-danger">{cancelError}</p>}
       </div>
 
       <ConfirmDialog

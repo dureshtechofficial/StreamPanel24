@@ -6,7 +6,7 @@ import { XIcon } from './icons';
 import { StreamPlayer } from './stream-player';
 import { CopyButton } from './copy-button';
 
-const labelClass = 'text-xs font-medium uppercase tracking-wide text-gray-400';
+const labelClass = 'text-xs font-medium uppercase tracking-wide text-muted-foreground/70';
 
 const PROTOCOL_KEYS: (keyof StreamProtocols)[] = [
   'hls',
@@ -94,23 +94,23 @@ export function StreamDetailsPanel({
     <div className={`fixed inset-0 z-50 ${open ? '' : 'pointer-events-none'}`}>
       <div
         onClick={onClose}
-        className={`absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity duration-300 ${
+        className={`absolute inset-0 bg-slate-950/50 backdrop-blur-sm transition-opacity duration-300 ${
           open ? 'opacity-100' : 'opacity-0'
         }`}
       />
 
       <div
-        className={`absolute inset-y-0 right-0 flex w-full max-w-lg flex-col bg-white shadow-2xl transition-transform duration-300 ease-in-out ${
+        className={`absolute inset-y-0 right-0 flex w-full max-w-lg flex-col bg-card shadow-2xl transition-transform duration-300 ease-in-out ${
           open ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
-        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-          <h2 className="text-base font-semibold text-gray-900">
+        <div className="flex items-center justify-between border-b border-border px-6 py-4">
+          <h2 className="text-base font-semibold text-foreground">
             {stream?.config_json.name ?? 'Stream details'}
           </h2>
           <button
             onClick={onClose}
-            className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            className="rounded-md p-1 text-muted-foreground/70 hover:bg-muted hover:text-muted-foreground"
             aria-label="Close panel"
           >
             <XIcon className="h-5 w-5" />
@@ -136,13 +136,13 @@ export function StreamDetailsPanel({
                 <div>
                   <p className={`${labelClass} mb-2`}>Protocols</p>
                   {activeProtocols.length === 0 ? (
-                    <p className="text-sm text-gray-400">No protocols enabled.</p>
+                    <p className="text-sm text-muted-foreground/70">No protocols enabled.</p>
                   ) : (
                     <div className="flex flex-wrap gap-1.5">
                       {activeProtocols.map((key) => (
                         <span
                           key={key}
-                          className="inline-block rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700"
+                          className="inline-block rounded-full bg-success-soft px-2 py-0.5 text-xs font-medium text-success"
                         >
                           {key}
                         </span>
@@ -154,10 +154,10 @@ export function StreamDetailsPanel({
             })()}
 
           {stream && (
-            <div className="border-t border-gray-100 pt-4">
+            <div className="border-t border-border pt-4">
               <p className={`${labelClass} mb-2`}>Input / output URLs</p>
               {!stream.ingest_domain ? (
-                <p className="text-sm text-gray-400">
+                <p className="text-sm text-muted-foreground/70">
                   Set an ingest domain on this stream to see input/output URLs.
                 </p>
               ) : (
@@ -176,18 +176,18 @@ export function StreamDetailsPanel({
                     return (
                       <>
                         <div>
-                          <p className="mb-1 text-xs font-medium text-gray-500">Input</p>
+                          <p className="mb-1 text-xs font-medium text-muted-foreground">Input</p>
                           {inputUrls.length === 0 ? (
-                            <p className="text-xs text-gray-400">
+                            <p className="text-xs text-muted-foreground/70">
                               No input protocols (RTMP/SRT) enabled.
                             </p>
                           ) : (
                             <ul className="space-y-2">
                               {inputUrls.map((entry) => (
-                                <li key={entry.label} className="rounded-md bg-gray-50 px-3 py-2">
-                                  <p className="text-xs font-semibold text-gray-500">{entry.label}</p>
+                                <li key={entry.label} className="rounded-md bg-muted px-3 py-2">
+                                  <p className="text-xs font-semibold text-muted-foreground">{entry.label}</p>
                                   <div className="mt-0.5 flex items-start justify-between gap-2">
-                                    <span className="break-all font-mono text-xs text-gray-700">
+                                    <span className="break-all font-mono text-xs text-foreground">
                                       {entry.url}
                                     </span>
                                     <CopyButton text={entry.url} />
@@ -198,18 +198,18 @@ export function StreamDetailsPanel({
                           )}
                         </div>
                         <div>
-                          <p className="mb-1 text-xs font-medium text-gray-500">Output</p>
+                          <p className="mb-1 text-xs font-medium text-muted-foreground">Output</p>
                           {outputUrls.length === 0 ? (
-                            <p className="text-xs text-gray-400">
+                            <p className="text-xs text-muted-foreground/70">
                               No output protocols (RTMP/HLS/DASH/SRT) enabled.
                             </p>
                           ) : (
                             <ul className="space-y-2">
                               {outputUrls.map((entry) => (
-                                <li key={entry.label} className="rounded-md bg-gray-50 px-3 py-2">
-                                  <p className="text-xs font-semibold text-gray-500">{entry.label}</p>
+                                <li key={entry.label} className="rounded-md bg-muted px-3 py-2">
+                                  <p className="text-xs font-semibold text-muted-foreground">{entry.label}</p>
                                   <div className="mt-0.5 flex items-start justify-between gap-2">
-                                    <span className="break-all font-mono text-xs text-gray-700">
+                                    <span className="break-all font-mono text-xs text-foreground">
                                       {entry.url}
                                     </span>
                                     <CopyButton text={entry.url} />
@@ -228,7 +228,7 @@ export function StreamDetailsPanel({
           )}
 
           {!live && (
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-muted-foreground">
               Not synced yet. Click &quot;Sync&quot; on the streams page to pull live data from the
               server.
             </p>
@@ -239,26 +239,26 @@ export function StreamDetailsPanel({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <p className={labelClass}>Status</p>
-                  <p className="mt-1 text-sm font-medium text-gray-900">
+                  <p className="mt-1 text-sm font-medium text-foreground">
                     {stats?.status ?? '—'}
                     {stats?.alive === false && ' (not alive)'}
                   </p>
                 </div>
                 <div>
                   <p className={labelClass}>Clients</p>
-                  <p className="mt-1 text-sm font-medium text-gray-900">
+                  <p className="mt-1 text-sm font-medium text-foreground">
                     {stats?.client_count ?? stats?.online_clients ?? '—'}
                   </p>
                 </div>
                 <div>
                   <p className={labelClass}>Bitrate (in / out)</p>
-                  <p className="mt-1 text-sm font-medium text-gray-900">
+                  <p className="mt-1 text-sm font-medium text-foreground">
                     {formatBitrate(stats?.input_bitrate)} / {formatBitrate(stats?.output_bitrate)}
                   </p>
                 </div>
                 <div>
                   <p className={labelClass}>Uptime</p>
-                  <p className="mt-1 text-sm font-medium text-gray-900">
+                  <p className="mt-1 text-sm font-medium text-foreground">
                     {/* lifetime comes back in milliseconds */}
                     {stats?.lifetime !== undefined
                       ? formatUptime(Math.floor(stats.lifetime / 1000))
@@ -270,16 +270,16 @@ export function StreamDetailsPanel({
               {stats?.url && (
                 <div>
                   <p className={labelClass}>Source URL</p>
-                  <p className="mt-1 break-all text-sm text-gray-700">{stats.url}</p>
+                  <p className="mt-1 break-all text-sm text-foreground">{stats.url}</p>
                 </div>
               )}
 
               {tracks.length > 0 && (
-                <div className="border-t border-gray-100 pt-4">
+                <div className="border-t border-border pt-4">
                   <p className={`${labelClass} mb-2`}>Media tracks</p>
                   <ul className="space-y-1">
                     {tracks.map((track, i) => (
-                      <li key={i} className="rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                      <li key={i} className="rounded-md bg-muted px-3 py-2 text-sm text-foreground">
                         {formatTrack(track)}
                       </li>
                     ))}
@@ -288,16 +288,16 @@ export function StreamDetailsPanel({
               )}
 
               {live.inputs && live.inputs.length > 0 && (
-                <div className="border-t border-gray-100 pt-4">
+                <div className="border-t border-border pt-4">
                   <p className={`${labelClass} mb-2`}>Inputs</p>
                   <ul className="space-y-1">
                     {live.inputs.map((input, i) => {
                       const rec = input as { url?: string; stats?: { active?: boolean } };
                       return (
-                        <li key={i} className="rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                        <li key={i} className="rounded-md bg-muted px-3 py-2 text-sm text-foreground">
                           <span
                             className={`mr-2 inline-block h-2 w-2 rounded-full ${
-                              rec.stats?.active ? 'bg-green-500' : 'bg-gray-300'
+                              rec.stats?.active ? 'bg-success' : 'bg-muted'
                             }`}
                           />
                           {rec.url ?? '—'}
@@ -309,8 +309,8 @@ export function StreamDetailsPanel({
               )}
 
               {showRawData && (
-                <details className="border-t border-gray-100 pt-4">
-                  <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-gray-400 hover:text-gray-600">
+                <details className="border-t border-border pt-4">
+                  <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-muted-foreground/70 hover:text-muted-foreground">
                     Raw sync data
                   </summary>
                   <pre className="mt-2 max-h-96 overflow-auto rounded-md bg-gray-900 p-3 text-xs text-gray-100">

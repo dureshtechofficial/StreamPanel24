@@ -1,10 +1,22 @@
 "use client";
 
+import Link from "next/link";
 import { ProtectedRoute } from "@/components/protected-route";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { useAuth } from "@/lib/auth-context";
-import { CalendarIcon, MailIcon, ShieldIcon } from "@/components/icons";
 import { usePageTitle } from "@/lib/use-page-title";
+import { StatCard } from "@/components/ui/stat-card";
+import { Card } from "@/components/ui/card";
+import {
+  ArrowRightIcon,
+  CalendarIcon,
+  ChartBarIcon,
+  MailIcon,
+  ServerIcon,
+  ShieldIcon,
+  TagIcon,
+  UsersIcon,
+} from "@/components/icons";
 
 function formatDate(unixSeconds: number | undefined) {
   if (!unixSeconds) return "—";
@@ -15,54 +27,68 @@ function formatDate(unixSeconds: number | undefined) {
   });
 }
 
+const QUICK_LINKS = [
+  { label: "Customers", description: "Manage customers & stream access", href: "/dashboard/customers", icon: UsersIcon },
+  { label: "Resellers", description: "Onboard and manage resellers", href: "/dashboard/resellers", icon: ShieldIcon, adminOnly: true },
+  { label: "Plans", description: "Subscription plans & pricing", href: "/dashboard/plans", icon: TagIcon, adminOnly: true },
+  { label: "Reports", description: "Orders & revenue insights", href: "/dashboard/reports", icon: ChartBarIcon, adminOnly: true },
+  { label: "Servers", description: "Flussonic servers & streams", href: "/dashboard/servers", icon: ServerIcon, adminOnly: true },
+];
+
 function DashboardContent() {
   usePageTitle("Dashboard");
   const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
 
-  const cards = [
-    { label: "Email address", value: user?.email ?? "—", icon: MailIcon },
-    { label: "Role", value: user?.role ?? "—", icon: ShieldIcon, badge: true },
-    {
-      label: "Member since",
-      value: formatDate(user?.created_at),
-      icon: CalendarIcon,
-    },
+  const stats = [
+    { label: "Email address", value: user?.email ?? "—", icon: <MailIcon className="h-4.5 w-4.5" />, tone: "brand" as const },
+    { label: "Role", value: user?.role ?? "—", icon: <ShieldIcon className="h-4.5 w-4.5" />, tone: "accent" as const, capitalize: true },
+    { label: "Member since", value: formatDate(user?.created_at), icon: <CalendarIcon className="h-4.5 w-4.5" />, tone: "info" as const },
   ];
 
+  const links = QUICK_LINKS.filter((l) => !l.adminOnly || isAdmin);
+
   return (
-    <div className="w-full">
+    <div className="mx-auto w-full max-w-6xl">
       <div className="animate-fade-in-up mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
           Welcome back, {user?.name?.split(" ")[0]} 👋
         </h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Here&apos;s a quick look at your servers.
+        <p className="mt-1 text-sm text-muted-foreground">
+          Here&apos;s a quick look at your account and shortcuts to get things done.
         </p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        {cards.map(({ label, value, icon: Icon, badge }, i) => (
-          <div
-            key={label}
-            className="animate-fade-in-up flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
-            style={{ animationDelay: `${(i + 1) * 30}ms` }}
-          >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-flu-pink/10 text-flu-pink">
-              <Icon className="h-5 w-5" />
-            </span>
-            <div className="min-w-0">
-              <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                {label}
-              </p>
-              {badge ? (
-                <span className="mt-0.5 inline-block rounded-full bg-flu-pink/10 px-2 py-0.5 text-sm font-semibold capitalize text-flu-pink">
-                  {value}
+        {stats.map((s, i) => (
+          <StatCard
+            key={s.label}
+            label={s.label}
+            value={<span className={s.capitalize ? "capitalize" : undefined}>{s.value}</span>}
+            icon={s.icon}
+            tone={s.tone}
+            style={{ animationDelay: `${(i + 1) * 40}ms` }}
+          />
+        ))}
+      </div>
+
+      <h2 className="mb-3 mt-10 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        Quick actions
+      </h2>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {links.map(({ label, description, href, icon: Icon }, i) => (
+          <Link key={label} href={href} className="animate-fade-in-up" style={{ animationDelay: `${(i + 1) * 40}ms` }}>
+            <Card className="group h-full p-5 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-elevated">
+              <div className="flex items-start justify-between">
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                  <Icon className="h-5 w-5" />
                 </span>
-              ) : (
-                <p className="truncate text-lg font-semibold text-gray-900">{value}</p>
-              )}
-            </div>
-          </div>
+                <ArrowRightIcon className="h-5 w-5 text-muted-foreground/50 transition-all group-hover:translate-x-0.5 group-hover:text-primary" />
+              </div>
+              <p className="mt-4 font-semibold text-foreground">{label}</p>
+              <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
+            </Card>
+          </Link>
         ))}
       </div>
     </div>

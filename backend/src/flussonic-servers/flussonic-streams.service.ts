@@ -19,6 +19,7 @@ import { buildFlussonicApiUrl } from './utils/flussonic-api-url.util';
 import { nowUnixSeconds } from '../common/utils/unix-timestamp.util';
 import { Order } from '../orders/entities/order.entity';
 import { OrderStatus } from '../orders/enums/order-status.enum';
+import { Customer } from '../customers/entities/customer.entity';
 import type { FlussonicStreamConfig } from './interfaces/flussonic-stream-config.interface';
 import type {
   FlussonicLiveStream,
@@ -58,6 +59,8 @@ export interface FlussonicStreamDirectoryEntry {
   server_id: string;
   server_name: string;
   customer_id: string | null;
+  /** Name of the customer this stream is currently assigned to (null if unassigned). */
+  customer_name: string | null;
   status: FlussonicStreamStatus;
   /** Flussonic-side `config_json.disabled` — distinct from `status` (our own soft-delete/active flag). */
   disabled: boolean;
@@ -74,6 +77,8 @@ export class FlussonicStreamsService {
     private readonly streamsRepository: Repository<FlussonicStream>,
     @InjectRepository(Order)
     private readonly ordersRepository: Repository<Order>,
+    @InjectRepository(Customer)
+    private readonly customersRepository: Repository<Customer>,
     private readonly serversService: FlussonicServersService,
   ) {}
 
@@ -92,6 +97,20 @@ export class FlussonicStreamsService {
       .andWhere('order.effective_to > :now', { now })
       .getRawMany<{ stream_id: string }>();
     return new Set(rows.map((r) => r.stream_id));
+  }
+
+  /** Batch resolve customer id → name for a directory-entry page (one query, not N). */
+  private async getCustomerNamesByIds(
+    customerIds: string[],
+  ): Promise<Map<string, string>> {
+    const uniqueIds = [...new Set(customerIds)];
+    if (uniqueIds.length === 0) return new Map();
+    const rows = await this.customersRepository
+      .createQueryBuilder('customer')
+      .select(['customer.id', 'customer.name'])
+      .where('customer.id IN (:...ids)', { ids: uniqueIds })
+      .getMany();
+    return new Map(rows.map((c) => [c.id, c.name]));
   }
 
   async findAllForServer(
@@ -142,9 +161,17 @@ export class FlussonicStreamsService {
    * unassigned or already assigned to that customer — a stream taken by a
    * *different* customer is excluded entirely, so the picker can never show
    * (let alone let an admin select) a stream that isn't actually available.
+   *
+   * `opts.includeAssignedToOtherCustomers` lifts that exclusion so the caller
+   * gets *every* non-deleted stream (each entry carries `customer_id` +
+   * `customer_name` so the UI can show, read-only, which other customer holds
+   * it). Only the admin directory endpoint opts in — the reseller picker keeps
+   * the default "available only" filter so it never leaks another customer's
+   * assignment.
    */
   async findAllAcrossServers(
     query: QueryFlussonicStreamsDirectoryDto,
+    opts: { includeAssignedToOtherCustomers?: boolean } = {},
   ): Promise<PaginatedResult<FlussonicStreamDirectoryEntry>> {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
@@ -155,7 +182,7 @@ export class FlussonicStreamsService {
         deleted: FlussonicStreamStatus.DELETED,
       });
 
-    if (query.availableForCustomerId) {
+    if (query.availableForCustomerId && !opts.includeAssignedToOtherCustomers) {
       qb.andWhere(
         '(stream.customer_id IS NULL OR stream.customer_id = :customerId)',
         { customerId: query.availableForCustomerId },
@@ -314,6 +341,11 @@ export class FlussonicStreamsService {
     const validOrderStreamIds = await this.getValidActiveOrderStreamIds(
       streams.map((s) => s.id),
     );
+    const customerNameById = await this.getCustomerNamesByIds(
+      streams
+        .map((s) => s.customer_id)
+        .filter((id): id is string => id !== null),
+    );
 
     return streams.map((stream) => {
       const liveStats = stream.live_stats_json as {
@@ -327,6 +359,9 @@ export class FlussonicStreamsService {
         server_name:
           serverNameById.get(stream.flussonic_server_id) ?? 'Unknown server',
         customer_id: stream.customer_id,
+        customer_name: stream.customer_id
+          ? (customerNameById.get(stream.customer_id) ?? null)
+          : null,
         status: stream.status,
         disabled: Boolean(stream.config_json.disabled),
         live_status: liveStats?.stats?.status ?? null,

@@ -24,8 +24,8 @@ const PROTOCOL_KEYS = [
 ];
 
 const inputClass =
-  'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 transition focus:border-flu-pink focus:outline-none focus:ring-2 focus:ring-flu-pink/20';
-const labelClass = 'mb-1 block text-xs font-medium text-gray-700';
+  'w-full rounded-lg border border-input px-3 py-2 text-sm text-foreground transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/20';
+const labelClass = 'mb-1 block text-xs font-medium text-foreground';
 
 type FormState = {
   name: string;
@@ -166,21 +166,21 @@ export function PlanFormPanel({
     <div className={`fixed inset-0 z-50 ${open ? '' : 'pointer-events-none'}`}>
       <div
         onClick={onClose}
-        className={`absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity duration-300 ${
+        className={`absolute inset-0 bg-slate-950/50 backdrop-blur-sm transition-opacity duration-300 ${
           open ? 'opacity-100' : 'opacity-0'
         }`}
       />
 
       <div
-        className={`absolute inset-y-0 right-0 flex w-full max-w-md flex-col bg-white shadow-2xl transition-transform duration-300 ease-in-out ${
+        className={`absolute inset-y-0 right-0 flex w-full max-w-md flex-col bg-card shadow-2xl transition-transform duration-300 ease-in-out ${
           open ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
-        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-          <h2 className="text-base font-semibold text-gray-900">{plan ? 'Edit plan' : 'Add plan'}</h2>
+        <div className="flex items-center justify-between border-b border-border px-6 py-4">
+          <h2 className="text-base font-semibold text-foreground">{plan ? 'Edit plan' : 'Add plan'}</h2>
           <button
             onClick={onClose}
-            className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            className="rounded-md p-1 text-muted-foreground/70 hover:bg-muted hover:text-muted-foreground"
             aria-label="Close panel"
           >
             <XIcon className="h-5 w-5" />
@@ -190,7 +190,7 @@ export function PlanFormPanel({
         <form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-y-auto">
           <div className="flex-1 space-y-4 px-6 py-5">
             {errors.general && errors.general.length > 0 && (
-              <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+              <div className="rounded-md bg-danger-soft px-3 py-2 text-sm text-danger">
                 {errors.general.map((msg) => (
                   <p key={msg}>{msg}</p>
                 ))}
@@ -201,7 +201,7 @@ export function PlanFormPanel({
               <label className={labelClass}>Name *</label>
               <input value={form.name} onChange={(e) => setField('name', e.target.value)} className={inputClass} />
               {errors.name?.map((msg) => (
-                <p key={msg} className="mt-1 text-xs text-red-600">{msg}</p>
+                <p key={msg} className="mt-1 text-xs text-danger">{msg}</p>
               ))}
             </div>
 
@@ -226,7 +226,7 @@ export function PlanFormPanel({
                   className={inputClass}
                 />
                 {errors.mrp?.map((msg) => (
-                  <p key={msg} className="mt-1 text-xs text-red-600">{msg}</p>
+                  <p key={msg} className="mt-1 text-xs text-danger">{msg}</p>
                 ))}
               </div>
               <div>
@@ -240,7 +240,7 @@ export function PlanFormPanel({
                   className={inputClass}
                 />
                 {errors.customer_price?.map((msg) => (
-                  <p key={msg} className="mt-1 text-xs text-red-600">{msg}</p>
+                  <p key={msg} className="mt-1 text-xs text-danger">{msg}</p>
                 ))}
               </div>
             </div>
@@ -257,7 +257,7 @@ export function PlanFormPanel({
                 className={inputClass}
               />
               {previewReseller !== null && (
-                <p className="mt-1 text-xs text-gray-400">Reseller price ≈ {previewReseller}</p>
+                <p className="mt-1 text-xs text-muted-foreground/70">Reseller price ≈ {previewReseller}</p>
               )}
             </div>
 
@@ -271,7 +271,7 @@ export function PlanFormPanel({
                 className={inputClass}
               />
               {errors.duration_days?.map((msg) => (
-                <p key={msg} className="mt-1 text-xs text-red-600">{msg}</p>
+                <p key={msg} className="mt-1 text-xs text-danger">{msg}</p>
               ))}
             </div>
 
@@ -299,7 +299,7 @@ export function PlanFormPanel({
             </div>
 
             <div>
-              <p className="mb-2 text-xs font-medium text-gray-700">Playback protocols</p>
+              <p className="mb-2 text-xs font-medium text-foreground">Playback protocols</p>
               <div className="flex flex-wrap gap-1.5">
                 {PROTOCOL_KEYS.map((key) => {
                   const enabled = form.playback_protocols.includes(key);
@@ -309,7 +309,7 @@ export function PlanFormPanel({
                       key={key}
                       onClick={() => toggleProtocol(key)}
                       className={`rounded-full px-2.5 py-1 text-xs font-medium transition ${
-                        enabled ? 'bg-flu-pink text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                        enabled ? 'bg-primary text-white' : 'bg-muted text-muted-foreground hover:bg-muted'
                       }`}
                     >
                       {key}
@@ -320,21 +320,21 @@ export function PlanFormPanel({
             </div>
 
             <div className="flex items-center gap-6">
-              <label className="flex items-center gap-2 text-sm text-gray-700">
+              <label className="flex items-center gap-2 text-sm text-foreground">
                 <input
                   type="checkbox"
                   checked={form.show_customer}
                   onChange={(e) => setField('show_customer', e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300 text-flu-pink focus:ring-flu-pink/40"
+                  className="h-4 w-4 rounded border-input text-primary focus:ring-ring/40"
                 />
                 Show to customers
               </label>
-              <label className="flex items-center gap-2 text-sm text-gray-700">
+              <label className="flex items-center gap-2 text-sm text-foreground">
                 <input
                   type="checkbox"
                   checked={form.show_reseller}
                   onChange={(e) => setField('show_reseller', e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300 text-flu-pink focus:ring-flu-pink/40"
+                  className="h-4 w-4 rounded border-input text-primary focus:ring-ring/40"
                 />
                 Show to resellers
               </label>
@@ -353,18 +353,18 @@ export function PlanFormPanel({
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 border-t border-gray-200 px-6 py-4">
+          <div className="flex justify-end gap-2 border-t border-border px-6 py-4">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+              className="rounded-full border border-input px-4 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="rounded-full bg-flu-pink px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-flu-pink/30 transition hover:bg-flu-pink-dark disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSubmitting ? 'Saving…' : 'Save plan'}
             </button>

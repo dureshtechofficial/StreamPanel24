@@ -5,6 +5,8 @@ export interface FlussonicStreamDirectoryEntry {
   server_id: string;
   server_name: string;
   customer_id: string | null;
+  /** Name of the customer this stream is currently assigned to (null if unassigned). */
+  customer_name: string | null;
   status: string;
   /** Flussonic-side `config_json.disabled` — distinct from `status` (our own soft-delete/active flag). */
   disabled: boolean;

@@ -9,8 +9,8 @@ import { XIcon } from './icons';
 const FIELDS = ['name', 'phone', 'username', 'password', 'email', 'company_name', 'address', 'city', 'state', 'pincode'];
 
 const inputClass =
-  'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 transition focus:border-flu-pink focus:outline-none focus:ring-2 focus:ring-flu-pink/20';
-const labelClass = 'mb-1 block text-xs font-medium text-gray-700';
+  'w-full rounded-lg border border-input px-3 py-2 text-sm text-foreground transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/20';
+const labelClass = 'mb-1 block text-xs font-medium text-foreground';
 
 type FormState = {
   name: string;
@@ -124,23 +124,23 @@ export function ResellerFormPanel({
     <div className={`fixed inset-0 z-50 ${open ? '' : 'pointer-events-none'}`}>
       <div
         onClick={onClose}
-        className={`absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity duration-300 ${
+        className={`absolute inset-0 bg-slate-950/50 backdrop-blur-sm transition-opacity duration-300 ${
           open ? 'opacity-100' : 'opacity-0'
         }`}
       />
 
       <div
-        className={`absolute inset-y-0 right-0 flex w-full max-w-md flex-col bg-white shadow-2xl transition-transform duration-300 ease-in-out ${
+        className={`absolute inset-y-0 right-0 flex w-full max-w-md flex-col bg-card shadow-2xl transition-transform duration-300 ease-in-out ${
           open ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
-        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-          <h2 className="text-base font-semibold text-gray-900">
+        <div className="flex items-center justify-between border-b border-border px-6 py-4">
+          <h2 className="text-base font-semibold text-foreground">
             {reseller ? 'Edit reseller' : 'Add reseller'}
           </h2>
           <button
             onClick={onClose}
-            className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            className="rounded-md p-1 text-muted-foreground/70 hover:bg-muted hover:text-muted-foreground"
             aria-label="Close panel"
           >
             <XIcon className="h-5 w-5" />
@@ -150,7 +150,7 @@ export function ResellerFormPanel({
         <form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-y-auto">
           <div className="flex-1 space-y-4 px-6 py-5">
             {errors.general && errors.general.length > 0 && (
-              <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+              <div className="rounded-md bg-danger-soft px-3 py-2 text-sm text-danger">
                 {errors.general.map((msg) => (
                   <p key={msg}>{msg}</p>
                 ))}
@@ -165,7 +165,7 @@ export function ResellerFormPanel({
                 className={inputClass}
               />
               {errors.name?.map((msg) => (
-                <p key={msg} className="mt-1 text-xs text-red-600">
+                <p key={msg} className="mt-1 text-xs text-danger">
                   {msg}
                 </p>
               ))}
@@ -180,7 +180,7 @@ export function ResellerFormPanel({
                   className={inputClass}
                 />
                 {errors.phone?.map((msg) => (
-                  <p key={msg} className="mt-1 text-xs text-red-600">
+                  <p key={msg} className="mt-1 text-xs text-danger">
                     {msg}
                   </p>
                 ))}
@@ -193,7 +193,7 @@ export function ResellerFormPanel({
                   className={inputClass}
                 />
                 {errors.email?.map((msg) => (
-                  <p key={msg} className="mt-1 text-xs text-red-600">
+                  <p key={msg} className="mt-1 text-xs text-danger">
                     {msg}
                   </p>
                 ))}
@@ -210,7 +210,7 @@ export function ResellerFormPanel({
                   autoComplete="off"
                 />
                 {errors.username?.map((msg) => (
-                  <p key={msg} className="mt-1 text-xs text-red-600">
+                  <p key={msg} className="mt-1 text-xs text-danger">
                     {msg}
                   </p>
                 ))}
@@ -228,7 +228,7 @@ export function ResellerFormPanel({
                   placeholder={reseller ? 'Leave blank to keep unchanged' : undefined}
                 />
                 {errors.password?.map((msg) => (
-                  <p key={msg} className="mt-1 text-xs text-red-600">
+                  <p key={msg} className="mt-1 text-xs text-danger">
                     {msg}
                   </p>
                 ))}
@@ -243,7 +243,7 @@ export function ResellerFormPanel({
                 className={inputClass}
               />
               {errors.company_name?.map((msg) => (
-                <p key={msg} className="mt-1 text-xs text-red-600">
+                <p key={msg} className="mt-1 text-xs text-danger">
                   {msg}
                 </p>
               ))}
@@ -299,18 +299,18 @@ export function ResellerFormPanel({
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 border-t border-gray-200 px-6 py-4">
+          <div className="flex justify-end gap-2 border-t border-border px-6 py-4">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+              className="rounded-full border border-input px-4 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="rounded-full bg-flu-pink px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-flu-pink/30 transition hover:bg-flu-pink-dark disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSubmitting ? 'Saving…' : 'Save reseller'}
             </button>

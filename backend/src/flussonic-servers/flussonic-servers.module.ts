@@ -6,6 +6,7 @@ import { FlussonicStream } from './entities/flussonic-stream.entity';
 import { FlussonicStreamSession } from './entities/flussonic-stream-session.entity';
 import { SyncSchedule } from '../settings/entities/sync-schedule.entity';
 import { Order } from '../orders/entities/order.entity';
+import { Customer } from '../customers/entities/customer.entity';
 import { FlussonicServersService } from './flussonic-servers.service';
 import { FlussonicServersController } from './flussonic-servers.controller';
 import { FlussonicServerStatsService } from './flussonic-server-stats.service';
@@ -32,6 +33,10 @@ import { SyncScheduleGateService } from './sync-schedule-gate.service';
       // circular. Same "touch a foreign entity directly to break a cycle"
       // pattern as SyncSchedule above and OrderExpiryService in SettingsModule.
       Order,
+      // Registered here (not via CustomersModule) so the stream directory can
+      // resolve the owning customer's name for the assignment picker without a
+      // circular module import.
+      Customer,
     ]),
   ],
   controllers: [

@@ -8,12 +8,12 @@ import { ApiError } from '@/lib/api-error';
 import { groupFieldErrors } from '@/lib/form-errors';
 import { AuthShell } from '@/components/auth-shell';
 import { usePageTitle } from '@/lib/use-page-title';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Field } from '@/components/ui/field';
+import { AlertIcon, CheckIcon } from '@/components/icons';
 
 const FIELDS = ['name', 'email', 'password'] as const;
-
-const inputClass =
-  'w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 transition focus:border-flu-pink focus:outline-none focus:ring-2 focus:ring-flu-pink/20';
-const labelClass = 'mb-1 block text-sm font-medium text-gray-700';
 
 function validateClientSide(
   name: string,
@@ -87,105 +87,81 @@ export default function RegisterPage() {
       footer={
         <>
           Already have an account?{' '}
-          <Link href="/login" className="font-semibold text-flu-pink hover:text-flu-pink-dark">
+          <Link href="/login" className="font-semibold text-primary hover:underline">
             Log in
           </Link>
         </>
       }
     >
       {success && (
-        <p className="mb-4 rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">
+        <div className="mb-5 flex items-center gap-2.5 rounded-lg border border-success/20 bg-success-soft px-3.5 py-3 text-sm text-success">
+          <CheckIcon className="h-4 w-4 shrink-0" />
           Account created. Redirecting to login…
-        </p>
+        </div>
       )}
 
       {errors.general && errors.general.length > 0 && (
-        <div className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-          {errors.general.map((msg) => (
-            <p key={msg}>{msg}</p>
-          ))}
+        <div className="mb-5 flex items-start gap-2.5 rounded-lg border border-danger/20 bg-danger-soft px-3.5 py-3 text-sm text-danger">
+          <AlertIcon className="mt-0.5 h-4 w-4 shrink-0" />
+          <div className="space-y-0.5">
+            {errors.general.map((msg) => (
+              <p key={msg}>{msg}</p>
+            ))}
+          </div>
         </div>
       )}
 
       <form className="space-y-4" onSubmit={handleSubmit} noValidate>
-        <div>
-          <label htmlFor="name" className={labelClass}>
-            Name
-          </label>
-          <input
+        <Field label="Name" htmlFor="name" error={errors.name?.[0]}>
+          <Input
             id="name"
             type="text"
             autoComplete="name"
+            placeholder="Jane Doe"
+            aria-invalid={!!errors.name?.length}
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className={inputClass}
           />
-          {errors.name?.map((msg) => (
-            <p key={msg} className="mt-1 text-xs text-red-600">
-              {msg}
-            </p>
-          ))}
-        </div>
+        </Field>
 
-        <div>
-          <label htmlFor="email" className={labelClass}>
-            Email
-          </label>
-          <input
+        <Field label="Email" htmlFor="email" error={errors.email?.[0]}>
+          <Input
             id="email"
             type="email"
             autoComplete="email"
+            placeholder="you@example.com"
+            aria-invalid={!!errors.email?.length}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className={inputClass}
           />
-          {errors.email?.map((msg) => (
-            <p key={msg} className="mt-1 text-xs text-red-600">
-              {msg}
-            </p>
-          ))}
-        </div>
+        </Field>
 
-        <div>
-          <label htmlFor="password" className={labelClass}>
-            Password
-          </label>
-          <input
+        <Field label="Password" htmlFor="password" error={errors.password?.[0]}>
+          <Input
             id="password"
             type="password"
             autoComplete="new-password"
+            placeholder="At least 8 characters"
+            aria-invalid={!!errors.password?.length}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className={inputClass}
           />
-          {errors.password?.map((msg) => (
-            <p key={msg} className="mt-1 text-xs text-red-600">
-              {msg}
-            </p>
-          ))}
-        </div>
+        </Field>
 
-        <div>
-          <label htmlFor="confirmPassword" className={labelClass}>
-            Confirm password
-          </label>
-          <input
+        <Field label="Confirm password" htmlFor="confirmPassword">
+          <Input
             id="confirmPassword"
             type="password"
             autoComplete="new-password"
+            placeholder="Re-enter your password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            className={inputClass}
           />
-        </div>
+        </Field>
 
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="w-full rounded-full bg-flu-pink px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-flu-pink/30 transition hover:bg-flu-pink-dark hover:shadow-flu-pink/50 disabled:cursor-not-allowed disabled:opacity-60"
-        >
+        <Button type="submit" size="lg" className="w-full" loading={isSubmitting}>
           {isSubmitting ? 'Creating account…' : 'Create account'}
-        </button>
+        </Button>
       </form>
     </AuthShell>
   );

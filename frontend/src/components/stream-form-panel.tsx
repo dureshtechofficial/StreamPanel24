@@ -13,7 +13,7 @@ import { ToggleField } from './toggle';
 import { ConfirmDialog } from './confirm-dialog';
 import { ChevronDownIcon, PlusIcon, TrashIcon, XIcon } from './icons';
 
-const FIELDS = ['name', 'inputs', 'retry_limit', 'ingest_domain', 'on_play', 'on_publish'];
+const FIELDS = ['name', 'title', 'inputs', 'retry_limit', 'ingest_domain', 'on_play', 'on_publish'];
 
 const DEFAULT_TRUE_PROTOCOLS: (keyof StreamProtocols)[] = ['hls', 'player', 'rtmp', 'srt'];
 
@@ -21,9 +21,9 @@ const URL_PRESETS = ['publish://', 'fake://fake', 'custom'] as const;
 type UrlPreset = (typeof URL_PRESETS)[number];
 
 const inputClass =
-  'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 transition focus:border-flu-pink focus:outline-none focus:ring-2 focus:ring-flu-pink/20';
-const labelClass = 'mb-1 block text-xs font-medium text-gray-700';
-const sectionHeaderClass = 'mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400';
+  'w-full rounded-lg border border-input px-3 py-2 text-sm text-foreground transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/20';
+const labelClass = 'mb-1 block text-xs font-medium text-foreground';
+const sectionHeaderClass = 'mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground/70';
 
 const PROTOCOL_KEYS: (keyof StreamProtocols)[] = [
   'hls',
@@ -74,14 +74,16 @@ const EMPTY_INPUT_ROW: InputRow = {
   source_timeout: '30',
 };
 
+const SESSION_KEYS_EXAMPLE = 'name,token,proto,ip';
+
 const EMPTY_AUTH_HOOK: AuthHookState = {
   url: '',
-  max_sessions: '5',
+  max_sessions: '10',
   domains: '',
   allowed_countries: '',
   disallowed_countries: '',
   soft_limitation: false,
-  session_keys: 'name,token,proto,ip',
+  session_keys: '',
 };
 
 const EMPTY_PROTOCOLS: Record<keyof StreamProtocols, boolean> = PROTOCOL_KEYS.reduce(
@@ -127,6 +129,12 @@ function computeName(applicationName: string, key: string): string {
   return `${applicationName.trim()}/${key.trim()}`;
 }
 
+/** Derive an application name from the title: lowercase, spaces removed
+ *  (e.g. "DURESH TV" → "dureshtv"). */
+function slugifyApplicationName(title: string): string {
+  return title.toLowerCase().replace(/\s+/g, '');
+}
+
 function splitName(name: string): { applicationName: string; key: string } {
   const index = name.indexOf('/');
   if (index === -1) return { applicationName: name, key: '' };
@@ -137,7 +145,7 @@ function toAuthHookState(hook: FlussonicStream['config_json']['on_play']): AuthH
   if (!hook) return EMPTY_AUTH_HOOK;
   return {
     url: hook.url ?? '',
-    max_sessions: hook.max_sessions !== undefined ? String(hook.max_sessions) : '5',
+    max_sessions: hook.max_sessions !== undefined ? String(hook.max_sessions) : '10',
     domains: (hook.domains ?? []).join(','),
     allowed_countries: (hook.allowed_countries ?? []).join(','),
     disallowed_countries: (hook.disallowed_countries ?? []).join(','),
@@ -322,10 +330,14 @@ export function StreamFormPanel({
     e.preventDefault();
 
     const clientErrors: Record<string, string[]> = {
+      title: [],
       applicationName: [],
       key: [],
       inputs: [],
     };
+    if (form.title.trim().length < 1) {
+      clientErrors.title.push('Title is required');
+    }
     if (form.applicationName.trim().length < 1) {
       clientErrors.applicationName.push('Application name is required');
     }
@@ -386,23 +398,23 @@ export function StreamFormPanel({
     <div className={`fixed inset-0 z-50 ${open ? '' : 'pointer-events-none'}`}>
       <div
         onClick={onClose}
-        className={`absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity duration-300 ${
+        className={`absolute inset-0 bg-slate-950/50 backdrop-blur-sm transition-opacity duration-300 ${
           open ? 'opacity-100' : 'opacity-0'
         }`}
       />
 
       <div
-        className={`absolute inset-y-0 right-0 flex w-full max-w-lg flex-col bg-white shadow-2xl transition-transform duration-300 ease-in-out ${
+        className={`absolute inset-y-0 right-0 flex w-full max-w-lg flex-col bg-card shadow-2xl transition-transform duration-300 ease-in-out ${
           open ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
-        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-          <h2 className="text-base font-semibold text-gray-900">
+        <div className="flex items-center justify-between border-b border-border px-6 py-4">
+          <h2 className="text-base font-semibold text-foreground">
             {stream ? 'Edit stream' : 'Add stream'}
           </h2>
           <button
             onClick={onClose}
-            className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            className="rounded-md p-1 text-muted-foreground/70 hover:bg-muted hover:text-muted-foreground"
             aria-label="Close panel"
           >
             <XIcon className="h-5 w-5" />
@@ -412,7 +424,7 @@ export function StreamFormPanel({
         <form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-y-auto">
           <div className="flex-1 space-y-5 px-6 py-5">
             {errors.general && errors.general.length > 0 && (
-              <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+              <div className="rounded-md bg-danger-soft px-3 py-2 text-sm text-danger">
                 {errors.general.map((msg) => (
                   <p key={msg}>{msg}</p>
                 ))}
@@ -428,8 +440,11 @@ export function StreamFormPanel({
                   placeholder="live"
                   className={inputClass}
                 />
+                <p className="mt-1 text-xs text-muted-foreground/70">
+                  Auto-filled from the title — edit if needed.
+                </p>
                 {errors.applicationName?.map((msg) => (
-                  <p key={msg} className="mt-1 text-xs text-red-600">
+                  <p key={msg} className="mt-1 text-xs text-danger">
                     {msg}
                   </p>
                 ))}
@@ -443,7 +458,7 @@ export function StreamFormPanel({
                   className={inputClass}
                 />
                 {errors.key?.map((msg) => (
-                  <p key={msg} className="mt-1 text-xs text-red-600">
+                  <p key={msg} className="mt-1 text-xs text-danger">
                     {msg}
                   </p>
                 ))}
@@ -456,14 +471,14 @@ export function StreamFormPanel({
                 value={name}
                 disabled
                 readOnly
-                className={`${inputClass} bg-gray-50 text-gray-500`}
+                className={`${inputClass} bg-muted text-muted-foreground`}
               />
-              <p className="mt-1 text-xs text-gray-400">
+              <p className="mt-1 text-xs text-muted-foreground/70">
                 Built automatically from application name and key.
                 {stream && ' Renaming deletes the old stream on Flussonic and recreates it under the new name.'}
               </p>
               {errors.name?.map((msg) => (
-                <p key={msg} className="mt-1 text-xs text-red-600">
+                <p key={msg} className="mt-1 text-xs text-danger">
                   {msg}
                 </p>
               ))}
@@ -471,13 +486,25 @@ export function StreamFormPanel({
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className={labelClass}>Title</label>
+                <label className={labelClass}>Title *</label>
                 <input
                   value={form.title}
-                  onChange={(e) => setField('title', e.target.value)}
-                  placeholder="Hockey Channel"
-                  className={inputClass}
+                  onChange={(e) => {
+                    const title = e.target.value.toUpperCase();
+                    setForm((prev) => ({
+                      ...prev,
+                      title,
+                      applicationName: slugifyApplicationName(title),
+                    }));
+                  }}
+                  placeholder="HOCKEY CHANNEL"
+                  className={`${inputClass} uppercase`}
                 />
+                {errors.title?.map((msg) => (
+                  <p key={msg} className="mt-1 text-xs text-danger">
+                    {msg}
+                  </p>
+                ))}
               </div>
               <div>
                 <label className={labelClass}>Ingest domain</label>
@@ -524,26 +551,26 @@ export function StreamFormPanel({
               </div>
             </div>
 
-            <div className="border-t border-gray-100 pt-4">
+            <div className="border-t border-border pt-4">
               <div className="mb-3 flex items-center justify-between">
                 <p className={sectionHeaderClass}>Inputs *</p>
                 <button
                   type="button"
                   onClick={addInputRow}
-                  className="flex items-center gap-1 text-xs font-medium text-flu-pink hover:text-flu-pink-dark"
+                  className="flex items-center gap-1 text-xs font-medium text-primary hover:text-primary-hover"
                 >
                   <PlusIcon className="h-3.5 w-3.5" />
                   Add input
                 </button>
               </div>
               {errors.inputs?.map((msg) => (
-                <p key={msg} className="mb-2 text-xs text-red-600">
+                <p key={msg} className="mb-2 text-xs text-danger">
                   {msg}
                 </p>
               ))}
               <div className="space-y-3">
                 {form.inputs.map((row, index) => (
-                  <div key={index} className="rounded-lg border border-gray-200 p-3">
+                  <div key={index} className="rounded-lg border border-border p-3">
                     <div className="mb-2 flex items-center justify-between">
                       <label className={labelClass}>URL — Priority {index + 1}</label>
                       <div className="flex items-center gap-1">
@@ -551,7 +578,7 @@ export function StreamFormPanel({
                           type="button"
                           onClick={() => moveInputRow(index, -1)}
                           disabled={index === 0}
-                          className="text-gray-400 hover:text-flu-pink disabled:cursor-not-allowed disabled:opacity-30"
+                          className="text-muted-foreground/70 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
                           aria-label="Move input up"
                         >
                           <ChevronDownIcon className="h-3.5 w-3.5 rotate-180" />
@@ -560,7 +587,7 @@ export function StreamFormPanel({
                           type="button"
                           onClick={() => moveInputRow(index, 1)}
                           disabled={index === form.inputs.length - 1}
-                          className="text-gray-400 hover:text-flu-pink disabled:cursor-not-allowed disabled:opacity-30"
+                          className="text-muted-foreground/70 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
                           aria-label="Move input down"
                         >
                           <ChevronDownIcon className="h-3.5 w-3.5" />
@@ -569,7 +596,7 @@ export function StreamFormPanel({
                           <button
                             type="button"
                             onClick={() => removeInputRow(index)}
-                            className="text-gray-400 hover:text-red-600"
+                            className="text-muted-foreground/70 hover:text-danger"
                             aria-label="Remove input"
                           >
                             <TrashIcon className="h-3.5 w-3.5" />
@@ -621,7 +648,7 @@ export function StreamFormPanel({
               </div>
             </div>
 
-            <div className="border-t border-gray-100 pt-4">
+            <div className="border-t border-border pt-4">
               <p className={sectionHeaderClass}>Protocols</p>
               <div className="grid grid-cols-2 gap-x-4 sm:grid-cols-3">
                 {PROTOCOL_KEYS.map((key) => (
@@ -635,7 +662,7 @@ export function StreamFormPanel({
               </div>
             </div>
 
-            <div className="border-t border-gray-100 pt-4">
+            <div className="border-t border-border pt-4">
               <ToggleField
                 label="on_play authentication"
                 hint="Restricts playback with an auth callback"
@@ -645,7 +672,7 @@ export function StreamFormPanel({
               {form.onPlayEnabled && <AuthHookFields value={form.onPlay} onChange={setOnPlay} />}
             </div>
 
-            <div className="border-t border-gray-100 pt-4">
+            <div className="border-t border-border pt-4">
               <ToggleField
                 label="on_publish authentication"
                 hint="Restricts publishing with an auth callback"
@@ -658,18 +685,18 @@ export function StreamFormPanel({
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 border-t border-gray-200 px-6 py-4">
+          <div className="flex justify-end gap-2 border-t border-border px-6 py-4">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+              className="rounded-full border border-input px-4 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting || isCheckingName}
-              className="rounded-full bg-flu-pink px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-flu-pink/30 transition hover:bg-flu-pink-dark disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isCheckingName ? 'Checking…' : isSubmitting ? 'Saving…' : 'Save stream'}
             </button>
@@ -702,7 +729,7 @@ function AuthHookFields({
   }
 
   return (
-    <div className="mt-3 space-y-3 rounded-lg border border-gray-200 p-3">
+    <div className="mt-3 space-y-3 rounded-lg border border-border p-3">
       <div>
         <label className={labelClass}>Callback URL</label>
         <input
@@ -722,7 +749,7 @@ function AuthHookFields({
             onChange={(e) => setField('max_sessions', e.target.value)}
             className={inputClass}
           />
-          <p className="mt-1 text-xs text-gray-400">Kept in sync with on_publish.</p>
+          <p className="mt-1 text-xs text-muted-foreground/70">Kept in sync with on_publish.</p>
         </div>
         <div className="flex items-end pb-1">
           <ToggleField
@@ -737,8 +764,12 @@ function AuthHookFields({
         <input
           value={value.session_keys}
           onChange={(e) => setField('session_keys', e.target.value)}
+          placeholder={SESSION_KEYS_EXAMPLE}
           className={inputClass}
         />
+        <p className="mt-1 text-xs text-muted-foreground/70">
+          Example: {SESSION_KEYS_EXAMPLE}
+        </p>
       </div>
       <div>
         <label className={labelClass}>Domains (comma-separated)</label>

@@ -17,7 +17,7 @@ export function ResellerProtectedRoute({ children }: { children: React.ReactNode
   if (isLoading || !reseller) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
-        <p className="text-sm text-gray-500">Loading…</p>
+        <p className="text-sm text-muted-foreground">Loading…</p>
       </div>
     );
   }

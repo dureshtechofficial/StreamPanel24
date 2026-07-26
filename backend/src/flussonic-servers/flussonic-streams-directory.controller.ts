@@ -21,6 +21,10 @@ export class FlussonicStreamsDirectoryController {
   })
   @Get()
   findAll(@Query() query: QueryFlussonicStreamsDirectoryDto) {
-    return this.streamsService.findAllAcrossServers(query);
+    // Admin picker shows every stream, including ones already assigned to a
+    // different customer (rendered read-only, with that customer's name).
+    return this.streamsService.findAllAcrossServers(query, {
+      includeAssignedToOtherCustomers: true,
+    });
   }
 }

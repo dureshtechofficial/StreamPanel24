@@ -28,16 +28,16 @@ export function OrderInvoiceDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-      <div onClick={onClose} className="animate-fade-in absolute inset-0 bg-gray-900/40 backdrop-blur-sm" />
-      <div className="animate-fade-in-up relative w-full max-w-lg rounded-xl bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+      <div onClick={onClose} className="animate-fade-in absolute inset-0 bg-slate-950/50 backdrop-blur-sm" />
+      <div className="animate-fade-in-up relative w-full max-w-lg rounded-xl bg-card shadow-2xl">
+        <div className="flex items-center justify-between border-b border-border px-6 py-4">
           <div>
-            <h2 className="text-base font-semibold text-gray-900">Invoice — {order.order_number}</h2>
-            <p className="text-xs text-gray-500">Billed {formatDate(order.created_at)}</p>
+            <h2 className="text-base font-semibold text-foreground">Invoice — {order.order_number}</h2>
+            <p className="text-xs text-muted-foreground">Billed {formatDate(order.created_at)}</p>
           </div>
           <button
             onClick={onClose}
-            className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            className="rounded-md p-1 text-muted-foreground/70 hover:bg-muted hover:text-muted-foreground"
             aria-label="Close invoice"
           >
             <XIcon className="h-5 w-5" />
@@ -46,64 +46,64 @@ export function OrderInvoiceDialog({
 
         <div className="max-h-[70vh] space-y-5 overflow-y-auto px-6 py-5">
           <div>
-            <p className="mb-1 text-xs font-medium uppercase tracking-wide text-gray-400">Bill to</p>
-            <p className="text-sm font-medium text-gray-900">{order.customer_name}</p>
+            <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground/70">Bill to</p>
+            <p className="text-sm font-medium text-foreground">{order.customer_name}</p>
             {billingLines.map((line) => (
-              <p key={line} className="text-sm text-gray-600">{line}</p>
+              <p key={line} className="text-sm text-muted-foreground">{line}</p>
             ))}
-            <p className="mt-1 text-xs text-gray-500">{order.customer_phone}</p>
-            {order.customer_email && <p className="text-xs text-gray-500">{order.customer_email}</p>}
+            <p className="mt-1 text-xs text-muted-foreground">{order.customer_phone}</p>
+            {order.customer_email && <p className="text-xs text-muted-foreground">{order.customer_email}</p>}
             {order.reseller_name && (
-              <p className="mt-1 text-xs text-gray-400">Sold via {order.reseller_name}</p>
+              <p className="mt-1 text-xs text-muted-foreground/70">Sold via {order.reseller_name}</p>
             )}
           </div>
 
           <div>
-            <p className="mb-1 text-xs font-medium uppercase tracking-wide text-gray-400">Plan</p>
-            <p className="text-sm font-medium text-gray-900">{order.plan_name}</p>
+            <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground/70">Plan</p>
+            <p className="text-sm font-medium text-foreground">{order.plan_name}</p>
             {order.plan_description && (
-              <p className="text-sm text-gray-600">{order.plan_description}</p>
+              <p className="text-sm text-muted-foreground">{order.plan_description}</p>
             )}
           </div>
 
           <div>
-            <p className="mb-1 text-xs font-medium uppercase tracking-wide text-gray-400">Stream</p>
-            <p className="text-sm font-medium text-gray-900">
+            <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground/70">Stream</p>
+            <p className="text-sm font-medium text-foreground">
               {order.stream_name}
               {order.server_name ? ` (${order.server_name})` : ''}
             </p>
-            {order.stream_title && <p className="text-sm text-gray-600">{order.stream_title}</p>}
+            {order.stream_title && <p className="text-sm text-muted-foreground">{order.stream_title}</p>}
             {order.stream_ingest_domain && (
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-muted-foreground">
                 Ingest domain: {order.stream_ingest_domain}
               </p>
             )}
           </div>
 
-          <div className="rounded-lg border border-gray-100 p-3">
+          <div className="rounded-lg border border-border p-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wide text-gray-400">Amount</span>
-              <span className="text-base font-semibold text-gray-900">
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground/70">Amount</span>
+              <span className="text-base font-semibold text-foreground">
                 {order.currency} {order.price}
               </span>
             </div>
-            <div className="mt-1 flex items-center justify-between text-xs text-gray-500">
+            <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
               <span>{order.duration_days} days</span>
               <span>
                 {formatDate(order.effective_from)} – {formatDate(order.effective_to)}
               </span>
             </div>
-            <div className="mt-1 flex items-center justify-between text-xs text-gray-500">
+            <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
               <span className="capitalize">{order.payment_method.replace('_', ' ')}</span>
               <span className="capitalize">{order.payment_status}</span>
             </div>
           </div>
         </div>
 
-        <div className="flex justify-end border-t border-gray-200 px-6 py-4">
+        <div className="flex justify-end border-t border-border px-6 py-4">
           <button
             onClick={onClose}
-            className="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+            className="rounded-full border border-input px-4 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
           >
             Close
           </button>

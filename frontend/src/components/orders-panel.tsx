@@ -50,18 +50,18 @@ function formatDate(unixSeconds: number): string {
 }
 
 const ORDER_STATUS_STYLES: Record<string, string> = {
-  active: 'bg-green-50 text-green-700',
-  expired: 'bg-gray-100 text-gray-600',
-  cancelled: 'bg-red-50 text-red-700',
-  suspended: 'bg-amber-50 text-amber-700',
+  active: 'bg-success-soft text-success',
+  expired: 'bg-muted text-muted-foreground',
+  cancelled: 'bg-danger-soft text-danger',
+  suspended: 'bg-warning-soft text-warning',
 };
 
 const PAYMENT_STATUS_STYLES: Record<string, string> = {
-  paid: 'bg-green-50 text-green-700',
-  pending: 'bg-amber-50 text-amber-700',
-  failed: 'bg-red-50 text-red-700',
-  refunded: 'bg-gray-100 text-gray-600',
-  cancelled: 'bg-gray-100 text-gray-600',
+  paid: 'bg-success-soft text-success',
+  pending: 'bg-warning-soft text-warning',
+  failed: 'bg-danger-soft text-danger',
+  refunded: 'bg-muted text-muted-foreground',
+  cancelled: 'bg-muted text-muted-foreground',
 };
 
 export function OrdersPanel({
@@ -230,24 +230,24 @@ export function OrdersPanel({
     <div className={`fixed inset-0 z-50 ${open ? '' : 'pointer-events-none'}`}>
       <div
         onClick={onClose}
-        className={`absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity duration-300 ${
+        className={`absolute inset-0 bg-slate-950/50 backdrop-blur-sm transition-opacity duration-300 ${
           open ? 'opacity-100' : 'opacity-0'
         }`}
       />
 
       <div
-        className={`absolute inset-y-0 right-0 flex w-full max-w-lg flex-col bg-white shadow-2xl transition-transform duration-300 ease-in-out ${
+        className={`absolute inset-y-0 right-0 flex w-full max-w-lg flex-col bg-card shadow-2xl transition-transform duration-300 ease-in-out ${
           open ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
-        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+        <div className="flex items-center justify-between border-b border-border px-6 py-4">
           <div>
-            <h2 className="text-base font-semibold text-gray-900">Orders</h2>
-            <p className="text-xs text-gray-500">{customer?.name}</p>
+            <h2 className="text-base font-semibold text-foreground">Orders</h2>
+            <p className="text-xs text-muted-foreground">{customer?.name}</p>
           </div>
           <button
             onClick={onClose}
-            className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            className="rounded-md p-1 text-muted-foreground/70 hover:bg-muted hover:text-muted-foreground"
             aria-label="Close panel"
           >
             <XIcon className="h-5 w-5" />
@@ -255,23 +255,23 @@ export function OrdersPanel({
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-4">
-          {cancelError && <p className="mb-3 text-sm text-red-600">{cancelError}</p>}
+          {cancelError && <p className="mb-3 text-sm text-danger">{cancelError}</p>}
 
           {isLoading && (
-            <p className="flex items-center gap-2 text-sm text-gray-400">
+            <p className="flex items-center gap-2 text-sm text-muted-foreground/70">
               <ArrowPathIcon className="h-4 w-4 animate-spin" />
               Loading orders…
             </p>
           )}
 
-          {!isLoading && loadError && <p className="text-sm text-red-600">{loadError}</p>}
+          {!isLoading && loadError && <p className="text-sm text-danger">{loadError}</p>}
 
           {!isLoading && !loadError && (
             <>
               {!showForm && (
                 <button
                   onClick={() => setShowForm(true)}
-                  className="mb-4 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-gray-300 py-2 text-sm font-medium text-gray-500 transition hover:border-flu-pink hover:text-flu-pink"
+                  className="mb-4 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-input py-2 text-sm font-medium text-muted-foreground transition hover:border-primary hover:text-primary"
                 >
                   <PlusIcon className="h-4 w-4" />
                   New order
@@ -279,13 +279,13 @@ export function OrdersPanel({
               )}
 
               {showForm && (
-                <div className="mb-4 space-y-3 rounded-lg border border-gray-200 p-4">
+                <div className="mb-4 space-y-3 rounded-lg border border-border p-4">
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-gray-700">Plan</label>
+                    <label className="mb-1 block text-xs font-medium text-foreground">Plan</label>
                     <select
                       value={planId}
                       onChange={(e) => setPlanId(e.target.value)}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-flu-pink focus:outline-none focus:ring-2 focus:ring-flu-pink/20"
+                      className="w-full rounded-lg border border-input px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/20"
                     >
                       <option value="">Choose a plan…</option>
                       {plans.map((plan) => (
@@ -295,19 +295,19 @@ export function OrdersPanel({
                       ))}
                     </select>
                     {previewPrice !== null && (
-                      <p className="mt-1 text-xs text-gray-400">
+                      <p className="mt-1 text-xs text-muted-foreground/70">
                         Price: {previewPrice} · {selectedPlan?.duration_days} days
                       </p>
                     )}
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-gray-700">Stream</label>
+                    <label className="mb-1 block text-xs font-medium text-foreground">Stream</label>
                     <select
                       value={streamId}
                       onChange={(e) => setStreamId(e.target.value)}
                       disabled={streams.length === 0}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-flu-pink focus:outline-none focus:ring-2 focus:ring-flu-pink/20 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400"
+                      className="w-full rounded-lg border border-input px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/20 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground/70"
                     >
                       <option value="">Choose a stream…</option>
                       {streams.map((stream) => (
@@ -317,25 +317,25 @@ export function OrdersPanel({
                       ))}
                     </select>
                     {streams.length === 0 && (
-                      <p className="mt-1 text-xs text-gray-400">
+                      <p className="mt-1 text-xs text-muted-foreground/70">
                         This customer has no assigned streams yet — assign one first.
                       </p>
                     )}
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-gray-700">
+                    <label className="mb-1 block text-xs font-medium text-foreground">
                       Payment method
                     </label>
                     {paymentMethods.length === 1 ? (
-                      <p className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm capitalize text-gray-700">
+                      <p className="rounded-lg border border-border bg-muted px-3 py-2 text-sm capitalize text-foreground">
                         {paymentMethods[0].replace('_', ' ')}
                       </p>
                     ) : (
                       <select
                         value={paymentMethod}
                         onChange={(e) => setPaymentMethod(e.target.value)}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-flu-pink focus:outline-none focus:ring-2 focus:ring-flu-pink/20"
+                        className="w-full rounded-lg border border-input px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/20"
                       >
                         {paymentMethods.map((m) => (
                           <option key={m} value={m}>
@@ -345,26 +345,26 @@ export function OrdersPanel({
                       </select>
                     )}
                     {walletBalance !== null && paymentMethod === 'wallet' && (
-                      <p className="mt-1 text-xs text-gray-400">
+                      <p className="mt-1 text-xs text-muted-foreground/70">
                         Current balance: {walletBalance}
                       </p>
                     )}
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-gray-700">
+                    <label className="mb-1 block text-xs font-medium text-foreground">
                       Remark (optional)
                     </label>
                     <input
                       value={remark}
                       onChange={(e) => setRemark(e.target.value)}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-flu-pink focus:outline-none focus:ring-2 focus:ring-flu-pink/20"
+                      className="w-full rounded-lg border border-input px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/20"
                     />
                   </div>
 
-                  {submitError && <p className="text-xs text-red-600">{submitError}</p>}
+                  {submitError && <p className="text-xs text-danger">{submitError}</p>}
                   {submitInfo && (
-                    <p className="rounded-md bg-amber-50 px-2 py-1.5 text-xs text-amber-700">
+                    <p className="rounded-md bg-warning-soft px-2 py-1.5 text-xs text-warning">
                       {submitInfo}
                     </p>
                   )}
@@ -373,7 +373,7 @@ export function OrdersPanel({
                     <button
                       type="button"
                       onClick={() => setShowForm(false)}
-                      className="rounded-full border border-gray-300 px-4 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                      className="rounded-full border border-input px-4 py-1.5 text-sm font-medium text-foreground transition hover:bg-muted"
                     >
                       Cancel
                     </button>
@@ -381,7 +381,7 @@ export function OrdersPanel({
                       type="button"
                       onClick={handleCreateClick}
                       disabled={isSubmitting}
-                      className="rounded-full bg-flu-pink px-4 py-1.5 text-sm font-semibold text-white shadow-lg shadow-flu-pink/30 transition hover:bg-flu-pink-dark disabled:cursor-not-allowed disabled:opacity-60"
+                      className="rounded-lg bg-primary px-4 py-1.5 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {isSubmitting ? 'Creating…' : 'Create order'}
                     </button>
@@ -390,35 +390,35 @@ export function OrdersPanel({
               )}
 
               {orders.length === 0 && (
-                <p className="text-sm text-gray-400">No orders yet.</p>
+                <p className="text-sm text-muted-foreground/70">No orders yet.</p>
               )}
 
               {orders.length > 0 && (
                 <ul className="space-y-3">
                   {orders.map((order) => (
-                    <li key={order.id} className="rounded-lg border border-gray-100 p-3">
+                    <li key={order.id} className="rounded-lg border border-border p-3">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-medium text-gray-900">
+                        <span className="text-sm font-medium text-foreground">
                           {order.order_number}
                         </span>
                         <div className="flex items-center gap-1.5">
                           <span
                             className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium capitalize ${
-                              ORDER_STATUS_STYLES[order.status] ?? 'bg-gray-100 text-gray-600'
+                              ORDER_STATUS_STYLES[order.status] ?? 'bg-muted text-muted-foreground'
                             }`}
                           >
                             {order.status}
                           </span>
                           {/* <span
                             className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium capitalize ${
-                              PAYMENT_STATUS_STYLES[order.payment_status] ?? 'bg-gray-100 text-gray-600'
+                              PAYMENT_STATUS_STYLES[order.payment_status] ?? 'bg-muted text-muted-foreground'
                             }`}
                           >
                             {order.payment_status}
                           </span> */}
                           <button
                             onClick={() => setInvoiceOrder(order)}
-                            className="rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
+                            className="rounded-md p-1 text-muted-foreground/70 transition-colors hover:bg-muted hover:text-primary"
                             aria-label={`View invoice for ${order.order_number}`}
                             title="View invoice"
                           >
@@ -426,21 +426,21 @@ export function OrdersPanel({
                           </button>
                         </div>
                       </div>
-                      <p className="mt-1 text-xs text-gray-500">
+                      <p className="mt-1 text-xs text-muted-foreground">
                         {order.currency} {order.price} · {order.duration_days} days ·{' '}
                         {formatDate(order.effective_from)} – {formatDate(order.effective_to)}
                       </p>
-                      <p className="text-xs text-gray-500">{order.customer_name}</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-muted-foreground">{order.customer_name}</p>
+                      <p className="text-xs text-muted-foreground">
                         {order.stream_name}
                         {order.stream_title ? ` — ${order.stream_title}` : ''}
                       </p>
                       {order.stream_ingest_domain && (
-                        <p className="text-xs text-gray-400">
+                        <p className="text-xs text-muted-foreground/70">
                           Ingest domain: {order.stream_ingest_domain}
                         </p>
                       )}
-                      <p className="text-xs text-gray-400">
+                      <p className="text-xs text-muted-foreground/70">
                         {order.payment_method.replace('_', ' ')}
                         {order.remark ? ` — ${order.remark}` : ''}
                       </p>
@@ -448,13 +448,13 @@ export function OrdersPanel({
                         <button
                           onClick={() => setPendingCancel(order)}
                           disabled={cancellingId === order.id}
-                          className="mt-2 text-xs font-medium text-red-600 hover:text-red-700 disabled:opacity-60"
+                          className="mt-2 text-xs font-medium text-danger hover:text-danger disabled:opacity-60"
                         >
                           Cancel order
                         </button>
                       )}
                       {order.status === 'active' && !cancelEnabled && showCancelDisabledNotice && (
-                        <p className="mt-2 text-xs text-gray-400">
+                        <p className="mt-2 text-xs text-muted-foreground/70">
                           Order cancellation is currently disabled
                         </p>
                       )}

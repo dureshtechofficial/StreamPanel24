@@ -46,8 +46,8 @@ import { liveStatusStyle } from '@/lib/live-status-style';
 const PAGE_SIZE = 10;
 
 const STATUS_STYLES: Record<FlussonicStreamStatus, string> = {
-  active: 'bg-green-50 text-green-700',
-  inactive: 'bg-gray-100 text-gray-600',
+  active: 'bg-success-soft text-success',
+  inactive: 'bg-muted text-muted-foreground',
 };
 
 function StreamsContent({ serverId }: { serverId: string }) {
@@ -180,7 +180,7 @@ function StreamsContent({ serverId }: { serverId: string }) {
     <div className="w-full">
       <Link
         href="/dashboard/servers"
-        className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-flu-pink"
+        className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-primary"
       >
         <ArrowLeftIcon className="h-4 w-4" />
         Back to servers
@@ -188,10 +188,10 @@ function StreamsContent({ serverId }: { serverId: string }) {
 
       <div className="animate-fade-in-up mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
             Streams{server ? ` — ${server.name}` : ''}
           </h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-muted-foreground">
             {server
               ? `${server.hostname}:${server.port}`
               : 'Loading server…'}
@@ -200,7 +200,7 @@ function StreamsContent({ serverId }: { serverId: string }) {
         <div className="flex gap-2">
           <Link
             href={`/dashboard/servers/${serverId}/sessions`}
-            className="flex items-center justify-center gap-1.5 rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+            className="flex items-center justify-center gap-1.5 rounded-full border border-input bg-card px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted"
           >
             <UsersIcon className="h-4 w-4" />
             Sessions
@@ -209,14 +209,14 @@ function StreamsContent({ serverId }: { serverId: string }) {
             onClick={handleSync}
             disabled={isSyncing || !syncManualFlags.streams}
             title={syncManualFlags.streams ? undefined : 'Manual streams sync is disabled in Settings'}
-            className="flex items-center justify-center gap-1.5 rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex items-center justify-center gap-1.5 rounded-full border border-input bg-card px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
           >
             <ArrowPathIcon className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
             {isSyncing ? 'Syncing…' : 'Sync'}
           </button>
           <button
             onClick={openCreate}
-            className="flex items-center justify-center gap-1.5 rounded-full bg-flu-pink px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-flu-pink/30 transition hover:bg-flu-pink-dark"
+            className="flex items-center justify-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition hover:bg-primary-hover"
           >
             <PlusIcon className="h-4 w-4" />
             Add stream
@@ -225,19 +225,19 @@ function StreamsContent({ serverId }: { serverId: string }) {
       </div>
 
       {syncError && (
-        <div className="animate-fade-in-up mb-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="animate-fade-in-up mb-4 rounded-md bg-danger-soft px-4 py-3 text-sm text-danger">
           {syncError}
         </div>
       )}
 
       {streamActions.error && (
-        <div className="animate-fade-in-up mb-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="animate-fade-in-up mb-4 rounded-md bg-danger-soft px-4 py-3 text-sm text-danger">
           {streamActions.error}
         </div>
       )}
 
       {syncSummary && (
-        <div className="animate-fade-in-up mb-4 rounded-md bg-green-50 px-4 py-3 text-sm text-green-700">
+        <div className="animate-fade-in-up mb-4 rounded-md bg-success-soft px-4 py-3 text-sm text-success">
           Synced {syncSummary.total} stream{syncSummary.total === 1 ? '' : 's'} from the server
           {syncSummary.created > 0 ? ` — ${syncSummary.created} newly imported` : ''}
           {syncSummary.updated > 0 ? `, ${syncSummary.updated} refreshed` : ''}.
@@ -249,12 +249,12 @@ function StreamsContent({ serverId }: { serverId: string }) {
         style={{ animationDelay: '60ms' }}
       >
         <div className="relative flex-1">
-          <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/70" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by name, title, or ingest domain…"
-            className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm text-gray-900 transition focus:border-flu-pink focus:outline-none focus:ring-2 focus:ring-flu-pink/20"
+            className="w-full rounded-lg border border-input py-2 pl-9 pr-3 text-sm text-foreground transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/20"
           />
         </div>
         <select
@@ -263,7 +263,7 @@ function StreamsContent({ serverId }: { serverId: string }) {
             setStatus(e.target.value as FlussonicStreamStatus | '');
             setPage(1);
           }}
-          className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 transition focus:border-flu-pink focus:outline-none focus:ring-2 focus:ring-flu-pink/20"
+          className="rounded-lg border border-input px-3 py-2 text-sm text-foreground transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/20"
         >
           <option value="">All statuses</option>
           <option value="active">Active</option>
@@ -272,19 +272,19 @@ function StreamsContent({ serverId }: { serverId: string }) {
       </div>
 
       <div
-        className="animate-fade-in-up overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"
+        className="animate-fade-in-up overflow-hidden rounded-xl border border-border bg-card shadow-sm"
         style={{ animationDelay: '120ms' }}
       >
         {isLoading && (
-          <p className="px-4 py-10 text-center text-sm text-gray-400">Loading streams…</p>
+          <p className="px-4 py-10 text-center text-sm text-muted-foreground/70">Loading streams…</p>
         )}
 
         {!isLoading && loadError && (
-          <p className="px-4 py-10 text-center text-sm text-red-600">{loadError}</p>
+          <p className="px-4 py-10 text-center text-sm text-danger">{loadError}</p>
         )}
 
         {!isLoading && !loadError && items.length === 0 && (
-          <p className="px-4 py-10 text-center text-sm text-gray-400">No streams found.</p>
+          <p className="px-4 py-10 text-center text-sm text-muted-foreground/70">No streams found.</p>
         )}
 
         {!isLoading && !loadError && items.length > 0 && (
@@ -292,7 +292,7 @@ function StreamsContent({ serverId }: { serverId: string }) {
             {/* Table — sm and up */}
             <div className="hidden overflow-x-auto sm:block">
               <table className="w-full text-left text-sm">
-                <thead className="border-b border-gray-200 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+                <thead className="border-b border-border bg-muted text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
                     <th className="px-4 py-3 font-medium">Title</th>
                     <th className="px-4 py-3 font-medium">Name</th>
@@ -304,20 +304,20 @@ function StreamsContent({ serverId }: { serverId: string }) {
                     <th className="px-4 py-3 font-medium text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-border">
                   {items.map((stream) => (
-                    <tr key={stream.id} className="transition-colors hover:bg-gray-50">
-                      <td className="px-4 py-3 text-gray-600">
+                    <tr key={stream.id} className="transition-colors hover:bg-muted">
+                      <td className="px-4 py-3 text-muted-foreground">
                         {stream.config_json.title ?? '—'}
                       </td>
-                      <td className="px-4 py-3 font-medium text-gray-900">
+                      <td className="px-4 py-3 font-medium text-foreground">
                         {stream.config_json.name}
                       </td>
-                      <td className="px-4 py-3 text-gray-600">{stream.ingest_domain ?? '—'}</td>
-                      <td className="px-4 py-3 text-gray-600">
+                      <td className="px-4 py-3 text-muted-foreground">{stream.ingest_domain ?? '—'}</td>
+                      <td className="px-4 py-3 text-muted-foreground">
                         {stream.config_json.inputs?.length ?? 0}
                       </td>
-                      <td className="px-4 py-3 text-gray-600">
+                      <td className="px-4 py-3 text-muted-foreground">
                         {stream.config_json.on_play?.max_sessions ?? '—'}
                       </td>
                       <td className="px-4 py-3">
@@ -327,7 +327,7 @@ function StreamsContent({ serverId }: { serverId: string }) {
                           {stream.status}
                         </span>
                         {stream.config_json.disabled && (
-                          <span className="ml-1 inline-block rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
+                          <span className="ml-1 inline-block rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning">
                             disabled
                           </span>
                         )}
@@ -346,14 +346,14 @@ function StreamsContent({ serverId }: { serverId: string }) {
                               setDetailsStream(stream);
                               setDetailsOpen(true);
                             }}
-                            className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
+                            className="rounded-md p-1.5 text-muted-foreground/70 transition-colors hover:bg-muted hover:text-primary"
                             aria-label={`View details for ${stream.config_json.name}`}
                           >
                             <EyeIcon className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => openEdit(stream)}
-                            className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
+                            className="rounded-md p-1.5 text-muted-foreground/70 transition-colors hover:bg-muted hover:text-primary"
                             aria-label={`Edit ${stream.config_json.name}`}
                           >
                             <PencilIcon className="h-4 w-4" />
@@ -362,7 +362,7 @@ function StreamsContent({ serverId }: { serverId: string }) {
                             <button
                               onClick={() => streamActions.start(stream.id)}
                               disabled={streamActions.busyId === stream.id}
-                              className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-green-50 hover:text-green-600 disabled:opacity-60"
+                              className="rounded-md p-1.5 text-muted-foreground/70 transition-colors hover:bg-success-soft hover:text-success disabled:opacity-60"
                               aria-label={`Start ${stream.config_json.name}`}
                               title="Start"
                             >
@@ -380,7 +380,7 @@ function StreamsContent({ serverId }: { serverId: string }) {
                               <button
                                 onClick={() => streamActions.disable(stream.id)}
                                 disabled={streamActions.busyId === stream.id}
-                                className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-60"
+                                className="rounded-md p-1.5 text-muted-foreground/70 transition-colors hover:bg-danger-soft hover:text-danger disabled:opacity-60"
                                 aria-label={`Disable ${stream.config_json.name}`}
                                 title="Disable"
                               >
@@ -396,7 +396,7 @@ function StreamsContent({ serverId }: { serverId: string }) {
                               <button
                                 onClick={() => streamActions.restart(stream.id)}
                                 disabled={streamActions.busyId === stream.id}
-                                className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink disabled:opacity-60"
+                                className="rounded-md p-1.5 text-muted-foreground/70 transition-colors hover:bg-muted hover:text-primary disabled:opacity-60"
                                 aria-label={`Restart ${stream.config_json.name}`}
                                 title="Restart"
                               >
@@ -413,7 +413,7 @@ function StreamsContent({ serverId }: { serverId: string }) {
                           )}
                           <button
                             onClick={() => setPendingDelete(stream)}
-                            className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                            className="rounded-md p-1.5 text-muted-foreground/70 transition-colors hover:bg-danger-soft hover:text-danger"
                             aria-label={`Delete ${stream.config_json.name}`}
                           >
                             <TrashIcon className="h-4 w-4" />
@@ -427,15 +427,15 @@ function StreamsContent({ serverId }: { serverId: string }) {
             </div>
 
             {/* Cards — below sm */}
-            <div className="divide-y divide-gray-100 sm:hidden">
+            <div className="divide-y divide-border sm:hidden">
               {items.map((stream) => (
                 <div key={stream.id} className="p-4">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="truncate font-medium text-gray-900">
+                      <p className="truncate font-medium text-foreground">
                         {stream.config_json.title ?? stream.config_json.name}
                       </p>
-                      <p className="truncate text-xs text-gray-500">{stream.config_json.name}</p>
+                      <p className="truncate text-xs text-muted-foreground">{stream.config_json.name}</p>
                     </div>
                     <div className="flex shrink-0 gap-1">
                       <button
@@ -443,14 +443,14 @@ function StreamsContent({ serverId }: { serverId: string }) {
                           setDetailsStream(stream);
                           setDetailsOpen(true);
                         }}
-                        className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
+                        className="rounded-md p-1.5 text-muted-foreground/70 transition-colors hover:bg-muted hover:text-primary"
                         aria-label={`View details for ${stream.config_json.name}`}
                       >
                         <EyeIcon className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => openEdit(stream)}
-                        className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink"
+                        className="rounded-md p-1.5 text-muted-foreground/70 transition-colors hover:bg-muted hover:text-primary"
                         aria-label={`Edit ${stream.config_json.name}`}
                       >
                         <PencilIcon className="h-4 w-4" />
@@ -459,7 +459,7 @@ function StreamsContent({ serverId }: { serverId: string }) {
                         <button
                           onClick={() => streamActions.start(stream.id)}
                           disabled={streamActions.busyId === stream.id}
-                          className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-green-50 hover:text-green-600 disabled:opacity-60"
+                          className="rounded-md p-1.5 text-muted-foreground/70 transition-colors hover:bg-success-soft hover:text-success disabled:opacity-60"
                           aria-label={`Start ${stream.config_json.name}`}
                           title="Start"
                         >
@@ -476,7 +476,7 @@ function StreamsContent({ serverId }: { serverId: string }) {
                           <button
                             onClick={() => streamActions.disable(stream.id)}
                             disabled={streamActions.busyId === stream.id}
-                            className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-60"
+                            className="rounded-md p-1.5 text-muted-foreground/70 transition-colors hover:bg-danger-soft hover:text-danger disabled:opacity-60"
                             aria-label={`Disable ${stream.config_json.name}`}
                             title="Disable"
                           >
@@ -491,7 +491,7 @@ function StreamsContent({ serverId }: { serverId: string }) {
                           <button
                             onClick={() => streamActions.restart(stream.id)}
                             disabled={streamActions.busyId === stream.id}
-                            className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-flu-pink disabled:opacity-60"
+                            className="rounded-md p-1.5 text-muted-foreground/70 transition-colors hover:bg-muted hover:text-primary disabled:opacity-60"
                             aria-label={`Restart ${stream.config_json.name}`}
                             title="Restart"
                           >
@@ -507,7 +507,7 @@ function StreamsContent({ serverId }: { serverId: string }) {
                       )}
                       <button
                         onClick={() => setPendingDelete(stream)}
-                        className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                        className="rounded-md p-1.5 text-muted-foreground/70 transition-colors hover:bg-danger-soft hover:text-danger"
                         aria-label={`Delete ${stream.config_json.name}`}
                       >
                         <TrashIcon className="h-4 w-4" />
@@ -515,7 +515,7 @@ function StreamsContent({ serverId }: { serverId: string }) {
                     </div>
                   </div>
 
-                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
+                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                     <span
                       className={`inline-block rounded-full px-2 py-0.5 font-medium capitalize ${STATUS_STYLES[stream.status]}`}
                     >
@@ -529,7 +529,7 @@ function StreamsContent({ serverId }: { serverId: string }) {
                       </span>
                     )}
                     {stream.config_json.disabled && (
-                      <span className="inline-block rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-700">
+                      <span className="inline-block rounded-full bg-warning-soft px-2 py-0.5 font-medium text-warning">
                         disabled
                       </span>
                     )}
@@ -545,24 +545,24 @@ function StreamsContent({ serverId }: { serverId: string }) {
           </>
         )}
 
-        <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3 text-sm text-gray-500">
+        <div className="flex items-center justify-between border-t border-border px-4 py-3 text-sm text-muted-foreground">
           <span>{total === 0 ? 'No results' : `Showing ${from}–${to} of ${total}`}</span>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page <= 1}
-              className="rounded-md p-1.5 text-gray-500 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
               aria-label="Previous page"
             >
               <ChevronLeftIcon className="h-4 w-4" />
             </button>
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-muted-foreground">
               Page {page} of {totalPages}
             </span>
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page >= totalPages}
-              className="rounded-md p-1.5 text-gray-500 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
               aria-label="Next page"
             >
               <ChevronRightIcon className="h-4 w-4" />
@@ -601,9 +601,9 @@ function StreamsContent({ serverId }: { serverId: string }) {
 
 function RestrictedNotice() {
   return (
-    <div className="mx-auto max-w-lg rounded-xl border border-gray-200 bg-white p-8 text-center shadow-sm">
-      <h1 className="text-lg font-semibold text-gray-900">Access restricted</h1>
-      <p className="mt-2 text-sm text-gray-500">
+    <div className="mx-auto max-w-lg rounded-xl border border-border bg-card p-8 text-center shadow-sm">
+      <h1 className="text-lg font-semibold text-foreground">Access restricted</h1>
+      <p className="mt-2 text-sm text-muted-foreground">
         Managing Flussonic servers requires an admin account. Contact an administrator if you
         need access.
       </p>

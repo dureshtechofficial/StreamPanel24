@@ -64,25 +64,25 @@ export function WalletTopupDialog({
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
       <div
         onClick={handleCancel}
-        className="animate-fade-in absolute inset-0 bg-gray-900/40 backdrop-blur-sm"
+        className="animate-fade-in absolute inset-0 bg-slate-950/50 backdrop-blur-sm"
       />
       <form
         onSubmit={handleSubmit}
-        className="animate-fade-in-up relative w-full max-w-sm rounded-xl bg-white p-6 shadow-2xl"
+        className="animate-fade-in-up relative w-full max-w-sm rounded-xl bg-card p-6 shadow-2xl"
       >
-        <h2 className="text-base font-semibold text-gray-900">Adjust wallet balance</h2>
-        <p className="mt-1 text-sm text-gray-500">
+        <h2 className="text-base font-semibold text-foreground">Adjust wallet balance</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
           Add or deduct funds from{' '}
-          <span className="font-medium text-gray-700">{entityName}</span>&rsquo;s wallet
+          <span className="font-medium text-foreground">{entityName}</span>&rsquo;s wallet
           balance.
         </p>
 
-        <div className="mt-4 flex rounded-lg border border-gray-300 p-0.5 text-sm font-medium">
+        <div className="mt-4 flex rounded-lg border border-input p-0.5 text-sm font-medium">
           <button
             type="button"
             onClick={() => setMode('add')}
             className={`flex-1 rounded-md py-1.5 transition ${
-              mode === 'add' ? 'bg-flu-pink text-white' : 'text-gray-600 hover:bg-gray-50'
+              mode === 'add' ? 'bg-primary text-white' : 'text-muted-foreground hover:bg-muted'
             }`}
           >
             Add funds
@@ -91,7 +91,7 @@ export function WalletTopupDialog({
             type="button"
             onClick={() => setMode('deduct')}
             className={`flex-1 rounded-md py-1.5 transition ${
-              mode === 'deduct' ? 'bg-red-600 text-white' : 'text-gray-600 hover:bg-gray-50'
+              mode === 'deduct' ? 'bg-danger text-white' : 'text-muted-foreground hover:bg-muted'
             }`}
           >
             Deduct funds
@@ -99,7 +99,7 @@ export function WalletTopupDialog({
         </div>
 
         <div className="mt-4">
-          <label className="mb-1 block text-sm font-medium text-gray-700">Amount</label>
+          <label className="mb-1 block text-sm font-medium text-foreground">Amount</label>
           <input
             type="number"
             step="0.01"
@@ -108,13 +108,13 @@ export function WalletTopupDialog({
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0.00"
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 transition focus:border-flu-pink focus:outline-none focus:ring-2 focus:ring-flu-pink/20"
+            className="w-full rounded-lg border border-input px-3 py-2 text-sm text-foreground transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/20"
           />
         </div>
 
         <div className="mt-4">
-          <label className="mb-1 block text-sm font-medium text-gray-700">
-            Remark <span className="text-gray-400">(optional)</span>
+          <label className="mb-1 block text-sm font-medium text-foreground">
+            Remark <span className="text-muted-foreground/70">(optional)</span>
           </label>
           <input
             type="text"
@@ -122,18 +122,18 @@ export function WalletTopupDialog({
             value={remark}
             onChange={(e) => setRemark(e.target.value)}
             placeholder={mode === 'deduct' ? 'e.g. Correction' : 'e.g. Bank transfer topup'}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 transition focus:border-flu-pink focus:outline-none focus:ring-2 focus:ring-flu-pink/20"
+            className="w-full rounded-lg border border-input px-3 py-2 text-sm text-foreground transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/20"
           />
         </div>
 
-        {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+        {error && <p className="mt-3 text-sm text-danger">{error}</p>}
 
         <div className="mt-6 flex justify-end gap-2">
           <button
             type="button"
             onClick={handleCancel}
             disabled={isBusy}
-            className="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-60"
+            className="rounded-full border border-input px-4 py-2 text-sm font-medium text-foreground transition hover:bg-muted disabled:opacity-60"
           >
             Cancel
           </button>
@@ -142,8 +142,8 @@ export function WalletTopupDialog({
             disabled={isBusy}
             className={`rounded-full px-4 py-2 text-sm font-semibold text-white shadow-lg transition disabled:cursor-not-allowed disabled:opacity-60 ${
               mode === 'deduct'
-                ? 'bg-red-600 shadow-red-600/30 hover:bg-red-700'
-                : 'bg-flu-pink shadow-flu-pink/30 hover:bg-flu-pink-dark'
+                ? 'bg-danger shadow-red-600/30 hover:bg-danger'
+                : 'bg-primary shadow-primary/30 hover:bg-primary-hover'
             }`}
           >
             {isBusy

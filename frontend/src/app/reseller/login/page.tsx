@@ -6,10 +6,10 @@ import { useResellerAuth } from '@/lib/reseller-auth-context';
 import { ApiError } from '@/lib/api-error';
 import { AuthShell } from '@/components/auth-shell';
 import { usePageTitle } from '@/lib/use-page-title';
-
-const inputClass =
-  'w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 transition focus:border-flu-pink focus:outline-none focus:ring-2 focus:ring-flu-pink/20';
-const labelClass = 'mb-1 block text-sm font-medium text-gray-700';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Field } from '@/components/ui/field';
+import { AlertIcon } from '@/components/icons';
 
 export default function ResellerLoginPage() {
   usePageTitle('Reseller Login');
@@ -31,7 +31,7 @@ export default function ResellerLoginPage() {
   if (isLoading || reseller) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <p className="text-sm text-gray-500">Loading…</p>
+        <p className="text-sm text-muted-foreground">Loading…</p>
       </div>
     );
   }
@@ -67,49 +67,42 @@ export default function ResellerLoginPage() {
       footer="Contact an administrator if you need account access."
     >
       {errors.length > 0 && (
-        <div className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-          {errors.map((msg) => (
-            <p key={msg}>{msg}</p>
-          ))}
+        <div className="mb-5 flex items-start gap-2.5 rounded-lg border border-danger/20 bg-danger-soft px-3.5 py-3 text-sm text-danger">
+          <AlertIcon className="mt-0.5 h-4 w-4 shrink-0" />
+          <div className="space-y-0.5">
+            {errors.map((msg) => (
+              <p key={msg}>{msg}</p>
+            ))}
+          </div>
         </div>
       )}
 
       <form className="space-y-4" onSubmit={handleSubmit} noValidate>
-        <div>
-          <label htmlFor="identifier" className={labelClass}>
-            Phone number or username
-          </label>
-          <input
+        <Field label="Phone number or username" htmlFor="identifier">
+          <Input
             id="identifier"
             type="text"
             autoComplete="username"
+            placeholder="Phone or username"
             value={identifier}
             onChange={(e) => setIdentifier(e.target.value)}
-            className={inputClass}
           />
-        </div>
+        </Field>
 
-        <div>
-          <label htmlFor="password" className={labelClass}>
-            Password
-          </label>
-          <input
+        <Field label="Password" htmlFor="password">
+          <Input
             id="password"
             type="password"
             autoComplete="current-password"
+            placeholder="••••••••"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className={inputClass}
           />
-        </div>
+        </Field>
 
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="w-full rounded-full bg-flu-pink px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-flu-pink/30 transition hover:bg-flu-pink-dark hover:shadow-flu-pink/50 disabled:cursor-not-allowed disabled:opacity-60"
-        >
+        <Button type="submit" size="lg" className="w-full" loading={isSubmitting}>
           {isSubmitting ? 'Logging in…' : 'Log in'}
-        </button>
+        </Button>
       </form>
     </AuthShell>
   );
