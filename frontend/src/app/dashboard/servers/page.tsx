@@ -31,6 +31,7 @@ import type {
   FlussonicServerStatus,
 } from "@/types/flussonic-server";
 import { ApiError } from "@/lib/api-error";
+import { toastSuccess, toastError } from "@/lib/toast";
 import { formatUptime } from "@/lib/format";
 import { useAuth } from "@/lib/auth-context";
 import { usePageTitle } from "@/lib/use-page-title";
@@ -129,6 +130,7 @@ function ServersContent() {
     } else {
       await createServer(payload);
     }
+    toastSuccess(editingServer ? "Server updated" : "Server created");
     setPanelOpen(false);
     await load();
   }
@@ -140,11 +142,13 @@ function ServersContent() {
     try {
       const summary = await syncAllServers();
       setSyncSummary(summary);
+      toastSuccess("Servers synced");
       await load();
     } catch (err) {
       setSyncError(
         err instanceof ApiError ? err.message : "Failed to sync servers.",
       );
+      toastError(err, "Failed to sync servers.");
     } finally {
       setIsSyncingAll(false);
     }
@@ -155,10 +159,11 @@ function ServersContent() {
     setIsDeleting(true);
     try {
       await deleteServer(pendingDelete.id);
+      toastSuccess("Server deleted");
       setPendingDelete(null);
       await load();
-    } catch {
-      setLoadError("Failed to delete server.");
+    } catch (err) {
+      toastError(err, "Failed to delete server.");
     } finally {
       setIsDeleting(false);
     }

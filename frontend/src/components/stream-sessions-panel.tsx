@@ -6,6 +6,7 @@ import type { PaginatedResult } from '@/types/pagination';
 import { ApiError } from '@/lib/api-error';
 import { lookupIp } from '@/lib/client-ipwhois';
 import { ArrowPathIcon, ChevronLeftIcon, ChevronRightIcon, ExternalLinkIcon, XIcon } from './icons';
+import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 
 const PAGE_SIZE = 20;
 // Sessions are always filtered to "still live as of the last sync" here —
@@ -155,28 +156,17 @@ export function StreamSessionsPanel({
   }, [items]);
 
   return (
-    <div className={`fixed inset-0 z-50 ${open ? '' : 'pointer-events-none'}`}>
-      <div
-        onClick={onClose}
-        className={`absolute inset-0 bg-slate-950/50 backdrop-blur-sm transition-opacity duration-300 ${
-          open ? 'opacity-100' : 'opacity-0'
-        }`}
-      />
-
-      <div
-        className={`absolute inset-y-0 right-0 flex w-full max-w-lg flex-col bg-card shadow-2xl transition-transform duration-300 ease-in-out ${
-          open ? 'translate-x-0' : 'translate-x-full'
-        }`}
-      >
-        <div className="flex items-center justify-between border-b border-border px-6 py-4">
+    <Sheet open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
+      <SheetContent size="lg" showClose={false}>
+        <div className="flex items-center justify-between border-b border-border bg-subtle/50 px-6 py-4">
           <div>
-            <h2 className="text-base font-semibold text-foreground">Sessions</h2>
-            <p className="text-xs text-muted-foreground">
+            <SheetTitle className="text-base">Sessions</SheetTitle>
+            <SheetDescription>
               {streamName}
               {!isLoading && !loadError && (
                 <span className="text-muted-foreground/70"> · {total} total</span>
               )}
-            </p>
+            </SheetDescription>
           </div>
           <div className="flex items-center gap-1">
             <button
@@ -283,7 +273,7 @@ export function StreamSessionsPanel({
             </button>
           </div>
         )}
-      </div>
-    </div>
+      </SheetContent>
+    </Sheet>
   );
 }

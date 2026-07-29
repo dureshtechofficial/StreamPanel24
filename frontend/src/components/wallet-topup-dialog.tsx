@@ -2,6 +2,16 @@
 
 import { useState } from 'react';
 import { ApiError } from '@/lib/api-error';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogBody,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 type Mode = 'add' | 'deduct';
 
@@ -23,8 +33,6 @@ export function WalletTopupDialog({
   const [amount, setAmount] = useState('');
   const [remark, setRemark] = useState('');
   const [error, setError] = useState<string | null>(null);
-
-  if (!open) return null;
 
   function reset() {
     setMode('add');
@@ -61,23 +69,19 @@ export function WalletTopupDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-      <div
-        onClick={handleCancel}
-        className="animate-fade-in absolute inset-0 bg-slate-950/50 backdrop-blur-sm"
-      />
-      <form
-        onSubmit={handleSubmit}
-        className="animate-fade-in-up relative w-full max-w-sm rounded-xl bg-card p-6 shadow-2xl"
-      >
-        <h2 className="text-base font-semibold text-foreground">Adjust wallet balance</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Add or deduct funds from{' '}
-          <span className="font-medium text-foreground">{entityName}</span>&rsquo;s wallet
-          balance.
-        </p>
+    <Dialog open={open} onOpenChange={(next) => { if (!next && !isBusy) handleCancel(); }}>
+      <DialogContent className="max-w-sm">
+      <form onSubmit={handleSubmit}>
+        <DialogHeader>
+          <DialogTitle>Adjust wallet balance</DialogTitle>
+          <DialogDescription>
+            Add or deduct funds from{' '}
+            <span className="font-medium text-foreground">{entityName}</span>&rsquo;s wallet balance.
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="mt-4 flex rounded-lg border border-input p-0.5 text-sm font-medium">
+        <DialogBody className="space-y-4">
+        <div className="flex rounded-lg border border-input p-0.5 text-sm font-medium">
           <button
             type="button"
             onClick={() => setMode('add')}
@@ -98,7 +102,7 @@ export function WalletTopupDialog({
           </button>
         </div>
 
-        <div className="mt-4">
+        <div>
           <label className="mb-1 block text-sm font-medium text-foreground">Amount</label>
           <input
             type="number"
@@ -112,7 +116,7 @@ export function WalletTopupDialog({
           />
         </div>
 
-        <div className="mt-4">
+        <div>
           <label className="mb-1 block text-sm font-medium text-foreground">
             Remark <span className="text-muted-foreground/70">(optional)</span>
           </label>
@@ -126,25 +130,18 @@ export function WalletTopupDialog({
           />
         </div>
 
-        {error && <p className="mt-3 text-sm text-danger">{error}</p>}
+        {error && <p className="text-sm text-danger">{error}</p>}
+        </DialogBody>
 
-        <div className="mt-6 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={handleCancel}
-            disabled={isBusy}
-            className="rounded-full border border-input px-4 py-2 text-sm font-medium text-foreground transition hover:bg-muted disabled:opacity-60"
-          >
+        <DialogFooter>
+          <Button type="button" variant="secondary" size="sm" onClick={handleCancel} disabled={isBusy}>
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
-            disabled={isBusy}
-            className={`rounded-full px-4 py-2 text-sm font-semibold text-white shadow-lg transition disabled:cursor-not-allowed disabled:opacity-60 ${
-              mode === 'deduct'
-                ? 'bg-danger shadow-red-600/30 hover:bg-danger'
-                : 'bg-primary shadow-primary/30 hover:bg-primary-hover'
-            }`}
+            size="sm"
+            variant={mode === 'deduct' ? 'danger' : 'primary'}
+            loading={isBusy}
           >
             {isBusy
               ? mode === 'deduct'
@@ -153,9 +150,10 @@ export function WalletTopupDialog({
               : mode === 'deduct'
                 ? 'Deduct funds'
                 : 'Add funds'}
-          </button>
-        </div>
+          </Button>
+        </DialogFooter>
       </form>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

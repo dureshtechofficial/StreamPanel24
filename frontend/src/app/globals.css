@@ -8,12 +8,13 @@
 /*  Brand colors are fixed; semantic surface tokens adapt per theme.   */
 /* ------------------------------------------------------------------ */
 :root {
-  /* Flussonic-inspired brand palette (fixed across themes) */
-  --flu-navy: #0a0e1c;
-  --flu-navy-light: #131a2e;
-  --flu-blue: #1531e0;
-  --flu-violet: #6c22d6;
-  --flu-pink: #ee1265;
+  /* Corporate-SaaS brand palette (fixed across themes) */
+  --flu-navy: #0b1020;
+  --flu-navy-light: #151b30;
+  --flu-blue: #4f46e5;   /* indigo-600 */
+  --flu-violet: #7c3aed; /* violet-600 */
+  --flu-sky: #2563eb;    /* blue-600  */
+  --flu-pink: #ee1265;   /* legacy accent, retained for compatibility */
   --flu-pink-dark: #c00d52;
   --flu-pink-light: #ff4d94;
 
@@ -27,13 +28,13 @@
   --subtle: #f1f4f9;
   --border: #e4e8f0;
   --input: #e4e8f0;
-  --ring: #ee1265;
+  --ring: #4f46e5;
 
-  --primary: #ee1265;
-  --primary-hover: #d10e59;
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
   --primary-foreground: #ffffff;
 
-  --accent: #1531e0;
+  --accent: #7c3aed;
   --accent-foreground: #ffffff;
 
   --success: #12905a;
@@ -42,8 +43,8 @@
   --warning-soft: #fbf1e0;
   --danger: #d92d20;
   --danger-soft: #fbe9e8;
-  --info: #1531e0;
-  --info-soft: #e7ecfd;
+  --info: #4f46e5;
+  --info-soft: #eef2ff;
 
   /* Elevation */
   --shadow-color: 220 40% 20%;
@@ -64,14 +65,14 @@
   --subtle: #141b31;
   --border: #222c48;
   --input: #26314f;
-  --ring: #ff4d94;
+  --ring: #818cf8;
 
-  --primary: #f5327a;
-  --primary-hover: #ff4d94;
+  --primary: #6366f1;
+  --primary-hover: #818cf8;
   --primary-foreground: #ffffff;
 
-  --accent: #5a7bff;
-  --accent-foreground: #ffffff;
+  --accent: #a78bfa;
+  --accent-foreground: #1a1030;
 
   --success: #34d399;
   --success-soft: #0f2a24;
@@ -79,8 +80,8 @@
   --warning-soft: #2a2113;
   --danger: #f87171;
   --danger-soft: #2c1618;
-  --info: #7c93ff;
-  --info-soft: #161f3d;
+  --info: #818cf8;
+  --info-soft: #1b1f3d;
 
   --shadow-color: 220 60% 2%;
   --shadow-sm: 0 1px 2px hsl(var(--shadow-color) / 0.4);
@@ -141,6 +142,9 @@
   --animate-fade-in-down: fade-in-down 0.18s ease-out both;
   --animate-scale-in: scale-in 0.16s ease-out both;
   --animate-shimmer: shimmer 1.6s linear infinite;
+  --animate-fade-out: fade-out 0.2s ease-in both;
+
+  --ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* ------------------------------------------------------------------ */
@@ -199,16 +203,16 @@
 .flu-hero-gradient {
   background-image:
     radial-gradient(circle, rgba(255, 255, 255, 0.16) 1px, transparent 1px),
-    linear-gradient(125deg, var(--flu-blue) 0%, #3a1fd0 45%, var(--flu-violet) 100%);
+    linear-gradient(125deg, var(--flu-sky) 0%, var(--flu-blue) 45%, var(--flu-violet) 100%);
   background-size: 22px 22px, 100% 100%;
 }
 
 .flu-brand-gradient {
-  background-image: linear-gradient(120deg, var(--flu-blue), var(--flu-violet) 55%, var(--flu-pink));
+  background-image: linear-gradient(120deg, var(--flu-sky), var(--flu-blue) 52%, var(--flu-violet));
 }
 
 .text-gradient {
-  background-image: linear-gradient(120deg, var(--flu-blue), var(--flu-violet) 55%, var(--flu-pink));
+  background-image: linear-gradient(120deg, var(--flu-sky), var(--flu-blue) 52%, var(--flu-violet));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -247,6 +251,10 @@
   from { opacity: 0; }
   to { opacity: 1; }
 }
+@keyframes fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
 @keyframes fade-in-up {
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
@@ -261,6 +269,14 @@
 }
 @keyframes shimmer {
   100% { transform: translateX(100%); }
+}
+/* Elevation on interactive cards/rows */
+.hover-lift {
+  transition: transform 0.2s var(--ease-emphasized), box-shadow 0.2s var(--ease-emphasized);
+}
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
 }
 
 @media (prefers-reduced-motion: reduce) {

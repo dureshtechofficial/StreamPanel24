@@ -28,6 +28,7 @@ import {
 } from "@/lib/wallet-api";
 import type { Reseller, ResellerInput, ResellerStatus } from "@/types/reseller";
 import { ApiError } from "@/lib/api-error";
+import { toastSuccess, toastError } from "@/lib/toast";
 import { useAuth } from "@/lib/auth-context";
 import { usePageTitle } from "@/lib/use-page-title";
 
@@ -116,6 +117,7 @@ function ResellersContent() {
     } else {
       await createReseller(payload);
     }
+    toastSuccess(editingReseller ? "Reseller updated" : "Reseller created");
     setPanelOpen(false);
     await load();
   }
@@ -125,10 +127,11 @@ function ResellersContent() {
     setIsDeleting(true);
     try {
       await deleteReseller(pendingDelete.id);
+      toastSuccess("Reseller deleted");
       setPendingDelete(null);
       await load();
-    } catch {
-      setLoadError("Failed to delete reseller.");
+    } catch (err) {
+      toastError(err, "Failed to delete reseller.");
     } finally {
       setIsDeleting(false);
     }
@@ -150,6 +153,7 @@ function ResellersContent() {
         amount,
         remark: remark || undefined,
       });
+      toastSuccess(amount < 0 ? "Wallet debited" : "Wallet credited");
       setTopupTarget(null);
       await load();
     } finally {

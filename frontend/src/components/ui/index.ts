@@ -18,6 +18,17 @@ export {
   DialogFooter,
 } from './dialog';
 export {
+  Sheet,
+  SheetTrigger,
+  SheetClose,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetBody,
+  SheetFooter,
+} from './sheet';
+export {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,

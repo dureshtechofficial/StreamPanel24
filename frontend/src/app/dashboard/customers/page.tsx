@@ -34,6 +34,7 @@ import {
 } from "@/lib/customer-wallet-api";
 import type { Customer, CustomerInput, CustomerStatus } from "@/types/customer";
 import { ApiError } from "@/lib/api-error";
+import { toastSuccess, toastError } from "@/lib/toast";
 import { usePageTitle } from "@/lib/use-page-title";
 import { useAdminOrderCancelEnabled } from "@/lib/use-order-cancel-enabled";
 import { useAdminCustomerActionFlags } from "@/lib/use-customer-action-flags";
@@ -127,6 +128,7 @@ function CustomersContent() {
     } else {
       await createCustomer(payload);
     }
+    toastSuccess(editingCustomer ? "Customer updated" : "Customer created");
     setPanelOpen(false);
     await load();
   }
@@ -136,10 +138,11 @@ function CustomersContent() {
     setIsDeleting(true);
     try {
       await deleteCustomer(pendingDelete.id);
+      toastSuccess("Customer deleted");
       setPendingDelete(null);
       await load();
-    } catch {
-      setLoadError("Failed to delete customer.");
+    } catch (err) {
+      toastError(err, "Failed to delete customer.");
     } finally {
       setIsDeleting(false);
     }
@@ -161,6 +164,7 @@ function CustomersContent() {
         amount,
         remark: remark || undefined,
       });
+      toastSuccess(amount < 0 ? "Wallet debited" : "Wallet credited");
       setTopupTarget(null);
       await load();
     } finally {

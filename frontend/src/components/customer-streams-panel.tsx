@@ -11,7 +11,8 @@ import type { FlussonicStreamDirectoryEntry } from '@/types/flussonic-stream-dir
 import type { Customer } from '@/types/customer';
 import type { PaginatedResult } from '@/types/pagination';
 import { ApiError } from '@/lib/api-error';
-import { ArrowPathIcon, ChevronLeftIcon, ChevronRightIcon, SearchIcon, XIcon } from './icons';
+import { ArrowPathIcon, ChevronLeftIcon, ChevronRightIcon, SearchIcon } from './icons';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Badge } from './ui/badge';
 
 const PAGE_SIZE = 20;
@@ -150,32 +151,12 @@ export function CustomerStreamsPanel({
   }
 
   return (
-    <div className={`fixed inset-0 z-50 ${open ? '' : 'pointer-events-none'}`}>
-      <div
-        onClick={onClose}
-        className={`absolute inset-0 bg-slate-950/50 backdrop-blur-sm transition-opacity duration-300 ${
-          open ? 'opacity-100' : 'opacity-0'
-        }`}
-      />
-
-      <div
-        className={`absolute inset-y-0 right-0 flex w-full max-w-lg flex-col bg-card shadow-2xl transition-transform duration-300 ease-in-out ${
-          open ? 'translate-x-0' : 'translate-x-full'
-        }`}
-      >
-        <div className="flex items-center justify-between border-b border-border px-6 py-4">
-          <div>
-            <h2 className="text-base font-semibold text-foreground">Assign streams</h2>
-            <p className="text-xs text-muted-foreground">{customer?.name}</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="rounded-md p-1 text-muted-foreground/70 hover:bg-muted hover:text-muted-foreground"
-            aria-label="Close panel"
-          >
-            <XIcon className="h-5 w-5" />
-          </button>
-        </div>
+    <Sheet open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
+      <SheetContent size="lg">
+        <SheetHeader>
+          <SheetTitle>Assign streams</SheetTitle>
+          <SheetDescription>{customer?.name}</SheetDescription>
+        </SheetHeader>
 
         <div className="border-b border-border px-6 py-3">
           <div className="relative">
@@ -312,7 +293,7 @@ export function CustomerStreamsPanel({
             {isSaving ? 'Saving…' : 'Save assignment'}
           </button>
         </div>
-      </div>
-    </div>
+      </SheetContent>
+    </Sheet>
   );
 }

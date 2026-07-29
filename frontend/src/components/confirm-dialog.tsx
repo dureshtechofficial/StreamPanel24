@@ -1,12 +1,25 @@
 'use client';
 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { AlertIcon } from './icons';
+import { cn } from '@/lib/cn';
+
 export function ConfirmDialog({
   open,
   title,
   message,
   confirmLabel = 'Confirm',
-  busyLabel = 'Deleting…',
+  busyLabel = 'Working…',
   isBusy,
+  variant = 'danger',
   onConfirm,
   onCancel,
 }: {
@@ -16,37 +29,48 @@ export function ConfirmDialog({
   confirmLabel?: string;
   busyLabel?: string;
   isBusy?: boolean;
+  variant?: 'danger' | 'primary';
   onConfirm: () => void;
   onCancel: () => void;
 }) {
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-      <div
-        onClick={onCancel}
-        className="animate-fade-in absolute inset-0 bg-slate-950/50 backdrop-blur-sm"
-      />
-      <div className="animate-fade-in-up relative w-full max-w-sm rounded-xl bg-card p-6 shadow-2xl">
-        <h2 className="text-base font-semibold text-foreground">{title}</h2>
-        <p className="mt-2 text-sm text-muted-foreground">{message}</p>
-        <div className="mt-6 flex justify-end gap-2">
-          <button
-            onClick={onCancel}
-            disabled={isBusy}
-            className="rounded-full border border-input px-4 py-2 text-sm font-medium text-foreground transition hover:bg-muted disabled:opacity-60"
-          >
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next && !isBusy) onCancel();
+      }}
+    >
+      <DialogContent className="max-w-sm" showClose={false}>
+        <DialogHeader className="items-start">
+          <div className="flex items-start gap-3">
+            <span
+              className={cn(
+                'flex h-10 w-10 shrink-0 items-center justify-center rounded-full',
+                variant === 'danger' ? 'bg-danger-soft text-danger' : 'bg-primary/10 text-primary',
+              )}
+            >
+              <AlertIcon className="h-5 w-5" />
+            </span>
+            <div className="space-y-1 pt-0.5">
+              <DialogTitle>{title}</DialogTitle>
+              <DialogDescription>{message}</DialogDescription>
+            </div>
+          </div>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="secondary" size="sm" onClick={onCancel} disabled={isBusy}>
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
+            variant={variant === 'danger' ? 'danger' : 'primary'}
+            size="sm"
             onClick={onConfirm}
-            disabled={isBusy}
-            className="rounded-full bg-danger px-4 py-2 text-sm font-semibold text-white transition hover:bg-danger disabled:cursor-not-allowed disabled:opacity-60"
+            loading={isBusy}
           >
             {isBusy ? busyLabel : confirmLabel}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

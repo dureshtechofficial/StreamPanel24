@@ -4,7 +4,16 @@ import { useState, type FormEvent } from 'react';
 import type { Plan, PlanInput, PlanStatus } from '@/types/plan';
 import { ApiError } from '@/lib/api-error';
 import { groupFieldErrors } from '@/lib/form-errors';
-import { XIcon } from './icons';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetBody,
+  SheetFooter,
+} from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
 
 const FIELDS = ['name', 'description', 'mrp', 'customer_price', 'reseller_percentage', 'duration_days', 'max_streams', 'max_connections'];
 
@@ -163,32 +172,17 @@ export function PlanFormPanel({
   }
 
   return (
-    <div className={`fixed inset-0 z-50 ${open ? '' : 'pointer-events-none'}`}>
-      <div
-        onClick={onClose}
-        className={`absolute inset-0 bg-slate-950/50 backdrop-blur-sm transition-opacity duration-300 ${
-          open ? 'opacity-100' : 'opacity-0'
-        }`}
-      />
+    <Sheet open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
+      <SheetContent size="md">
+        <SheetHeader>
+          <SheetTitle>{plan ? 'Edit plan' : 'Add plan'}</SheetTitle>
+          <SheetDescription>
+            {plan ? 'Update this plan.' : 'Create a new plan.'}
+          </SheetDescription>
+        </SheetHeader>
 
-      <div
-        className={`absolute inset-y-0 right-0 flex w-full max-w-md flex-col bg-card shadow-2xl transition-transform duration-300 ease-in-out ${
-          open ? 'translate-x-0' : 'translate-x-full'
-        }`}
-      >
-        <div className="flex items-center justify-between border-b border-border px-6 py-4">
-          <h2 className="text-base font-semibold text-foreground">{plan ? 'Edit plan' : 'Add plan'}</h2>
-          <button
-            onClick={onClose}
-            className="rounded-md p-1 text-muted-foreground/70 hover:bg-muted hover:text-muted-foreground"
-            aria-label="Close panel"
-          >
-            <XIcon className="h-5 w-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-y-auto">
-          <div className="flex-1 space-y-4 px-6 py-5">
+        <form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-hidden">
+          <SheetBody>
             {errors.general && errors.general.length > 0 && (
               <div className="rounded-md bg-danger-soft px-3 py-2 text-sm text-danger">
                 {errors.general.map((msg) => (
@@ -351,26 +345,18 @@ export function PlanFormPanel({
                 <option value="inactive">Inactive</option>
               </select>
             </div>
-          </div>
+          </SheetBody>
 
-          <div className="flex justify-end gap-2 border-t border-border px-6 py-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-full border border-input px-4 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
-            >
+          <SheetFooter>
+            <Button type="button" variant="secondary" size="sm" onClick={onClose}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
-            >
+            </Button>
+            <Button type="submit" size="sm" loading={isSubmitting}>
               {isSubmitting ? 'Saving…' : 'Save plan'}
-            </button>
-          </div>
+            </Button>
+          </SheetFooter>
         </form>
-      </div>
-    </div>
+      </SheetContent>
+    </Sheet>
   );
 }

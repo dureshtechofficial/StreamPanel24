@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { PaginatedResult } from '@/types/pagination';
 import { ApiError } from '@/lib/api-error';
-import { ArrowPathIcon, ChevronLeftIcon, ChevronRightIcon, XIcon } from './icons';
+import { ArrowPathIcon, ChevronLeftIcon, ChevronRightIcon } from './icons';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetBody } from '@/components/ui/sheet';
 
 const PAGE_SIZE = 20;
 
@@ -81,31 +82,13 @@ export function WalletTransactionsPanel<T extends WalletTransactionLike>({
   }, [open, page, load]);
 
   return (
-    <div className={`fixed inset-0 z-50 ${open ? '' : 'pointer-events-none'}`}>
-      <div
-        onClick={onClose}
-        className={`absolute inset-0 bg-slate-950/50 backdrop-blur-sm transition-opacity duration-300 ${
-          open ? 'opacity-100' : 'opacity-0'
-        }`}
-      />
+    <Sheet open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
+      <SheetContent size="lg">
+        <SheetHeader>
+          <SheetTitle>{title}</SheetTitle>
+        </SheetHeader>
 
-      <div
-        className={`absolute inset-y-0 right-0 flex w-full max-w-lg flex-col bg-card shadow-2xl transition-transform duration-300 ease-in-out ${
-          open ? 'translate-x-0' : 'translate-x-full'
-        }`}
-      >
-        <div className="flex items-center justify-between border-b border-border px-6 py-4">
-          <h2 className="text-base font-semibold text-foreground">{title}</h2>
-          <button
-            onClick={onClose}
-            className="rounded-md p-1 text-muted-foreground/70 hover:bg-muted hover:text-muted-foreground"
-            aria-label="Close panel"
-          >
-            <XIcon className="h-5 w-5" />
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-6 py-5">
+        <SheetBody className="space-y-0">
           {isLoading && (
             <p className="flex items-center gap-2 text-sm text-muted-foreground/70">
               <ArrowPathIcon className="h-4 w-4 animate-spin" />
@@ -145,7 +128,7 @@ export function WalletTransactionsPanel<T extends WalletTransactionLike>({
               ))}
             </ul>
           )}
-        </div>
+        </SheetBody>
 
         {!isLoading && !loadError && transactions.length > 0 && (
           <div className="flex items-center justify-between border-t border-border px-6 py-3">
@@ -170,7 +153,7 @@ export function WalletTransactionsPanel<T extends WalletTransactionLike>({
             </button>
           </div>
         )}
-      </div>
-    </div>
+      </SheetContent>
+    </Sheet>
   );
 }

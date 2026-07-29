@@ -11,7 +11,17 @@ import { groupFieldErrors } from '@/lib/form-errors';
 import { checkStreamName } from '@/lib/flussonic-streams-api';
 import { ToggleField } from './toggle';
 import { ConfirmDialog } from './confirm-dialog';
-import { ChevronDownIcon, PlusIcon, TrashIcon, XIcon } from './icons';
+import { ChevronDownIcon, PlusIcon, TrashIcon } from './icons';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetBody,
+  SheetFooter,
+} from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
 
 const FIELDS = ['name', 'title', 'inputs', 'retry_limit', 'ingest_domain', 'on_play', 'on_publish'];
 
@@ -395,34 +405,18 @@ export function StreamFormPanel({
   const name = computeName(form.applicationName, form.key);
 
   return (
-    <div className={`fixed inset-0 z-50 ${open ? '' : 'pointer-events-none'}`}>
-      <div
-        onClick={onClose}
-        className={`absolute inset-0 bg-slate-950/50 backdrop-blur-sm transition-opacity duration-300 ${
-          open ? 'opacity-100' : 'opacity-0'
-        }`}
-      />
+    <>
+    <Sheet open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
+      <SheetContent size="lg">
+        <SheetHeader>
+          <SheetTitle>{stream ? 'Edit stream' : 'Add stream'}</SheetTitle>
+          <SheetDescription>
+            {stream ? 'Update this stream configuration.' : 'Provision a new stream on a Flussonic server.'}
+          </SheetDescription>
+        </SheetHeader>
 
-      <div
-        className={`absolute inset-y-0 right-0 flex w-full max-w-lg flex-col bg-card shadow-2xl transition-transform duration-300 ease-in-out ${
-          open ? 'translate-x-0' : 'translate-x-full'
-        }`}
-      >
-        <div className="flex items-center justify-between border-b border-border px-6 py-4">
-          <h2 className="text-base font-semibold text-foreground">
-            {stream ? 'Edit stream' : 'Add stream'}
-          </h2>
-          <button
-            onClick={onClose}
-            className="rounded-md p-1 text-muted-foreground/70 hover:bg-muted hover:text-muted-foreground"
-            aria-label="Close panel"
-          >
-            <XIcon className="h-5 w-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-y-auto">
-          <div className="flex-1 space-y-5 px-6 py-5">
+        <form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-hidden">
+          <SheetBody className="space-y-5">
             {errors.general && errors.general.length > 0 && (
               <div className="rounded-md bg-danger-soft px-3 py-2 text-sm text-danger">
                 {errors.general.map((msg) => (
@@ -683,37 +677,31 @@ export function StreamFormPanel({
                 <AuthHookFields value={form.onPublish} onChange={setOnPublish} />
               )}
             </div>
-          </div>
+          </SheetBody>
 
-          <div className="flex justify-end gap-2 border-t border-border px-6 py-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-full border border-input px-4 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
-            >
+          <SheetFooter>
+            <Button type="button" variant="secondary" size="sm" onClick={onClose}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting || isCheckingName}
-              className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
-            >
+            </Button>
+            <Button type="submit" size="sm" loading={isSubmitting || isCheckingName}>
               {isCheckingName ? 'Checking…' : isSubmitting ? 'Saving…' : 'Save stream'}
-            </button>
-          </div>
+            </Button>
+          </SheetFooter>
         </form>
-      </div>
+      </SheetContent>
+    </Sheet>
 
-      <ConfirmDialog
-        open={pendingOverwriteConfirm}
-        title="Stream already exists"
-        message={`A stream named "${name}" already exists on this Flussonic server (it wasn't created through this app). Overwriting it will replace its current configuration. Continue?`}
-        confirmLabel="Overwrite"
-        isBusy={isSubmitting}
-        onConfirm={handleConfirmOverwrite}
-        onCancel={() => setPendingOverwriteConfirm(false)}
-      />
-    </div>
+    <ConfirmDialog
+      open={pendingOverwriteConfirm}
+      title="Stream already exists"
+      message={`A stream named "${name}" already exists on this Flussonic server (it wasn't created through this app). Overwriting it will replace its current configuration. Continue?`}
+      confirmLabel="Overwrite"
+      variant="primary"
+      isBusy={isSubmitting}
+      onConfirm={handleConfirmOverwrite}
+      onCancel={() => setPendingOverwriteConfirm(false)}
+    />
+    </>
   );
 }
 

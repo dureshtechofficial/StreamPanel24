@@ -16,6 +16,7 @@ import {
 import { createPlan, deletePlan, listPlans, updatePlan } from "@/lib/plans-api";
 import type { Plan, PlanInput, PlanStatus } from "@/types/plan";
 import { ApiError } from "@/lib/api-error";
+import { toastSuccess, toastError } from "@/lib/toast";
 import { useAuth } from "@/lib/auth-context";
 import { usePageTitle } from "@/lib/use-page-title";
 
@@ -100,6 +101,7 @@ function PlansContent() {
     } else {
       await createPlan(payload);
     }
+    toastSuccess(editingPlan ? "Plan updated" : "Plan created");
     setPanelOpen(false);
     await load();
   }
@@ -109,10 +111,11 @@ function PlansContent() {
     setIsDeleting(true);
     try {
       await deletePlan(pendingDelete.id);
+      toastSuccess("Plan deleted");
       setPendingDelete(null);
       await load();
-    } catch {
-      setLoadError("Failed to delete plan.");
+    } catch (err) {
+      toastError(err, "Failed to delete plan.");
     } finally {
       setIsDeleting(false);
     }

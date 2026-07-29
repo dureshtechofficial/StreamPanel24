@@ -2,7 +2,7 @@
 
 import type { FlussonicStream, StreamMediaTrack, StreamProtocols } from '@/types/flussonic-stream';
 import { formatUptime } from '@/lib/format';
-import { XIcon } from './icons';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetBody } from '@/components/ui/sheet';
 import { StreamPlayer } from './stream-player';
 import { CopyButton } from './copy-button';
 
@@ -91,33 +91,13 @@ export function StreamDetailsPanel({
   const tracks = stats?.media_info?.tracks ?? [];
 
   return (
-    <div className={`fixed inset-0 z-50 ${open ? '' : 'pointer-events-none'}`}>
-      <div
-        onClick={onClose}
-        className={`absolute inset-0 bg-slate-950/50 backdrop-blur-sm transition-opacity duration-300 ${
-          open ? 'opacity-100' : 'opacity-0'
-        }`}
-      />
+    <Sheet open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
+      <SheetContent size="lg">
+        <SheetHeader>
+          <SheetTitle>{stream?.config_json.name ?? 'Stream details'}</SheetTitle>
+        </SheetHeader>
 
-      <div
-        className={`absolute inset-y-0 right-0 flex w-full max-w-lg flex-col bg-card shadow-2xl transition-transform duration-300 ease-in-out ${
-          open ? 'translate-x-0' : 'translate-x-full'
-        }`}
-      >
-        <div className="flex items-center justify-between border-b border-border px-6 py-4">
-          <h2 className="text-base font-semibold text-foreground">
-            {stream?.config_json.name ?? 'Stream details'}
-          </h2>
-          <button
-            onClick={onClose}
-            className="rounded-md p-1 text-muted-foreground/70 hover:bg-muted hover:text-muted-foreground"
-            aria-label="Close panel"
-          >
-            <XIcon className="h-5 w-5" />
-          </button>
-        </div>
-
-        <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
+        <SheetBody className="space-y-5">
           {stream?.ingest_domain && stream.config_json.protocols?.hls && (
             <div>
               <p className={`${labelClass} mb-2`}>Preview</p>
@@ -320,8 +300,8 @@ export function StreamDetailsPanel({
               )}
             </>
           )}
-        </div>
-      </div>
-    </div>
+        </SheetBody>
+      </SheetContent>
+    </Sheet>
   );
 }

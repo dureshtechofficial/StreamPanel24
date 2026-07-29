@@ -10,7 +10,8 @@ import type { Plan } from '@/types/plan';
 import type { FlussonicStreamDirectoryEntry } from '@/types/flussonic-stream-directory';
 import type { Customer } from '@/types/customer';
 import { ApiError } from '@/lib/api-error';
-import { ArrowPathIcon, EyeIcon, PlusIcon, XIcon } from './icons';
+import { ArrowPathIcon, EyeIcon, PlusIcon } from './icons';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { ConfirmDialog } from './confirm-dialog';
 import { OrderInvoiceDialog } from './order-invoice-dialog';
 
@@ -227,32 +228,13 @@ export function OrdersPanel({
   }
 
   return (
-    <div className={`fixed inset-0 z-50 ${open ? '' : 'pointer-events-none'}`}>
-      <div
-        onClick={onClose}
-        className={`absolute inset-0 bg-slate-950/50 backdrop-blur-sm transition-opacity duration-300 ${
-          open ? 'opacity-100' : 'opacity-0'
-        }`}
-      />
-
-      <div
-        className={`absolute inset-y-0 right-0 flex w-full max-w-lg flex-col bg-card shadow-2xl transition-transform duration-300 ease-in-out ${
-          open ? 'translate-x-0' : 'translate-x-full'
-        }`}
-      >
-        <div className="flex items-center justify-between border-b border-border px-6 py-4">
-          <div>
-            <h2 className="text-base font-semibold text-foreground">Orders</h2>
-            <p className="text-xs text-muted-foreground">{customer?.name}</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="rounded-md p-1 text-muted-foreground/70 hover:bg-muted hover:text-muted-foreground"
-            aria-label="Close panel"
-          >
-            <XIcon className="h-5 w-5" />
-          </button>
-        </div>
+    <>
+    <Sheet open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
+      <SheetContent size="lg">
+        <SheetHeader>
+          <SheetTitle>Orders</SheetTitle>
+          <SheetDescription>{customer?.name}</SheetDescription>
+        </SheetHeader>
 
         <div className="flex-1 overflow-y-auto px-6 py-4">
           {cancelError && <p className="mb-3 text-sm text-danger">{cancelError}</p>}
@@ -465,7 +447,8 @@ export function OrdersPanel({
             </>
           )}
         </div>
-      </div>
+      </SheetContent>
+    </Sheet>
 
       <ConfirmDialog
         open={pendingCancel !== null}
@@ -510,6 +493,6 @@ export function OrdersPanel({
         }
         onClose={() => setInvoiceOrder(null)}
       />
-    </div>
+    </>
   );
 }

@@ -116,20 +116,20 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-border bg-card transition-transform duration-300 ease-in-out lg:translate-x-0',
+          'fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-flu-navy text-slate-300 transition-transform duration-300 ease-in-out lg:translate-x-0',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full',
         )}
       >
-        <div className="flex h-16 items-center justify-between border-b border-border px-5">
+        <div className="flex h-16 items-center justify-between border-b border-white/10 px-5">
           <Link href="/dashboard" className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg flu-brand-gradient text-white">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg flu-brand-gradient text-white shadow-lg shadow-black/20">
               <BroadcastIcon className="h-[18px] w-[18px]" />
             </span>
-            <span className="text-base font-semibold tracking-tight text-foreground">{APP_NAME}</span>
+            <span className="text-base font-semibold tracking-tight text-white">{APP_NAME}</span>
           </Link>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground lg:hidden"
+            className="rounded-md p-1 text-slate-400 hover:bg-white/10 hover:text-white lg:hidden"
             aria-label="Close sidebar"
           >
             <XIcon className="h-5 w-5" />
@@ -139,7 +139,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
           {sections.map((section) => (
             <div key={section.title}>
-              <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+              <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                 {section.title}
               </p>
               <div className="space-y-1">
@@ -150,12 +150,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                         key={label}
                         disabled
                         title="Coming soon"
-                        className="flex w-full cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground/60"
+                        className="flex w-full cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-500"
                       >
                         <Icon className="h-[18px] w-[18px]" />
                         {label}
                         {soon && (
-                          <Badge variant="neutral" className="ml-auto px-1.5 py-0 text-[10px]">
+                          <Badge className="ml-auto border-white/10 bg-white/10 px-1.5 py-0 text-[10px] text-slate-300">
                             Soon
                           </Badge>
                         )}
@@ -168,16 +168,16 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                       key={label}
                       href={href}
                       className={cn(
-                        'group relative flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                        'group relative flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150',
                         active
-                          ? 'bg-primary/10 text-primary'
-                          : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                          ? 'bg-white/10 text-white shadow-sm'
+                          : 'text-slate-400 hover:bg-white/5 hover:text-white',
                       )}
                     >
                       {active && (
                         <span className="absolute inset-y-1.5 left-0 w-1 rounded-full bg-primary" />
                       )}
-                      <Icon className="h-[18px] w-[18px]" />
+                      <Icon className={cn('h-[18px] w-[18px] transition-colors', active ? 'text-primary' : 'group-hover:text-white')} />
                       {label}
                     </Link>
                   );
@@ -187,10 +187,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
 
-        <div className="border-t border-border p-3">
+        <div className="border-t border-white/10 p-3">
           <button
             onClick={handleLogout}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-danger-soft hover:text-danger"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-400 transition-colors hover:bg-white/5 hover:text-red-300"
           >
             <LogOutIcon className="h-[18px] w-[18px]" />
             Log out

@@ -5,6 +5,16 @@ import { ApiError } from '@/lib/api-error';
 import { openRazorpayCheckout } from '@/lib/razorpay-checkout';
 import { APP_NAME } from '@/lib/app-config';
 import type { RazorpayOrderResponse, VerifyRazorpayPaymentInput } from '@/types/razorpay';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogBody,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 /**
  * Self-service "Add money" dialog — distinct from `WalletTopupDialog`, which
@@ -31,8 +41,6 @@ export function RazorpayTopupDialog({
   const [amount, setAmount] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  if (!open) return null;
 
   function reset() {
     setAmount('');
@@ -91,55 +99,45 @@ export function RazorpayTopupDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-      <div
-        onClick={handleClose}
-        className="animate-fade-in absolute inset-0 bg-slate-950/50 backdrop-blur-sm"
-      />
-      <form
-        onSubmit={handlePay}
-        className="animate-fade-in-up relative w-full max-w-sm rounded-xl bg-card p-6 shadow-2xl"
-      >
-        <h2 className="text-base font-semibold text-foreground">Add money to wallet</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Pay securely via Razorpay — your wallet is credited as soon as the payment succeeds.
-        </p>
+    <Dialog open={open} onOpenChange={(next) => { if (!next) handleClose(); }}>
+      <DialogContent className="max-w-sm">
+      <form onSubmit={handlePay}>
+        <DialogHeader>
+          <DialogTitle>Add money to wallet</DialogTitle>
+          <DialogDescription>
+            Pay securely via Razorpay — your wallet is credited as soon as the payment succeeds.
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="mt-4">
-          <label className="mb-1 block text-sm font-medium text-foreground">Amount</label>
-          <input
-            type="number"
-            step="0.01"
-            min={minimumAmount}
-            autoFocus
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="0.00"
-            className="w-full rounded-lg border border-input px-3 py-2 text-sm text-foreground transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/20"
-          />
-          <p className="mt-1 text-xs text-muted-foreground/70">Minimum {minimumAmount.toFixed(2)}</p>
-        </div>
+        <DialogBody>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-foreground">Amount</label>
+            <input
+              type="number"
+              step="0.01"
+              min={minimumAmount}
+              autoFocus
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="0.00"
+              className="w-full rounded-lg border border-input px-3 py-2 text-sm text-foreground transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/20"
+            />
+            <p className="mt-1 text-xs text-muted-foreground/70">Minimum {minimumAmount.toFixed(2)}</p>
+          </div>
 
-        {error && <p className="mt-3 text-sm text-danger">{error}</p>}
+          {error && <p className="mt-3 text-sm text-danger">{error}</p>}
+        </DialogBody>
 
-        <div className="mt-6 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={handleClose}
-            disabled={isProcessing}
-            className="rounded-full border border-input px-4 py-2 text-sm font-medium text-foreground transition hover:bg-muted disabled:opacity-60"
-          >
+        <DialogFooter>
+          <Button type="button" variant="secondary" size="sm" onClick={handleClose} disabled={isProcessing}>
             Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={isProcessing}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
-          >
+          </Button>
+          <Button type="submit" size="sm" loading={isProcessing}>
             {isProcessing ? 'Processing…' : 'Pay now'}
-          </button>
-        </div>
+          </Button>
+        </DialogFooter>
       </form>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
