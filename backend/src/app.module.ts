@@ -27,6 +27,7 @@ import { SyncScheduleRun } from './settings/entities/sync-schedule-run.entity';
 import { OrderCancelSetting } from './settings/entities/order-cancel-setting.entity';
 import { CustomerActionSetting } from './settings/entities/customer-action-setting.entity';
 import { WalletTopupSetting } from './settings/entities/wallet-topup-setting.entity';
+import { SmtpSetting } from './settings/entities/smtp-setting.entity';
 import { SettingsModule } from './settings/settings.module';
 import { Plan } from './plans/entities/plan.entity';
 import { PlansModule } from './plans/plans.module';
@@ -71,6 +72,7 @@ import { RazorpayModule } from './razorpay/razorpay.module';
           OrderCancelSetting,
           CustomerActionSetting,
           WalletTopupSetting,
+          SmtpSetting,
           Reseller,
           Plan,
           Order,

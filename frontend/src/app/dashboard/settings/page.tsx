@@ -22,6 +22,12 @@ import {
   listWalletTopupSettings,
   updateWalletTopupSetting,
 } from "@/lib/wallet-topup-settings-api";
+import {
+  getSmtpSettings,
+  updateSmtpSettings,
+  sendSmtpTest,
+} from "@/lib/smtp-settings-api";
+import type { SmtpSetting } from "@/types/smtp-setting";
 import { CopyButton } from "@/components/copy-button";
 import type { SyncSchedule, SyncType } from "@/types/sync-schedule";
 import type { OrderCancelActor, OrderCancelSetting } from "@/types/order-cancel-setting";
@@ -32,6 +38,7 @@ import type {
 } from "@/types/customer-action-setting";
 import type { WalletTopupActor, WalletTopupSetting } from "@/types/razorpay";
 import { ApiError } from "@/lib/api-error";
+import { toastSuccess, toastError } from "@/lib/toast";
 import { useAuth } from "@/lib/auth-context";
 import { usePageTitle } from "@/lib/use-page-title";
 
@@ -508,6 +515,279 @@ function WalletTopupSection() {
   );
 }
 
+const smtpInputClass =
+  "w-full rounded-lg border border-input px-3 py-2 text-sm text-foreground transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/20";
+const smtpLabelClass = "mb-1 block text-xs font-medium text-foreground";
+
+type SmtpDraft = {
+  enabled: boolean;
+  host: string;
+  port: string;
+  secure: boolean;
+  username: string;
+  password: string;
+  from_email: string;
+  from_name: string;
+};
+
+function toSmtpDraft(s: SmtpSetting): SmtpDraft {
+  return {
+    enabled: s.enabled,
+    host: s.host,
+    port: String(s.port),
+    secure: s.secure,
+    username: s.username ?? "",
+    password: "",
+    from_email: s.from_email,
+    from_name: s.from_name ?? "",
+  };
+}
+
+function EmailSmtpSection() {
+  const [setting, setSetting] = useState<SmtpSetting | null>(null);
+  const [draft, setDraft] = useState<SmtpDraft | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
+  const [testEmail, setTestEmail] = useState("");
+
+  const load = useCallback(async () => {
+    setIsLoading(true);
+    setLoadError(null);
+    try {
+      const result = await getSmtpSettings();
+      setSetting(result);
+      setDraft(toSmtpDraft(result));
+    } catch (err) {
+      setLoadError(
+        err instanceof ApiError ? err.message : "Failed to load email settings.",
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load();
+  }, [load]);
+
+  function setField<K extends keyof SmtpDraft>(key: K, value: SmtpDraft[K]) {
+    setDraft((prev) => (prev ? { ...prev, [key]: value } : prev));
+  }
+
+  async function handleSave() {
+    if (!draft) return;
+    if (!draft.host.trim()) {
+      toastError(null, "SMTP host is required.");
+      return;
+    }
+    if (!draft.from_email.trim()) {
+      toastError(null, "A “from” email address is required.");
+      return;
+    }
+    const port = Number(draft.port);
+    setIsSaving(true);
+    try {
+      const updated = await updateSmtpSettings({
+        enabled: draft.enabled,
+        host: draft.host.trim(),
+        port: Number.isFinite(port) && port > 0 ? port : undefined,
+        secure: draft.secure,
+        username: draft.username.trim(),
+        password: draft.password ? draft.password : undefined,
+        from_email: draft.from_email.trim(),
+        from_name: draft.from_name.trim(),
+      });
+      setSetting(updated);
+      setDraft(toSmtpDraft(updated));
+      toastSuccess("Email settings saved");
+    } catch (err) {
+      toastError(err, "Failed to save email settings.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleTest() {
+    const to = testEmail.trim();
+    if (!to) {
+      toastError(null, "Enter a recipient email address to test.");
+      return;
+    }
+    setIsTesting(true);
+    try {
+      await sendSmtpTest(to);
+      toastSuccess("Test email sent", `Delivered to ${to}`);
+    } catch (err) {
+      toastError(err, "Failed to send test email.");
+    } finally {
+      setIsTesting(false);
+    }
+  }
+
+  return (
+    <div className="animate-fade-in-up mb-6 rounded-xl border border-border bg-card p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-base font-semibold text-foreground">Email (SMTP)</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Store the outbound mail server used to send transactional email, and
+            send yourself a test to confirm it works.
+          </p>
+        </div>
+        {setting && (
+          <span
+            className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+              setting.enabled
+                ? "bg-success-soft text-success"
+                : "bg-muted text-muted-foreground"
+            }`}
+          >
+            {setting.enabled ? "Enabled" : "Disabled"}
+          </span>
+        )}
+      </div>
+
+      {isLoading && (
+        <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground/70">
+          <ArrowPathIcon className="h-4 w-4 animate-spin" />
+          Loading…
+        </p>
+      )}
+
+      {!isLoading && loadError && (
+        <p className="mt-4 text-sm text-danger">{loadError}</p>
+      )}
+
+      {!isLoading && !loadError && draft && (
+        <>
+          <div className="mt-4 border-t border-border pt-4">
+            <ToggleField
+              label="Enable outbound email"
+              checked={draft.enabled}
+              onChange={(v) => setField("enabled", v)}
+            />
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-6">
+            <div className="sm:col-span-4">
+              <label className={smtpLabelClass}>SMTP host</label>
+              <input
+                value={draft.host}
+                onChange={(e) => setField("host", e.target.value)}
+                placeholder="smtp.example.com"
+                className={smtpInputClass}
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label className={smtpLabelClass}>Port</label>
+              <input
+                type="number"
+                min={1}
+                max={65535}
+                value={draft.port}
+                onChange={(e) => setField("port", e.target.value)}
+                placeholder="587"
+                className={smtpInputClass}
+              />
+            </div>
+
+            <div className="sm:col-span-3">
+              <label className={smtpLabelClass}>Username</label>
+              <input
+                value={draft.username}
+                onChange={(e) => setField("username", e.target.value)}
+                placeholder="apikey / user@example.com"
+                autoComplete="off"
+                className={smtpInputClass}
+              />
+            </div>
+            <div className="sm:col-span-3">
+              <label className={smtpLabelClass}>Password</label>
+              <input
+                type="password"
+                value={draft.password}
+                onChange={(e) => setField("password", e.target.value)}
+                placeholder={
+                  setting?.has_password ? "•••••••• (leave blank to keep)" : "SMTP password"
+                }
+                autoComplete="new-password"
+                className={smtpInputClass}
+              />
+            </div>
+
+            <div className="sm:col-span-3">
+              <label className={smtpLabelClass}>From email</label>
+              <input
+                type="email"
+                value={draft.from_email}
+                onChange={(e) => setField("from_email", e.target.value)}
+                placeholder="no-reply@example.com"
+                className={smtpInputClass}
+              />
+            </div>
+            <div className="sm:col-span-3">
+              <label className={smtpLabelClass}>From name</label>
+              <input
+                value={draft.from_name}
+                onChange={(e) => setField("from_name", e.target.value)}
+                placeholder="Optional display name"
+                className={smtpInputClass}
+              />
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <ToggleField
+              label="Use implicit TLS (SSL) — enable for port 465, off for 587/STARTTLS"
+              checked={draft.secure}
+              onChange={(v) => setField("secure", v)}
+            />
+          </div>
+
+          <div className="mt-4 flex justify-end border-t border-border pt-4">
+            <button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isSaving ? "Saving…" : "Save email settings"}
+            </button>
+          </div>
+
+          <div className="mt-4 rounded-lg bg-subtle/60 p-4">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground/70">
+              Send a test email
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Uses the saved settings above — save any changes first.
+            </p>
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+              <input
+                type="email"
+                value={testEmail}
+                onChange={(e) => setTestEmail(e.target.value)}
+                placeholder="you@example.com"
+                className={`${smtpInputClass} sm:flex-1`}
+              />
+              <button
+                onClick={handleTest}
+                disabled={isTesting}
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-input px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isTesting && <ArrowPathIcon className="h-4 w-4 animate-spin" />}
+                {isTesting ? "Sending…" : "Send test"}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function ScheduleCard({
   type,
   schedule,
@@ -691,6 +971,7 @@ function SettingsContent() {
         </p>
       </div>
 
+      <EmailSmtpSection />
       <OrderCancelSection />
       <CustomerActionsSection />
       <WalletTopupSection />
