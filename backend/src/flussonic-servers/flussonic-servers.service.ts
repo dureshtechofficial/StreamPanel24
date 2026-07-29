@@ -169,6 +169,13 @@ export class FlussonicServersService {
     }
   }
 
+  /**
+   * (hostname, port) is unique only among **active** servers — a soft-deleted
+   * server's hostname:port is released for reuse, not reserved forever. The DB
+   * no longer enforces this (the old `uq_hostname_port` unique key counted
+   * deleted rows too and MySQL can't express a status-filtered unique index),
+   * so this app-layer check is the sole enforcer.
+   */
   private async assertHostPortAvailable(
     hostname: string,
     port: number,
@@ -179,6 +186,9 @@ export class FlussonicServersService {
       .where('server.hostname = :hostname AND server.port = :port', {
         hostname,
         port,
+      })
+      .andWhere('server.status != :deleted', {
+        deleted: FlussonicServerStatus.DELETED,
       });
 
     if (excludeId) {
