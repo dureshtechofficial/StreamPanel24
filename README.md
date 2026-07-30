@@ -1,6 +1,6 @@
 # Stream Panel 24
 
-A full-stack demo app: user auth, customer management, and Flussonic media-server management/monitoring.
+A full-stack demo app: user auth, customer management, and Flussonic media-server management/monitoring .
 
 - **`backend/`** — NestJS + TypeORM + MySQL REST API. See [`backend/README.md`](backend/README.md).
 - **`frontend/`** — Next.js (App Router) + Tailwind CSS UI. See [`frontend/README.md`](frontend/README.md).
