@@ -2,6 +2,7 @@ import {
   BadGatewayException,
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -20,6 +21,11 @@ import { nowUnixSeconds } from '../common/utils/unix-timestamp.util';
 import { Order } from '../orders/entities/order.entity';
 import { OrderStatus } from '../orders/enums/order-status.enum';
 import { Customer } from '../customers/entities/customer.entity';
+import {
+  NotificationsService,
+  type StreamUrlEntry,
+} from '../notifications/notifications.service';
+import { NotificationEvent } from '../notifications/enums/notification-event.enum';
 import type { FlussonicStreamConfig } from './interfaces/flussonic-stream-config.interface';
 import type {
   FlussonicLiveStream,
@@ -29,6 +35,8 @@ import type { PaginatedResult } from '../common/interfaces/paginated-result.inte
 
 const REQUEST_TIMEOUT_MS = 8_000;
 const MAX_SYNC_PAGES = 100;
+/** Pause between the disable and re-enable PUTs in restart(), so Flussonic actually drops the stream before it comes back. */
+const RESTART_DELAY_MS = 3_000;
 
 export interface SyncStreamsSummary {
   total: number;
@@ -68,6 +76,8 @@ export interface FlussonicStreamDirectoryEntry {
   live_status: string | null;
   /** Whether this stream currently has an order whose date window covers right now — gates the customer/reseller portal's on/off controls. */
   has_active_order: boolean;
+  /** Admin lock — when true the portals hide the disable/start/restart controls and the stream is forced disabled. */
+  blocked: boolean;
 }
 
 @Injectable()
@@ -80,6 +90,7 @@ export class FlussonicStreamsService {
     @InjectRepository(Customer)
     private readonly customersRepository: Repository<Customer>,
     private readonly serversService: FlussonicServersService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   /** Batch "does this stream currently have an order actually inside its date window" check — one query for a whole directory-entry page instead of N. */
@@ -366,6 +377,7 @@ export class FlussonicStreamsService {
         disabled: Boolean(stream.config_json.disabled),
         live_status: liveStats?.stats?.status ?? null,
         has_active_order: validOrderStreamIds.has(stream.id),
+        blocked: Boolean(stream.blocked),
       };
     });
   }
@@ -513,6 +525,15 @@ export class FlussonicStreamsService {
   ): Promise<FlussonicStream> {
     this.assertSettableStatus(dto.status);
     const stream = await this.findOneForServer(serverId, id);
+
+    // A blocked stream is administratively locked to disabled — nobody can
+    // enable it (via the on/off toggle or an order reconcile) until unblocked.
+    if (stream.blocked && dto.disabled === false) {
+      throw new ForbiddenException(
+        'This stream is blocked by an administrator and cannot be enabled. Unblock it first.',
+      );
+    }
+
     const server = await this.serversService.findOne(serverId);
     const existing = stream.config_json;
 
@@ -555,6 +576,9 @@ export class FlussonicStreamsService {
       await this.deleteFromFlussonic(server, existing.name);
     }
 
+    const wasDisabled = Boolean(existing.disabled);
+    const nowDisabled = Boolean(mergedConfig.disabled);
+
     stream.config_json = mergedConfig;
     if (dto.ingest_domain !== undefined) {
       stream.ingest_domain = dto.ingest_domain;
@@ -562,7 +586,130 @@ export class FlussonicStreamsService {
     if (dto.status) {
       stream.status = dto.status;
     }
+
+    // A genuine off→on disable notifies "disabled"; the reverse (a "Start")
+    // notifies "started". A restart never routes through here (it uses
+    // restart() below, which PUTs directly), so it can't misfire either.
+    // `last_notified_disabled` is the persisted memory of the state we last
+    // emailed about — even if this exact transition is re-applied (a retry, a
+    // re-sync, a double click), the same-state email is never sent twice.
+    const transitioned = wasDisabled !== nowDisabled;
+    const alreadyNotifiedThisState =
+      stream.last_notified_disabled === nowDisabled;
+    const shouldNotify = transitioned && !alreadyNotifiedThisState;
+    if (shouldNotify) {
+      stream.last_notified_disabled = nowDisabled;
+    }
+
+    const saved = await this.streamsRepository.save(stream);
+
+    if (shouldNotify) {
+      const event = nowDisabled
+        ? NotificationEvent.STREAM_DISABLE
+        : NotificationEvent.STREAM_START;
+      await this.notificationsService.notify(event, {
+        customerId: saved.customer_id,
+        context: {
+          streamName: saved.config_json.name,
+          inputUrls: this.buildInputUrls(saved.config_json, saved.ingest_domain),
+        },
+      });
+    }
+
+    return saved;
+  }
+
+  /**
+   * Disable then re-enable a stream on Flussonic to force it to drop and
+   * reconnect — the server-side equivalent of the old two-PATCH "restart" the
+   * frontend did. Done via the low-level PUT (not update()) so the intermediate
+   * disable never emits a STREAM_DISABLE notification; a single STREAM_RESTART
+   * notification is sent instead. The stream is left enabled at the end.
+   */
+  async restart(serverId: string, id: string): Promise<FlussonicStream> {
+    const stream = await this.findOneForServer(serverId, id);
+    if (stream.blocked) {
+      throw new ForbiddenException(
+        'This stream is blocked by an administrator and cannot be restarted. Unblock it first.',
+      );
+    }
+    const server = await this.serversService.findOne(serverId);
+    const base = stream.config_json;
+
+    await this.putToFlussonic(server, { ...base, disabled: true });
+    await new Promise((resolve) => setTimeout(resolve, RESTART_DELAY_MS));
+    const enabledConfig = { ...base, disabled: false };
+    await this.putToFlussonic(server, enabledConfig);
+
+    stream.config_json = enabledConfig;
+    // Restart leaves the stream enabled — keep the notified-state memory in sync
+    // so a later disable/start still emails correctly.
+    stream.last_notified_disabled = false;
+    const saved = await this.streamsRepository.save(stream);
+
+    await this.notificationsService.notify(NotificationEvent.STREAM_RESTART, {
+      customerId: saved.customer_id,
+      context: {
+        streamName: saved.config_json.name,
+        inputUrls: this.buildInputUrls(saved.config_json, saved.ingest_domain),
+      },
+    });
+
+    return saved;
+  }
+
+  /**
+   * Admin lock: mark the stream blocked and force it disabled on Flussonic (if
+   * it's currently enabled). While blocked it can't be enabled/started/restarted
+   * by anyone until unblocked. Done via the low-level PUT so no "disabled"
+   * notification is emitted for an administrative block.
+   */
+  async block(serverId: string, id: string): Promise<FlussonicStream> {
+    const stream = await this.findOneForServer(serverId, id);
+    if (!stream.config_json.disabled) {
+      const server = await this.serversService.findOne(serverId);
+      const disabledConfig = { ...stream.config_json, disabled: true };
+      await this.putToFlussonic(server, disabledConfig);
+      stream.config_json = disabledConfig;
+      // Keep the notify-state memory consistent with reality (now disabled).
+      stream.last_notified_disabled = true;
+    }
+    stream.blocked = true;
     return this.streamsRepository.save(stream);
+  }
+
+  /** Admin unlock: clears the block. Leaves the stream disabled — an admin/customer can start it again afterwards. */
+  async unblock(serverId: string, id: string): Promise<FlussonicStream> {
+    const stream = await this.findOneForServer(serverId, id);
+    stream.blocked = false;
+    return this.streamsRepository.save(stream);
+  }
+
+  /**
+   * The stream's available input (ingest) URLs — the same list the stream-view
+   * "Input" section shows, derived from the ingest domain + name + enabled
+   * publish protocols (RTMP/SRT). Kept identical to the frontend's
+   * `buildInputUrls` in stream-details-panel.tsx. Empty when no ingest domain
+   * is set or no publish protocol is enabled.
+   */
+  private buildInputUrls(
+    config: FlussonicStreamConfig,
+    ingestDomain: string | null,
+  ): StreamUrlEntry[] {
+    if (!ingestDomain) return [];
+    const name = config.name;
+    const protocols = config.protocols;
+    const urls: StreamUrlEntry[] = [];
+    if (protocols?.rtmp) {
+      urls.push({ label: 'RTMP', url: `rtmp://${ingestDomain}:1935/${name}` });
+    }
+    if (protocols?.srt) {
+      urls.push({
+        label: 'SRT',
+        url: `srt://${ingestDomain}:1234?streamid=#!::r=${name},m=publish`,
+      });
+    }
+    return urls;
   }
 
   /** Soft delete: removes the stream from Flussonic, but the local row is never physically removed. */

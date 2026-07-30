@@ -13,7 +13,7 @@ import {
 
 /**
  * One configurable cron schedule per sync type (server stats / streams /
- * sessions), applied across every non-deleted server when it fires — not
+ * order expiry), applied across every non-deleted server when it fires — not
  * per-server. Seeded with one disabled row per `SyncType` by migration.
  */
 @Entity('sync_schedules')

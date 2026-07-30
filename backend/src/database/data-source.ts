@@ -5,7 +5,6 @@ import { Customer } from '../customers/entities/customer.entity';
 import { FlussonicServer } from '../flussonic-servers/entities/flussonic-server.entity';
 import { FlussonicServerStat } from '../flussonic-servers/entities/flussonic-server-stat.entity';
 import { FlussonicStream } from '../flussonic-servers/entities/flussonic-stream.entity';
-import { FlussonicStreamSession } from '../flussonic-servers/entities/flussonic-stream-session.entity';
 import { SyncSchedule } from '../settings/entities/sync-schedule.entity';
 import { SyncScheduleRun } from '../settings/entities/sync-schedule-run.entity';
 import { OrderCancelSetting } from '../settings/entities/order-cancel-setting.entity';
@@ -17,6 +16,8 @@ import { Plan } from '../plans/entities/plan.entity';
 import { Order } from '../orders/entities/order.entity';
 import { WalletTransaction } from '../wallet/entities/wallet-transaction.entity';
 import { CustomerWalletTransaction } from '../customer-wallet/entities/customer-wallet-transaction.entity';
+import { NotificationSetting } from '../notifications/entities/notification-setting.entity';
+import { Notification } from '../notifications/entities/notification.entity';
 
 config();
 
@@ -33,7 +34,6 @@ export const dataSourceOptions: DataSourceOptions = {
     FlussonicServer,
     FlussonicServerStat,
     FlussonicStream,
-    FlussonicStreamSession,
     SyncSchedule,
     SyncScheduleRun,
     OrderCancelSetting,
@@ -45,6 +45,8 @@ export const dataSourceOptions: DataSourceOptions = {
     Order,
     WalletTransaction,
     CustomerWalletTransaction,
+    NotificationSetting,
+    Notification,
   ],
   migrations: [__dirname + '/migrations/*.{ts,js}'],
   synchronize: false,

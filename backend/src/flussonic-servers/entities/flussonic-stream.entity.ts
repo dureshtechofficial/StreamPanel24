@@ -47,6 +47,26 @@ export class FlussonicStream {
   })
   status: FlussonicStreamStatus;
 
+  /**
+   * The disabled-state (true = disabled, false = enabled) for which a stream
+   * disable/start notification was last sent — the "memory of the previous
+   * state" used to dedupe: re-applying the same state never re-emails. NULL
+   * means no such notification has been processed yet. See
+   * FlussonicStreamsService.update().
+   */
+  @Column({ type: 'boolean', nullable: true, default: null })
+  last_notified_disabled: boolean | null;
+
+  /**
+   * Admin lock. When true the stream is administratively blocked: it is forced
+   * to Flussonic `disabled: true` and cannot be enabled/started/restarted (by
+   * anyone) until an admin unblocks it — the reseller/customer portals hide
+   * those controls entirely. Distinct from `config_json.disabled`, which is the
+   * ordinary on/off state.
+   */
+  @Column({ type: 'boolean', default: false })
+  blocked: boolean;
+
   /** UTC unix timestamp (seconds). Set by the app, not MySQL — see @BeforeInsert/@BeforeUpdate below. */
   @Column({
     type: 'bigint',

@@ -7,9 +7,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * express a status-filtered unique index, so the hard `uq_hostname_port`
  * unique key is dropped and replaced with a plain (non-unique) lookup index.
  */
-export class DropHostPortUniqueFromServers1784800100013
-  implements MigrationInterface
-{
+export class DropHostPortUniqueFromServers1784800100013 implements MigrationInterface {
   name = 'DropHostPortUniqueFromServers1784800100013';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

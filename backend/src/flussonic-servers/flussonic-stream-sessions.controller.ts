@@ -1,13 +1,4 @@
-import {
-  Controller,
-  Get,
-  HttpCode,
-  HttpStatus,
-  Param,
-  Post,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAccessGuard } from '../auth/guards/jwt-access.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -15,8 +6,6 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../users/enums/user-role.enum';
 import { FlussonicStreamSessionsService } from './flussonic-stream-sessions.service';
 import { QueryFlussonicStreamSessionDto } from './dto/query-flussonic-stream-session.dto';
-import { SyncScheduleGateService } from './sync-schedule-gate.service';
-import { SyncType } from '../settings/enums/sync-type.enum';
 
 @ApiTags('flussonic-stream-sessions')
 @ApiBearerAuth('access-token')
@@ -26,12 +15,11 @@ import { SyncType } from '../settings/enums/sync-type.enum';
 export class FlussonicStreamSessionsController {
   constructor(
     private readonly sessionsService: FlussonicStreamSessionsService,
-    private readonly syncGate: SyncScheduleGateService,
   ) {}
 
   @ApiOperation({
     summary:
-      "List a server's stream sessions (paginated, newest-updated first)",
+      "List a server's current stream sessions — fetched live from the real GET sessions endpoint on each request, never stored (paginated, newest-updated first)",
   })
   @Get()
   findAll(
@@ -39,16 +27,5 @@ export class FlussonicStreamSessionsController {
     @Query() query: QueryFlussonicStreamSessionDto,
   ) {
     return this.sessionsService.findAllForServer(serverId, query);
-  }
-
-  @ApiOperation({
-    summary:
-      'Sync with the real GET sessions endpoint — upserts every current session by its Flussonic session id, enriching new ones via ipwho.is',
-  })
-  @Post('sync')
-  @HttpCode(HttpStatus.OK)
-  async sync(@Param('serverId') serverId: string) {
-    await this.syncGate.assertManualSyncEnabled(SyncType.SESSIONS);
-    return this.sessionsService.syncFromFlussonic(serverId);
   }
 }

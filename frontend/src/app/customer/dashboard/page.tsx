@@ -23,6 +23,7 @@ import {
   listMyStreams,
   listMyStreamSessions,
   setMyStreamDisabled,
+  restartMyStream,
 } from '@/lib/customer-portal-api';
 import {
   getMyWalletBalance,
@@ -119,6 +120,7 @@ function CustomerDashboardContent() {
   const streamActions = useStreamDisableActions(
     (streamId, disabled) => setMyStreamDisabled(streamId, disabled),
     load,
+    (streamId) => restartMyStream(streamId),
   );
 
   async function handleView(stream: FlussonicStreamDirectoryEntry) {

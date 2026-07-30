@@ -10,10 +10,7 @@ import * as nodemailer from 'nodemailer';
 import { SmtpSetting } from './entities/smtp-setting.entity';
 import { UpdateSmtpSettingDto } from './dto/update-smtp-setting.dto';
 import { TestSmtpSettingDto } from './dto/test-smtp-setting.dto';
-import {
-  decryptSecret,
-  encryptSecret,
-} from '../common/utils/encryption.util';
+import { decryptSecret, encryptSecret } from '../common/utils/encryption.util';
 
 @Injectable()
 export class SmtpSettingsService {
@@ -29,7 +26,10 @@ export class SmtpSettingsService {
    * editable rather than 404-ing the settings page.
    */
   async get(): Promise<SmtpSetting> {
-    const existing = await this.repository.findOne({ where: {}, order: { id: 'ASC' } });
+    const existing = await this.repository.findOne({
+      where: {},
+      order: { id: 'ASC' },
+    });
     if (existing) return existing;
     return this.repository.save(this.repository.create({}));
   }
@@ -41,9 +41,12 @@ export class SmtpSettingsService {
     if (dto.host !== undefined) setting.host = dto.host.trim();
     if (dto.port !== undefined) setting.port = dto.port;
     if (dto.secure !== undefined) setting.secure = dto.secure;
-    if (dto.username !== undefined) setting.username = dto.username.trim() || null;
-    if (dto.from_email !== undefined) setting.from_email = dto.from_email.trim();
-    if (dto.from_name !== undefined) setting.from_name = dto.from_name.trim() || null;
+    if (dto.username !== undefined)
+      setting.username = dto.username.trim() || null;
+    if (dto.from_email !== undefined)
+      setting.from_email = dto.from_email.trim();
+    if (dto.from_name !== undefined)
+      setting.from_name = dto.from_name.trim() || null;
 
     // A password is only rewritten when a non-empty value is supplied; an
     // empty/absent field means "keep whatever is stored".
@@ -55,7 +58,9 @@ export class SmtpSettingsService {
   }
 
   /** Sends a test email using the currently *stored* config (save before testing). */
-  async sendTest(dto: TestSmtpSettingDto): Promise<{ messageId: string; accepted: string[] }> {
+  async sendTest(
+    dto: TestSmtpSettingDto,
+  ): Promise<{ messageId: string; accepted: string[] }> {
     const setting = await this.get();
 
     if (!setting.host || !setting.from_email) {
@@ -101,7 +106,8 @@ export class SmtpSettingsService {
     } catch (err) {
       // Bubble the SMTP failure reason up as a 400 so the admin sees exactly
       // what went wrong (bad host, auth rejected, TLS mismatch, …).
-      const message = err instanceof Error ? err.message : 'Failed to send test email.';
+      const message =
+        err instanceof Error ? err.message : 'Failed to send test email.';
       throw new BadRequestException(`SMTP test failed: ${message}`);
     }
   }

@@ -51,7 +51,6 @@ export interface SyncAllServersResult {
   name: string;
   stats: SyncOutcome;
   streams: SyncOutcome;
-  sessions: SyncOutcome;
 }
 
 export interface SyncAllSummary {
@@ -59,7 +58,7 @@ export interface SyncAllSummary {
   results: SyncAllServersResult[];
 }
 
-/** Runs stats, streams, and sessions sync for every non-deleted server. */
+/** Runs stats and streams sync for every non-deleted server (sessions are read live, not synced). */
 export function syncAllServers() {
   return apiFetch<SyncAllSummary>('/flussonic-servers/sync-all', { method: 'POST' });
 }

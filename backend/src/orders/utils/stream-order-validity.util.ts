@@ -40,6 +40,10 @@ export async function syncStreamDisabledState(
   const stream = await streamsService.findOneById(streamId);
   if (!stream) return false;
 
+  // A blocked stream is administratively locked to disabled — never let an order
+  // becoming valid re-enable it (update() would reject the enable anyway).
+  if (stream.blocked && shouldBeEnabled) return false;
+
   const currentlyDisabled = Boolean(stream.config_json.disabled);
   if (currentlyDisabled === !shouldBeEnabled) return false;
 

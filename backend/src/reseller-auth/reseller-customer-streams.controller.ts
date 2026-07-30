@@ -2,9 +2,12 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   NotFoundException,
   Param,
   Patch,
+  Post,
   Put,
   Query,
   UseGuards,
@@ -116,6 +119,20 @@ export class ResellerCustomerStreamsController {
     return this.streamsService.update(stream.flussonic_server_id, streamId, {
       disabled: dto.disabled,
     });
+  }
+
+  @ApiOperation({
+    summary:
+      "Restart one stream (disable then re-enable, forcing a reconnect) — 404s unless it's currently assigned to one of the reseller's own customers",
+  })
+  @Post('streams/:streamId/restart')
+  @HttpCode(HttpStatus.OK)
+  async restartStream(
+    @CurrentReseller() reseller: Reseller,
+    @Param('streamId') streamId: string,
+  ) {
+    const stream = await this.assertOwnedStream(reseller, streamId);
+    return this.streamsService.restart(stream.flussonic_server_id, streamId);
   }
 
   /** 404s unless `streamId` is currently assigned to one of this reseller's own customers. */

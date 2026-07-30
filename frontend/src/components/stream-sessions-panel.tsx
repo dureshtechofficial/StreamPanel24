@@ -9,10 +9,6 @@ import { ArrowPathIcon, ChevronLeftIcon, ChevronRightIcon, ExternalLinkIcon, XIc
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 
 const PAGE_SIZE = 20;
-// Sessions are always filtered to "still live as of the last sync" here —
-// this panel (customer/reseller portals) has no toggle for historical
-// sessions, unlike the admin per-server sessions page.
-const LATEST_ONLY = true;
 const AUTO_REFRESH_INTERVAL_MS = 30_000;
 
 function formatTime(unixSeconds: number | null): string {
@@ -65,7 +61,7 @@ export function StreamSessionsPanel({
   onClose: () => void;
   listSessions: (
     streamId: string,
-    params: { page?: number; limit?: number; latestOnly?: boolean },
+    params: { page?: number; limit?: number },
   ) => Promise<PaginatedResult<FlussonicStreamSession>>;
 }) {
   const [items, setItems] = useState<FlussonicStreamSession[]>([]);
@@ -100,7 +96,6 @@ export function StreamSessionsPanel({
         const result = await listSessions(id, {
           page: targetPage,
           limit: PAGE_SIZE,
-          latestOnly: LATEST_ONLY,
         });
         setItems(result.items);
         setTotalPages(result.totalPages);
@@ -199,7 +194,7 @@ export function StreamSessionsPanel({
           {!isLoading && loadError && <p className="text-sm text-danger">{loadError}</p>}
 
           {!isLoading && !loadError && items.length === 0 && (
-            <p className="text-sm text-muted-foreground/70">No sessions recorded for this stream yet.</p>
+            <p className="text-sm text-muted-foreground/70">No active sessions for this stream right now.</p>
           )}
 
           {!isLoading && !loadError && items.length > 0 && (
@@ -207,7 +202,7 @@ export function StreamSessionsPanel({
               {items.map((session) => {
                 const geo = session.ip ? geoByIp[session.ip] : null;
                 return (
-                  <li key={session.id} className="rounded-lg border border-border p-3">
+                  <li key={session.session_uuid} className="rounded-lg border border-border p-3">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-sm font-medium capitalize text-foreground">
                         {session.type ?? '—'}

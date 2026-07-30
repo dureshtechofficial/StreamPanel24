@@ -34,6 +34,14 @@ export function setMyStreamDisabled(_serverId: string, streamId: string, disable
   });
 }
 
+/** `_serverId` is accepted (and ignored) to match the panel's restart signature; the portal route is stream-scoped. */
+export function restartMyStream(_serverId: string, streamId: string) {
+  return resellerApiFetch<FlussonicStream>(
+    `/reseller-auth/streams/${streamId}/restart`,
+    { method: 'POST' },
+  );
+}
+
 export function assignMyCustomerStreams(customerId: string, streamIds: string[]) {
   return resellerApiFetch<FlussonicStreamDirectoryEntry[]>(
     `/reseller-auth/customers/${customerId}/streams`,
@@ -65,16 +73,13 @@ export function searchMyAvailableStreams(params: SearchAvailableStreamsParams) {
 export interface ListStreamSessionsParams {
   page?: number;
   limit?: number;
-  /** Only sessions touched by the server's most recent sync (i.e. still live as of last check). */
-  latestOnly?: boolean;
 }
 
-/** Sessions for one stream — the backend 404s unless it's currently assigned to one of the reseller's own customers. */
+/** Live sessions for one stream — the backend 404s unless it's currently assigned to one of the reseller's own customers. */
 export function listMyStreamSessions(streamId: string, params: ListStreamSessionsParams = {}) {
   const query = new URLSearchParams();
   query.set('page', String(params.page ?? 1));
   query.set('limit', String(params.limit ?? 20));
-  if (params.latestOnly) query.set('latestOnly', 'true');
 
   return resellerApiFetch<PaginatedResult<FlussonicStreamSession>>(
     `/reseller-auth/streams/${streamId}/sessions?${query.toString()}`,

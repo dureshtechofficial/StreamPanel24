@@ -2,9 +2,12 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   NotFoundException,
   Param,
   Patch,
+  Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -77,6 +80,20 @@ export class CustomerStreamsPortalController {
     return this.streamsService.update(stream.flussonic_server_id, streamId, {
       disabled: dto.disabled,
     });
+  }
+
+  @ApiOperation({
+    summary:
+      "Restart one of the current customer's own streams (disable then re-enable, forcing a reconnect) — 404s unless it's currently assigned to them",
+  })
+  @Post(':streamId/restart')
+  @HttpCode(HttpStatus.OK)
+  async restartStream(
+    @CurrentCustomer() customer: Customer,
+    @Param('streamId') streamId: string,
+  ) {
+    const stream = await this.assertOwnedStream(customer, streamId);
+    return this.streamsService.restart(stream.flussonic_server_id, streamId);
   }
 
   /** 404s unless `streamId` is currently assigned to this customer. */

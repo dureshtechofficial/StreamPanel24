@@ -57,7 +57,7 @@ export class FlussonicServersController {
 
   @ApiOperation({
     summary:
-      'Sync every non-deleted server (stats, streams, and sessions); one failure does not abort the rest',
+      'Sync every non-deleted server (stats and streams); one failure does not abort the rest',
   })
   @Post('sync-all')
   syncAll() {

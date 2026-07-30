@@ -11,6 +11,27 @@ export default () => ({
     .map((origin) => origin.trim())
     .filter(Boolean),
 
+  // Refresh-cookie delivery. When the frontend and API are on different sites
+  // (e.g. a localhost frontend talking to an https tunnel API, or different
+  // registrable domains), the browser only sends the cookie on reload if it's
+  // `SameSite=None; Secure`. Set `COOKIE_SAMESITE=none` for that shape — it
+  // forces `secure=true` (browsers reject `SameSite=None` without `Secure`),
+  // which is fine because such setups are always https. Pure same-origin or
+  // localhost-http dev keeps the default `lax`.
+  cookie: (() => {
+    const sameSite = (process.env.COOKIE_SAMESITE ?? 'lax').toLowerCase() as
+      | 'lax'
+      | 'none'
+      | 'strict';
+    const secure =
+      sameSite === 'none'
+        ? true
+        : process.env.COOKIE_SECURE !== undefined
+          ? process.env.COOKIE_SECURE === 'true'
+          : process.env.APP_ENV === 'production';
+    return { sameSite, secure };
+  })(),
+
   database: {
     host: process.env.DB_HOST,
     port: parseInt(process.env.DB_PORT ?? '3306', 10),

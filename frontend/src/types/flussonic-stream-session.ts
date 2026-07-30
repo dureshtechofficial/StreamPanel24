@@ -15,16 +15,19 @@ export interface IpWhoIsInfo {
   [key: string]: unknown;
 }
 
+/**
+ * A live stream session read straight from Flussonic on each request (never
+ * stored in our DB), so there's no local row id — `session_uuid` (Flussonic's
+ * own session id) is the identity/key.
+ */
 export interface FlussonicStreamSession {
-  id: string;
-  flussonic_stream_id: string | null;
   session_uuid: string;
   stream_name: string;
   type: string | null;
   ip: string | null;
+  proto: string | null;
   /** UTC unix timestamp (seconds) */
   started_at: number | null;
-  proto: string | null;
   /** UTC unix timestamp (seconds) — Flussonic's own session updated_at */
   updated_at: number | null;
   country: string | null;

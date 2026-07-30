@@ -20,7 +20,6 @@ import { ResellerAuthModule } from './reseller-auth/reseller-auth.module';
 import { FlussonicServer } from './flussonic-servers/entities/flussonic-server.entity';
 import { FlussonicServerStat } from './flussonic-servers/entities/flussonic-server-stat.entity';
 import { FlussonicStream } from './flussonic-servers/entities/flussonic-stream.entity';
-import { FlussonicStreamSession } from './flussonic-servers/entities/flussonic-stream-session.entity';
 import { FlussonicServersModule } from './flussonic-servers/flussonic-servers.module';
 import { SyncSchedule } from './settings/entities/sync-schedule.entity';
 import { SyncScheduleRun } from './settings/entities/sync-schedule-run.entity';
@@ -38,6 +37,9 @@ import { WalletModule } from './wallet/wallet.module';
 import { CustomerWalletTransaction } from './customer-wallet/entities/customer-wallet-transaction.entity';
 import { CustomerWalletModule } from './customer-wallet/customer-wallet.module';
 import { RazorpayModule } from './razorpay/razorpay.module';
+import { NotificationSetting } from './notifications/entities/notification-setting.entity';
+import { Notification } from './notifications/entities/notification.entity';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -66,7 +68,6 @@ import { RazorpayModule } from './razorpay/razorpay.module';
           FlussonicServer,
           FlussonicServerStat,
           FlussonicStream,
-          FlussonicStreamSession,
           SyncSchedule,
           SyncScheduleRun,
           OrderCancelSetting,
@@ -78,6 +79,8 @@ import { RazorpayModule } from './razorpay/razorpay.module';
           Order,
           WalletTransaction,
           CustomerWalletTransaction,
+          NotificationSetting,
+          Notification,
         ],
         synchronize: false,
         logging: configService.get<string>('appEnv') === 'development',
@@ -96,6 +99,7 @@ import { RazorpayModule } from './razorpay/razorpay.module';
     WalletModule,
     CustomerWalletModule,
     RazorpayModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [

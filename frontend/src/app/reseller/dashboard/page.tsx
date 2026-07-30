@@ -39,6 +39,7 @@ import {
   listMyStreamSessions,
   searchMyAvailableStreams,
   setMyStreamDisabled,
+  restartMyStream,
 } from '@/lib/reseller-customer-streams-api';
 import {
   createMyCustomerOrder,
@@ -90,6 +91,7 @@ const VIEW_STREAMS_API: CustomerAssignedStreamsPanelApi = {
   listCustomerStreams: listMyCustomerStreams,
   getStreamDetails: getMyStreamDetails,
   setStreamDisabled: setMyStreamDisabled,
+  restartStream: restartMyStream,
 };
 
 function ResellerDashboardContent() {

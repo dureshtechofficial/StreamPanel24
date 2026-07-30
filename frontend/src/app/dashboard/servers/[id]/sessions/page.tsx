@@ -12,21 +12,15 @@ import {
   ChevronRightIcon,
   SearchIcon,
 } from '@/components/icons';
-import { ToggleField } from '@/components/toggle';
 import { ExternalLinkIcon } from '@/components/icons';
 import { getServer } from '@/lib/flussonic-servers-api';
 import { lookupIp } from '@/lib/client-ipwhois';
-import {
-  listStreamSessions,
-  syncStreamSessions,
-  type SyncSessionsSummary,
-} from '@/lib/flussonic-stream-sessions-api';
+import { listStreamSessions } from '@/lib/flussonic-stream-sessions-api';
 import type { FlussonicServer } from '@/types/flussonic-server';
 import type { FlussonicStreamSession, IpWhoIsInfo } from '@/types/flussonic-stream-session';
 import { ApiError } from '@/lib/api-error';
 import { useAuth } from '@/lib/auth-context';
 import { usePageTitle } from '@/lib/use-page-title';
-import { useSyncManualFlags } from '@/lib/use-sync-manual-flags';
 
 const PAGE_SIZE = 20;
 
@@ -77,14 +71,8 @@ function SessionsContent({ serverId }: { serverId: string }) {
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState(initialSearch);
   const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
-  const [latestOnly, setLatestOnly] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [syncSummary, setSyncSummary] = useState<SyncSessionsSummary | null>(null);
-  const [syncError, setSyncError] = useState<string | null>(null);
-  const syncManualFlags = useSyncManualFlags();
   const [geoByIp, setGeoByIp] = useState<Record<string, IpWhoIsInfo | null>>({});
 
   useEffect(() => {
@@ -103,7 +91,6 @@ function SessionsContent({ serverId }: { serverId: string }) {
         getServer(serverId),
         listStreamSessions(serverId, {
           search: debouncedSearch || undefined,
-          latestOnly,
           page,
           limit: PAGE_SIZE,
         }),
@@ -117,7 +104,7 @@ function SessionsContent({ serverId }: { serverId: string }) {
     } finally {
       setIsLoading(false);
     }
-  }, [serverId, debouncedSearch, latestOnly, page]);
+  }, [serverId, debouncedSearch, page]);
 
   useEffect(() => {
     // Standard fetch-on-dependency-change effect. isLoading/loadError are reset
@@ -150,22 +137,6 @@ function SessionsContent({ serverId }: { serverId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items]);
 
-  async function handleSync() {
-    setSyncError(null);
-    setSyncSummary(null);
-    setIsSyncing(true);
-    try {
-      const summary = await syncStreamSessions(serverId);
-      setSyncSummary(summary);
-      setPage(1);
-      await load();
-    } catch (err) {
-      setSyncError(err instanceof ApiError ? err.message : 'Failed to sync sessions.');
-    } finally {
-      setIsSyncing(false);
-    }
-  }
-
   const from = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
   const to = Math.min(page * PAGE_SIZE, total);
 
@@ -189,29 +160,18 @@ function SessionsContent({ serverId }: { serverId: string }) {
           </p>
         </div>
         <button
-          onClick={handleSync}
-          disabled={isSyncing || !syncManualFlags.sessions}
-          title={syncManualFlags.sessions ? undefined : 'Manual sessions sync is disabled in Settings'}
+          onClick={() => load()}
+          disabled={isLoading}
           className="flex items-center justify-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <ArrowPathIcon className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
-          {isSyncing ? 'Syncing…' : 'Sync'}
+          <ArrowPathIcon className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+          {isLoading ? 'Refreshing…' : 'Refresh'}
         </button>
       </div>
 
-      {syncError && (
-        <div className="animate-fade-in-up mb-4 rounded-md bg-danger-soft px-4 py-3 text-sm text-danger">
-          {syncError}
-        </div>
-      )}
-
-      {syncSummary && (
-        <div className="animate-fade-in-up mb-4 rounded-md bg-success-soft px-4 py-3 text-sm text-success">
-          Synced {syncSummary.total} session{syncSummary.total === 1 ? '' : 's'} from the server
-          {syncSummary.created > 0 ? ` — ${syncSummary.created} new` : ''}
-          {syncSummary.updated > 0 ? `, ${syncSummary.updated} refreshed` : ''}.
-        </div>
-      )}
+      <p className="mb-4 text-xs text-muted-foreground/70">
+        Sessions are read live from the server each time — use Refresh to pull the current list.
+      </p>
 
       <div
         className="animate-fade-in-up mb-4 flex flex-col gap-3 sm:flex-row sm:items-center"
@@ -224,17 +184,6 @@ function SessionsContent({ serverId }: { serverId: string }) {
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by stream name, IP, or country…"
             className="w-full rounded-lg border border-input py-2 pl-9 pr-3 text-sm text-foreground transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/20"
-          />
-        </div>
-        <div className="rounded-lg border border-input bg-card px-3 py-1.5 sm:w-64">
-          <ToggleField
-            label="Current sessions only"
-            hint="Hide sessions not seen in the last sync"
-            checked={latestOnly}
-            onChange={(v) => {
-              setLatestOnly(v);
-              setPage(1);
-            }}
           />
         </div>
       </div>
@@ -253,7 +202,7 @@ function SessionsContent({ serverId }: { serverId: string }) {
 
         {!isLoading && !loadError && items.length === 0 && (
           <p className="px-4 py-10 text-center text-sm text-muted-foreground/70">
-            No sessions recorded yet. Click Sync to pull the latest sessions from this server.
+            No active sessions on this server right now.
           </p>
         )}
 
@@ -278,7 +227,7 @@ function SessionsContent({ serverId }: { serverId: string }) {
                   {items.map((session) => {
                     const geo = session.ip ? geoByIp[session.ip] : null;
                     return (
-                      <tr key={session.id} className="transition-colors hover:bg-muted">
+                      <tr key={session.session_uuid} className="transition-colors hover:bg-muted">
                         <td className="px-4 py-3 font-medium text-foreground">
                           {session.stream_name}
                         </td>
@@ -311,7 +260,7 @@ function SessionsContent({ serverId }: { serverId: string }) {
               {items.map((session) => {
                 const geo = session.ip ? geoByIp[session.ip] : null;
                 return (
-                  <div key={session.id} className="p-4">
+                  <div key={session.session_uuid} className="p-4">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <p className="truncate font-medium text-foreground">{session.stream_name}</p>

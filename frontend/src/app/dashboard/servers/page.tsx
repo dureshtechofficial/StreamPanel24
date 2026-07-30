@@ -73,7 +73,7 @@ function ServersContent() {
   const [syncError, setSyncError] = useState<string | null>(null);
   const syncManualFlags = useSyncManualFlags();
   const anyManualSyncEnabled =
-    syncManualFlags.server_stats || syncManualFlags.streams || syncManualFlags.sessions;
+    syncManualFlags.server_stats || syncManualFlags.streams;
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -220,7 +220,6 @@ function ServersContent() {
           const items: { serverId: string; name: string; type: string; error?: string }[] = [];
           if (!r.stats.ok) items.push({ serverId: r.serverId, name: r.name, type: "stats", error: r.stats.error });
           if (!r.streams.ok) items.push({ serverId: r.serverId, name: r.name, type: "streams", error: r.streams.error });
-          if (!r.sessions.ok) items.push({ serverId: r.serverId, name: r.name, type: "sessions", error: r.sessions.error });
           return items;
         });
         return (
@@ -232,7 +231,7 @@ function ServersContent() {
             }`}
           >
             <p>
-              Synced stats, streams, and sessions for {syncSummary.total} server
+              Synced stats and streams for {syncSummary.total} server
               {syncSummary.total === 1 ? "" : "s"}
               {failures.length > 0 ? `, ${failures.length} issue${failures.length === 1 ? "" : "s"}` : ""}.
             </p>

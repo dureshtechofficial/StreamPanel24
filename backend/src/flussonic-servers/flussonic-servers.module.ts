@@ -3,7 +3,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { FlussonicServer } from './entities/flussonic-server.entity';
 import { FlussonicServerStat } from './entities/flussonic-server-stat.entity';
 import { FlussonicStream } from './entities/flussonic-stream.entity';
-import { FlussonicStreamSession } from './entities/flussonic-stream-session.entity';
 import { SyncSchedule } from '../settings/entities/sync-schedule.entity';
 import { Order } from '../orders/entities/order.entity';
 import { Customer } from '../customers/entities/customer.entity';
@@ -18,14 +17,15 @@ import { FlussonicStreamSessionsService } from './flussonic-stream-sessions.serv
 import { FlussonicStreamSessionsController } from './flussonic-stream-sessions.controller';
 import { FlussonicSyncAllService } from './flussonic-sync-all.service';
 import { SyncScheduleGateService } from './sync-schedule-gate.service';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
+    NotificationsModule,
     TypeOrmModule.forFeature([
       FlussonicServer,
       FlussonicServerStat,
       FlussonicStream,
-      FlussonicStreamSession,
       SyncSchedule,
       // Registered here (not via OrdersModule) so FlussonicStreamsService can
       // compute has_active_order — OrdersModule already imports

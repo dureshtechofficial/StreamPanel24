@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { listCustomerStreams } from '@/lib/customer-streams-api';
-import { getStream, updateStream } from '@/lib/flussonic-streams-api';
+import { getStream, restartStream, updateStream } from '@/lib/flussonic-streams-api';
 import { useStreamDisableActions } from '@/lib/use-stream-disable-actions';
 import { liveStatusStyle } from '@/lib/live-status-style';
 import { StreamDetailsPanel } from './stream-details-panel';
@@ -28,6 +28,8 @@ export interface CustomerAssignedStreamsPanelApi {
   getStreamDetails?: (serverId: string, streamId: string) => Promise<FlussonicStream>;
   /** Omit to hide the "disable"/"restart" actions entirely (shown whenever this is provided). */
   setStreamDisabled?: (serverId: string, streamId: string, disabled: boolean) => Promise<unknown>;
+  /** Dedicated restart endpoint (one call, one "restarted" notification). Falls back to disable+re-enable when omitted. */
+  restartStream?: (serverId: string, streamId: string) => Promise<unknown>;
 }
 
 const DEFAULT_API: CustomerAssignedStreamsPanelApi = {
@@ -35,6 +37,7 @@ const DEFAULT_API: CustomerAssignedStreamsPanelApi = {
   getStreamDetails: getStream,
   setStreamDisabled: (serverId, streamId, disabled) =>
     updateStream(serverId, streamId, { disabled }),
+  restartStream: (serverId, streamId) => restartStream(serverId, streamId),
 };
 
 export function CustomerAssignedStreamsPanel({
@@ -64,7 +67,7 @@ export function CustomerAssignedStreamsPanel({
    */
   sessionsApi?: (
     streamId: string,
-    params: { page?: number; limit?: number; latestOnly?: boolean },
+    params: { page?: number; limit?: number },
   ) => Promise<PaginatedResult<FlussonicStreamSession>>;
 }) {
   const router = useRouter();
@@ -96,11 +99,21 @@ export function CustomerAssignedStreamsPanel({
     load();
   }, [open, customer, load]);
 
-  const streamActions = useStreamDisableActions(async (streamId, disabled) => {
-    const stream = streams.find((s) => s.id === streamId);
-    if (!stream || !api.setStreamDisabled) return;
-    await api.setStreamDisabled(stream.server_id, streamId, disabled);
-  }, load);
+  const streamActions = useStreamDisableActions(
+    async (streamId, disabled) => {
+      const stream = streams.find((s) => s.id === streamId);
+      if (!stream || !api.setStreamDisabled) return;
+      await api.setStreamDisabled(stream.server_id, streamId, disabled);
+    },
+    load,
+    api.restartStream
+      ? async (streamId) => {
+          const stream = streams.find((s) => s.id === streamId);
+          if (!stream || !api.restartStream) return;
+          await api.restartStream(stream.server_id, streamId);
+        }
+      : undefined,
+  );
 
   async function handleView(stream: FlussonicStreamDirectoryEntry) {
     if (!api.getStreamDetails) return;
@@ -224,7 +237,15 @@ export function CustomerAssignedStreamsPanel({
                           <UsersIcon className="h-4 w-4" />
                         </button>
                       )}
-                      {api.setStreamDisabled && stream.has_active_order && (
+                      {stream.blocked && (
+                        <span
+                          className="rounded-full bg-danger-soft px-2 py-0.5 text-xs font-medium text-danger"
+                          title="Blocked by an administrator"
+                        >
+                          Blocked
+                        </span>
+                      )}
+                      {api.setStreamDisabled && stream.has_active_order && !stream.blocked && (
                         <>
                           {stream.disabled ? (
                             <button

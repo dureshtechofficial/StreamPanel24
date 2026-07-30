@@ -1,13 +1,9 @@
 import { BadGatewayException, Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { FlussonicStreamSession } from './entities/flussonic-stream-session.entity';
 import { FlussonicServer } from './entities/flussonic-server.entity';
 import { QueryFlussonicStreamSessionDto } from './dto/query-flussonic-stream-session.dto';
 import { FlussonicServersService } from './flussonic-servers.service';
 import { FlussonicStreamsService } from './flussonic-streams.service';
 import { buildFlussonicApiUrl } from './utils/flussonic-api-url.util';
-import { nowUnixSeconds } from '../common/utils/unix-timestamp.util';
 import type {
   FlussonicSessionEntry,
   FlussonicSessionsListResponse,
@@ -15,151 +11,109 @@ import type {
 import type { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 
 const REQUEST_TIMEOUT_MS = 8_000;
-const MAX_SYNC_PAGES = 200;
+const MAX_FETCH_PAGES = 200;
 
-/** A session row plus a computed (never stored) link to look up its IP on ip.me. */
-export type FlussonicStreamSessionWithLookup = FlussonicStreamSession & {
+/**
+ * A single live session as returned to the frontend — read straight from
+ * Flussonic's real `GET sessions` on every request, never persisted. `ip_lookup_url`
+ * is a computed convenience link; IP geolocation itself is done client-side
+ * (browser → ipwho.is) so the backend never hammers a rate-limited API.
+ */
+export interface LiveStreamSession {
+  /** Flussonic's own session id (its `sessions[].id`). */
+  session_uuid: string;
+  stream_name: string;
+  type: string | null;
+  ip: string | null;
+  proto: string | null;
+  /** UTC unix timestamp (seconds) — converted from Flussonic's millisecond value. */
+  started_at: number | null;
+  /** UTC unix timestamp (seconds) — Flussonic's own session `updated_at`. */
+  updated_at: number | null;
+  country: string | null;
+  /** ip.me lookup link; null when `ip` is null. */
   ip_lookup_url: string | null;
-};
-
-function withIpLookupUrl(
-  session: FlussonicStreamSession,
-): FlussonicStreamSessionWithLookup {
-  return {
-    ...session,
-    ip_lookup_url: session.ip ? `https://ip.me/ip/${session.ip}` : null,
-  };
 }
 
-export interface SyncSessionsSummary {
-  total: number;
-  created: number;
-  updated: number;
-}
-
-export interface SyncAllServersResult {
-  serverId: string;
-  name: string;
-  ok: boolean;
-  error?: string;
-  created?: number;
-  updated?: number;
-}
-
-export interface SyncAllServersSummary {
-  total: number;
-  succeeded: number;
-  failed: number;
-  results: SyncAllServersResult[];
-}
-
+/**
+ * Stream sessions are NOT stored — every request pulls the current sessions
+ * straight from the server's real `GET sessions` endpoint and filters/paginates
+ * them in memory. There is no sync/persistence step: the "refresh" button on the
+ * sessions view simply re-fetches live.
+ */
 @Injectable()
 export class FlussonicStreamSessionsService {
   constructor(
-    @InjectRepository(FlussonicStreamSession)
-    private readonly sessionsRepository: Repository<FlussonicStreamSession>,
     private readonly serversService: FlussonicServersService,
     private readonly streamsService: FlussonicStreamsService,
   ) {}
 
+  /** Every current session on the server, filtered by `search` and paginated in memory. */
   async findAllForServer(
     serverId: string,
     query: QueryFlussonicStreamSessionDto,
-  ): Promise<PaginatedResult<FlussonicStreamSessionWithLookup>> {
-    await this.serversService.findOne(serverId); // 404s if the server doesn't exist or is soft-deleted
-
-    const page = query.page ?? 1;
-    const limit = query.limit ?? 20;
-
-    // Sessions have no server_id of their own — attribute them to a server via
-    // the local stream row (set during sync) they matched by name.
-    const qb = this.sessionsRepository
-      .createQueryBuilder('session')
-      .innerJoin(
-        'flussonic_streams',
-        'stream',
-        'stream.id = session.flussonic_stream_id',
-      )
-      .where('stream.flussonic_server_id = :serverId', { serverId });
-
-    if (query.search) {
-      qb.andWhere(
-        '(session.stream_name LIKE :search OR session.ip LIKE :search OR session.country LIKE :search)',
-        { search: `%${query.search}%` },
-      );
-    }
-
-    if (query.latestOnly) {
-      // A row not touched by the most recent sync means Flussonic no longer
-      // reported it — the session has effectively ended.
-      qb.andWhere(
-        `session.synced_at = (
-          SELECT MAX(s2.synced_at)
-          FROM flussonic_stream_sessions s2
-          INNER JOIN flussonic_streams st2 ON st2.id = s2.flussonic_stream_id
-          WHERE st2.flussonic_server_id = :serverId
-        )`,
-        { serverId },
-      );
-    }
-
-    qb.orderBy('session.updated_at', 'DESC')
-      .skip((page - 1) * limit)
-      .take(limit);
-
-    const [items, total] = await qb.getManyAndCount();
-
-    return {
-      items: items.map(withIpLookupUrl),
-      total,
-      page,
-      limit,
-      totalPages: Math.max(1, Math.ceil(total / limit)),
-    };
+  ): Promise<PaginatedResult<LiveStreamSession>> {
+    const server = await this.serversService.findOne(serverId); // 404s if unknown/soft-deleted
+    const sessions = (await this.fetchAllSessions(server)).map(mapEntry);
+    const filtered = this.applySearch(sessions, query.search, true);
+    return this.paginate(filtered, query);
   }
 
   /**
-   * Sessions for one specific stream — used by the reseller/customer portals
-   * (each behind their own ownership check in the caller controller) so they
-   * can see who's watching/publishing a stream they hold without exposing
-   * the rest of the server's sessions the way the admin per-server view does.
+   * Current sessions for one specific stream — used by the reseller/customer
+   * portals (each behind their own ownership check in the caller controller).
+   * Filters the server's live session list down to the stream's name.
    */
   async findAllForStream(
     streamId: string,
     query: QueryFlussonicStreamSessionDto,
-  ): Promise<PaginatedResult<FlussonicStreamSessionWithLookup>> {
+  ): Promise<PaginatedResult<LiveStreamSession>> {
+    const stream = await this.streamsService.findOneById(streamId);
+    if (!stream) return this.emptyPage(query);
+
+    const server = await this.serversService.findOne(stream.flussonic_server_id);
+    const streamName = stream.config_json.name;
+    const sessions = (await this.fetchAllSessions(server))
+      .map(mapEntry)
+      .filter((s) => s.stream_name === streamName);
+    const filtered = this.applySearch(sessions, query.search, false);
+    return this.paginate(filtered, query);
+  }
+
+  private applySearch(
+    sessions: LiveStreamSession[],
+    search: string | undefined,
+    includeStreamName: boolean,
+  ): LiveStreamSession[] {
+    if (!search) return sessions;
+    const needle = search.toLowerCase();
+    return sessions.filter((s) => {
+      const haystack = [
+        includeStreamName ? s.stream_name : null,
+        s.ip,
+        s.country,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(needle);
+    });
+  }
+
+  private paginate(
+    sessions: LiveStreamSession[],
+    query: QueryFlussonicStreamSessionDto,
+  ): PaginatedResult<LiveStreamSession> {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
-
-    const qb = this.sessionsRepository
-      .createQueryBuilder('session')
-      .where('session.flussonic_stream_id = :streamId', { streamId });
-
-    if (query.search) {
-      qb.andWhere('(session.ip LIKE :search OR session.country LIKE :search)', {
-        search: `%${query.search}%`,
-      });
-    }
-
-    if (query.latestOnly) {
-      qb.andWhere(
-        `session.synced_at = (
-          SELECT MAX(s2.synced_at)
-          FROM flussonic_stream_sessions s2
-          WHERE s2.flussonic_stream_id = :streamId
-        )`,
-        { streamId },
-      );
-    }
-
-    qb.orderBy('session.updated_at', 'DESC')
-      .skip((page - 1) * limit)
-      .take(limit);
-
-    const [items, total] = await qb.getManyAndCount();
-
+    // Newest activity first — mirrors the old ORDER BY updated_at DESC.
+    const sorted = [...sessions].sort(
+      (a, b) => (b.updated_at ?? 0) - (a.updated_at ?? 0),
+    );
+    const total = sorted.length;
+    const start = (page - 1) * limit;
     return {
-      items: items.map(withIpLookupUrl),
+      items: sorted.slice(start, start + limit),
       total,
       page,
       limit,
@@ -167,105 +121,19 @@ export class FlussonicStreamSessionsService {
     };
   }
 
-  /**
-   * Pulls every current session from the server's real `GET sessions`
-   * (cursor-paginated, covers all streams at once) and upserts each by its
-   * Flussonic session id — one row per real session, refreshed while it's
-   * ongoing. IP geolocation is deliberately not done here — it's looked up
-   * client-side (browser calls ipwho.is directly) so that a server pulling
-   * thousands of sessions across many servers never hammers a rate-limited
-   * IP-lookup API from one server IP.
-   */
-  async syncFromFlussonic(serverId: string): Promise<SyncSessionsSummary> {
-    const server = await this.serversService.findOne(serverId);
-    const sessions = await this.fetchAllSessions(server);
-
-    // Captured once and stamped on every row this run touches, so "latest
-    // synced" can be identified later via MAX(synced_at) instead of needing
-    // a separate sync-run table.
-    const syncTimestamp = nowUnixSeconds();
-
-    let created = 0;
-    let updated = 0;
-    for (const entry of sessions) {
-      const existing = await this.sessionsRepository.findOne({
-        where: { session_uuid: entry.id },
-      });
-
-      const stream = await this.streamsService.findByNameInDb(
-        serverId,
-        entry.name,
-      );
-
-      if (existing) {
-        existing.flussonic_stream_id = stream?.id ?? null;
-        existing.stream_name = entry.name;
-        existing.type = entry.type ?? null;
-        existing.ip = entry.ip ?? null;
-        existing.started_at = toUnixSeconds(entry.started_at);
-        existing.proto = entry.proto ?? null;
-        existing.updated_at = toUnixSeconds(entry.updated_at);
-        existing.country = entry.country ?? null;
-        existing.synced_at = syncTimestamp;
-        await this.sessionsRepository.save(existing);
-        updated++;
-        continue;
-      }
-
-      const session = this.sessionsRepository.create({
-        flussonic_stream_id: stream?.id ?? null,
-        session_uuid: entry.id,
-        stream_name: entry.name,
-        type: entry.type ?? null,
-        ip: entry.ip ?? null,
-        started_at: toUnixSeconds(entry.started_at),
-        proto: entry.proto ?? null,
-        updated_at: toUnixSeconds(entry.updated_at),
-        country: entry.country ?? null,
-        synced_at: syncTimestamp,
-      });
-      await this.sessionsRepository.save(session);
-      created++;
-    }
-
-    return { total: sessions.length, created, updated };
-  }
-
-  /** Syncs every non-deleted server's sessions, one at a time; a single failure doesn't abort the rest. */
-  async syncAllServers(): Promise<SyncAllServersSummary> {
-    const servers = await this.serversService.findAllActive();
-
-    const results: SyncAllServersResult[] = [];
-    for (const server of servers) {
-      try {
-        const summary = await this.syncFromFlussonic(server.id);
-        results.push({
-          serverId: server.id,
-          name: server.name,
-          ok: true,
-          created: summary.created,
-          updated: summary.updated,
-        });
-      } catch (err) {
-        results.push({
-          serverId: server.id,
-          name: server.name,
-          ok: false,
-          error: err instanceof Error ? err.message : 'unknown error',
-        });
-      }
-    }
-
-    const succeeded = results.filter((r) => r.ok).length;
+  private emptyPage(
+    query: QueryFlussonicStreamSessionDto,
+  ): PaginatedResult<LiveStreamSession> {
     return {
-      total: results.length,
-      succeeded,
-      failed: results.length - succeeded,
-      results,
+      items: [],
+      total: 0,
+      page: query.page ?? 1,
+      limit: query.limit ?? 20,
+      totalPages: 1,
     };
   }
 
-  /** Follows `next` cursor pagination until exhausted (capped at MAX_SYNC_PAGES as a safety net). */
+  /** Follows `next` cursor pagination until exhausted (capped at MAX_FETCH_PAGES as a safety net). */
   private async fetchAllSessions(
     server: FlussonicServer,
   ): Promise<FlussonicSessionEntry[]> {
@@ -273,7 +141,7 @@ export class FlussonicStreamSessionsService {
     const all: FlussonicSessionEntry[] = [];
     let cursor: string | null = null;
 
-    for (let page = 0; page < MAX_SYNC_PAGES; page++) {
+    for (let page = 0; page < MAX_FETCH_PAGES; page++) {
       const url =
         buildFlussonicApiUrl(server, 'sessions') +
         (cursor ? `?next=${encodeURIComponent(cursor)}` : '');
@@ -317,7 +185,21 @@ export class FlussonicStreamSessionsService {
   }
 }
 
-/** Flussonic session timestamps come back in milliseconds; the rest of this app stores unix seconds. */
+function mapEntry(entry: FlussonicSessionEntry): LiveStreamSession {
+  return {
+    session_uuid: entry.id,
+    stream_name: entry.name,
+    type: entry.type ?? null,
+    ip: entry.ip ?? null,
+    proto: entry.proto ?? null,
+    started_at: toUnixSeconds(entry.started_at),
+    updated_at: toUnixSeconds(entry.updated_at),
+    country: entry.country ?? null,
+    ip_lookup_url: entry.ip ? `https://ip.me/ip/${entry.ip}` : null,
+  };
+}
+
+/** Flussonic session timestamps come back in milliseconds; this app uses unix seconds. */
 function toUnixSeconds(ms: number | undefined): number | null {
   return ms !== undefined ? Math.floor(ms / 1000) : null;
 }

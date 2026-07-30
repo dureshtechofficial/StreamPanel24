@@ -100,6 +100,8 @@ export interface FlussonicStream {
   /** Set once the stream has been synced from the live Flussonic server; null until then. */
   live_stats_json: FlussonicLiveStream | null;
   status: FlussonicStreamStatus;
+  /** Admin lock — when true the stream is forced disabled and enable/start/restart are blocked until unblocked. */
+  blocked: boolean;
   /** UTC unix timestamp (seconds) */
   created_at: number;
   /** UTC unix timestamp (seconds) */

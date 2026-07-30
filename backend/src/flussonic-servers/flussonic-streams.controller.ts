@@ -100,6 +100,35 @@ export class FlussonicStreamsController {
 
   @ApiOperation({
     summary:
+      'Restart a stream (disable then re-enable on Flussonic, forcing a reconnect) — sends a single restart notification',
+  })
+  @Post(':id/restart')
+  @HttpCode(HttpStatus.OK)
+  restart(@Param('serverId') serverId: string, @Param('id') id: string) {
+    return this.streamsService.restart(serverId, id);
+  }
+
+  @ApiOperation({
+    summary:
+      'Block a stream: force it disabled and lock out enable/start/restart until unblocked (hidden from reseller/customer portals)',
+  })
+  @Post(':id/block')
+  @HttpCode(HttpStatus.OK)
+  block(@Param('serverId') serverId: string, @Param('id') id: string) {
+    return this.streamsService.block(serverId, id);
+  }
+
+  @ApiOperation({
+    summary: 'Unblock a stream (clears the admin lock; leaves it disabled)',
+  })
+  @Post(':id/unblock')
+  @HttpCode(HttpStatus.OK)
+  unblock(@Param('serverId') serverId: string, @Param('id') id: string) {
+    return this.streamsService.unblock(serverId, id);
+  }
+
+  @ApiOperation({
+    summary:
       'Delete a stream from Flussonic and soft-delete it locally (sets status to "deleted", never removes the row)',
   })
   @Delete(':id')

@@ -27,7 +27,17 @@ import {
   updateSmtpSettings,
   sendSmtpTest,
 } from "@/lib/smtp-settings-api";
+import {
+  listNotificationSettings,
+  updateNotificationSetting,
+} from "@/lib/notification-settings-api";
+import { listNotifications } from "@/lib/notifications-api";
 import type { SmtpSetting } from "@/types/smtp-setting";
+import type {
+  NotificationEvent,
+  NotificationRecord,
+  NotificationSetting,
+} from "@/types/notification";
 import { CopyButton } from "@/components/copy-button";
 import type { SyncSchedule, SyncType } from "@/types/sync-schedule";
 import type { OrderCancelActor, OrderCancelSetting } from "@/types/order-cancel-setting";
@@ -56,12 +66,6 @@ const TYPE_INFO: Record<
     title: "Streams sync",
     description:
       "Pulls every server's real stream list (GET streams) and refreshes live data.",
-    hasManualSync: true,
-  },
-  sessions: {
-    title: "Sessions sync",
-    description:
-      "Pulls every server's real session list (GET sessions). IP geolocation is looked up client-side when sessions are viewed, not during this sync.",
     hasManualSync: true,
   },
   order_expiry: {
@@ -116,7 +120,12 @@ function summarizeLastRun(
   }
   const expired = summary.expired;
   if (typeof expired === "number") {
-    return `${expired} order${expired === 1 ? "" : "s"} expired`;
+    const reminded = summary.reminded;
+    const remindedText =
+      typeof reminded === "number" && reminded > 0
+        ? `, ${reminded} reminder${reminded === 1 ? "" : "s"} sent`
+        : "";
+    return `${expired} order${expired === 1 ? "" : "s"} expired${remindedText}`;
   }
   return null;
 }
@@ -788,6 +797,236 @@ function EmailSmtpSection() {
   );
 }
 
+const NOTIFICATION_EVENT_ORDER: NotificationEvent[] = [
+  "stream_start",
+  "stream_disable",
+  "stream_restart",
+  "order_expiry_reminder",
+  "order_expiry",
+];
+const NOTIFICATION_EVENT_LABELS: Record<NotificationEvent, string> = {
+  stream_start: "Stream started",
+  stream_disable: "Stream disabled",
+  stream_restart: "Stream restarted",
+  order_expiry_reminder: "Payment reminder",
+  order_expiry: "Order expired",
+};
+const NOTIFICATION_EVENT_TOGGLE_LABELS: Record<NotificationEvent, string> = {
+  stream_start: "Email the customer when their stream starts (enabled)",
+  stream_disable: "Email the customer when their stream is disabled",
+  stream_restart: "Email the customer when their stream is restarted",
+  order_expiry_reminder:
+    "Email the customer a payment reminder on each of the 2 days before their order expires",
+  order_expiry: "Email the customer when their order expires",
+};
+
+const NOTIFICATION_STATUS_STYLES: Record<string, string> = {
+  sent: "bg-success-soft text-success",
+  failed: "bg-danger-soft text-danger",
+  skipped: "bg-muted text-muted-foreground",
+};
+
+function NotificationsSection() {
+  const [settings, setSettings] = useState<NotificationSetting[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [savingEvent, setSavingEvent] = useState<NotificationEvent | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const [logOpen, setLogOpen] = useState(false);
+  const [log, setLog] = useState<NotificationRecord[]>([]);
+  const [logLoading, setLogLoading] = useState(false);
+  const [logError, setLogError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setIsLoading(true);
+    setLoadError(null);
+    try {
+      const result = await listNotificationSettings();
+      setSettings(result);
+    } catch (err) {
+      setLoadError(
+        err instanceof ApiError ? err.message : "Failed to load notification settings.",
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load();
+  }, [load]);
+
+  const loadLog = useCallback(async () => {
+    setLogLoading(true);
+    setLogError(null);
+    try {
+      const result = await listNotifications({ limit: 20 });
+      setLog(result.items);
+    } catch (err) {
+      setLogError(
+        err instanceof ApiError ? err.message : "Failed to load notification log.",
+      );
+    } finally {
+      setLogLoading(false);
+    }
+  }, []);
+
+  async function handleToggle(event: NotificationEvent, enabled: boolean) {
+    setSavingEvent(event);
+    setError(null);
+    try {
+      const updated = await updateNotificationSetting(event, enabled);
+      setSettings((prev) =>
+        prev.map((s) => (s.event_type === event ? updated : s)),
+      );
+    } catch (err) {
+      setError(
+        err instanceof ApiError ? err.message : "Failed to save notification setting.",
+      );
+    } finally {
+      setSavingEvent(null);
+    }
+  }
+
+  function handleToggleLog() {
+    const next = !logOpen;
+    setLogOpen(next);
+    if (next) loadLog();
+  }
+
+  return (
+    <div className="animate-fade-in-up mb-6 rounded-xl border border-border bg-card p-5 shadow-sm">
+      <h2 className="text-base font-semibold text-foreground">
+        Customer notifications
+      </h2>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Email the affected customer when their stream is disabled or restarted,
+        or when their order expires. Emails use the SMTP settings above (enable
+        those first), and every attempt is recorded in the log below.
+      </p>
+
+      {isLoading && (
+        <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground/70">
+          <ArrowPathIcon className="h-4 w-4 animate-spin" />
+          Loading…
+        </p>
+      )}
+
+      {!isLoading && loadError && (
+        <p className="mt-4 text-sm text-danger">{loadError}</p>
+      )}
+
+      {!isLoading && !loadError && (
+        <div className="mt-4 divide-y divide-border">
+          {NOTIFICATION_EVENT_ORDER.map((event) => {
+            const setting = settings.find((s) => s.event_type === event);
+            if (!setting) return null;
+            return (
+              <div
+                key={event}
+                className="flex items-center justify-between py-2"
+              >
+                <ToggleField
+                  label={NOTIFICATION_EVENT_TOGGLE_LABELS[event]}
+                  checked={setting.enabled}
+                  onChange={(v) => handleToggle(event, v)}
+                />
+                {savingEvent === event && (
+                  <ArrowPathIcon className="h-4 w-4 animate-spin text-muted-foreground/70" />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {error && <p className="mt-2 text-xs text-danger">{error}</p>}
+
+      <div className="mt-4 border-t border-border pt-4">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground/70">
+            Notification log
+          </p>
+          <button
+            onClick={handleToggleLog}
+            className="rounded-full border border-input px-3 py-1 text-xs font-medium text-foreground transition hover:bg-muted"
+          >
+            {logOpen ? "Hide log" : "Show log"}
+          </button>
+        </div>
+
+        {logOpen && (
+          <div className="mt-3">
+            {logLoading && (
+              <p className="flex items-center gap-2 text-sm text-muted-foreground/70">
+                <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                Loading…
+              </p>
+            )}
+            {!logLoading && logError && (
+              <p className="text-sm text-danger">{logError}</p>
+            )}
+            {!logLoading && !logError && log.length === 0 && (
+              <p className="text-sm text-muted-foreground/70">
+                No notifications sent yet.
+              </p>
+            )}
+            {!logLoading && !logError && log.length > 0 && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="text-muted-foreground/70">
+                      <th className="pb-2 pr-3 font-medium">Event</th>
+                      <th className="pb-2 pr-3 font-medium">Recipient</th>
+                      <th className="pb-2 pr-3 font-medium">Status</th>
+                      <th className="pb-2 font-medium">When</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {log.map((n) => (
+                      <tr key={n.id} className="align-top">
+                        <td className="py-2 pr-3 text-foreground">
+                          {NOTIFICATION_EVENT_LABELS[n.event_type]}
+                        </td>
+                        <td className="py-2 pr-3 text-muted-foreground">
+                          {n.recipient_email ?? "—"}
+                        </td>
+                        <td className="py-2 pr-3">
+                          <span
+                            className={`inline-block rounded-full px-2 py-0.5 font-medium ${
+                              NOTIFICATION_STATUS_STYLES[n.status] ??
+                              "bg-muted text-muted-foreground"
+                            }`}
+                          >
+                            {n.status}
+                          </span>
+                          {n.error && (
+                            <span
+                              className="ml-1 text-muted-foreground/70"
+                              title={n.error}
+                            >
+                              ⓘ
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-2 text-muted-foreground/70">
+                          {formatRelativeTime(n.created_at)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ScheduleCard({
   type,
   schedule,
@@ -972,6 +1211,7 @@ function SettingsContent() {
       </div>
 
       <EmailSmtpSection />
+      <NotificationsSection />
       <OrderCancelSection />
       <CustomerActionsSection />
       <WalletTopupSection />

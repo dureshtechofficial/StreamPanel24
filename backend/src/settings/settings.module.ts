@@ -19,9 +19,11 @@ import { CustomerActionSettingsController } from './customer-action-settings.con
 import { WalletTopupSettingsController } from './wallet-topup-settings.controller';
 import { SmtpSettingsController } from './smtp-settings.controller';
 import { FlussonicServersModule } from '../flussonic-servers/flussonic-servers.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
+    NotificationsModule,
     TypeOrmModule.forFeature([
       SyncSchedule,
       SyncScheduleRun,

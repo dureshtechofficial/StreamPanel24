@@ -14,4 +14,6 @@ export interface FlussonicStreamDirectoryEntry {
   live_status: string | null;
   /** Whether this stream currently has an order whose date window covers right now — gates the customer/reseller portal's on/off controls. */
   has_active_order: boolean;
+  /** Admin lock — when true the portals hide the disable/start/restart controls. */
+  blocked: boolean;
 }

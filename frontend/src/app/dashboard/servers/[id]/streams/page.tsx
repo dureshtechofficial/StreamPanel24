@@ -10,6 +10,7 @@ import { ConfirmDialog } from '@/components/confirm-dialog';
 import {
   ArrowLeftIcon,
   ArrowPathIcon,
+  BanIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   EyeIcon,
@@ -18,15 +19,20 @@ import {
   PlusIcon,
   PowerIcon,
   SearchIcon,
+  ShieldIcon,
   TrashIcon,
   UsersIcon,
 } from '@/components/icons';
+import { toastError, toastSuccess } from '@/lib/toast';
 import { getServer } from '@/lib/flussonic-servers-api';
 import {
+  blockStream,
   createStream,
   deleteStream,
   listStreams,
+  restartStream,
   syncStreams,
+  unblockStream,
   updateStream,
   type SyncStreamsSummary,
 } from '@/lib/flussonic-streams-api';
@@ -120,7 +126,36 @@ function StreamsContent({ serverId }: { serverId: string }) {
   const streamActions = useStreamDisableActions(
     (streamId, disabled) => updateStream(serverId, streamId, { disabled }),
     load,
+    (streamId) => restartStream(serverId, streamId),
   );
+
+  const [blockingId, setBlockingId] = useState<string | null>(null);
+
+  async function handleBlock(stream: FlussonicStream) {
+    setBlockingId(stream.id);
+    try {
+      await blockStream(serverId, stream.id);
+      toastSuccess('Stream blocked', 'It has been disabled and locked.');
+      await load();
+    } catch (err) {
+      toastError(err, 'Failed to block stream.');
+    } finally {
+      setBlockingId(null);
+    }
+  }
+
+  async function handleUnblock(stream: FlussonicStream) {
+    setBlockingId(stream.id);
+    try {
+      await unblockStream(serverId, stream.id);
+      toastSuccess('Stream unblocked');
+      await load();
+    } catch (err) {
+      toastError(err, 'Failed to unblock stream.');
+    } finally {
+      setBlockingId(null);
+    }
+  }
 
   function openCreate() {
     setEditingStream(null);
@@ -326,7 +361,12 @@ function StreamsContent({ serverId }: { serverId: string }) {
                         >
                           {stream.status}
                         </span>
-                        {stream.config_json.disabled && (
+                        {stream.blocked && (
+                          <span className="ml-1 inline-block rounded-full bg-danger-soft px-2 py-0.5 text-xs font-medium text-danger">
+                            blocked
+                          </span>
+                        )}
+                        {stream.config_json.disabled && !stream.blocked && (
                           <span className="ml-1 inline-block rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning">
                             disabled
                           </span>
@@ -358,7 +398,8 @@ function StreamsContent({ serverId }: { serverId: string }) {
                           >
                             <PencilIcon className="h-4 w-4" />
                           </button>
-                          {stream.config_json.disabled ? (
+                          {!stream.blocked &&
+                            (stream.config_json.disabled ? (
                             <button
                               onClick={() => streamActions.start(stream.id)}
                               disabled={streamActions.busyId === stream.id}
@@ -410,6 +451,27 @@ function StreamsContent({ serverId }: { serverId: string }) {
                                 />
                               </button>
                             </>
+                          ))}
+                          {stream.blocked ? (
+                            <button
+                              onClick={() => handleUnblock(stream)}
+                              disabled={blockingId === stream.id}
+                              className="rounded-md p-1.5 text-success transition-colors hover:bg-success-soft disabled:opacity-60"
+                              aria-label={`Unblock ${stream.config_json.name}`}
+                              title="Blocked — click to unblock"
+                            >
+                              <ShieldIcon className="h-4 w-4" />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleBlock(stream)}
+                              disabled={blockingId === stream.id}
+                              className="rounded-md p-1.5 text-muted-foreground/70 transition-colors hover:bg-danger-soft hover:text-danger disabled:opacity-60"
+                              aria-label={`Block ${stream.config_json.name}`}
+                              title="Block"
+                            >
+                              <BanIcon className="h-4 w-4" />
+                            </button>
                           )}
                           <button
                             onClick={() => setPendingDelete(stream)}
@@ -455,7 +517,8 @@ function StreamsContent({ serverId }: { serverId: string }) {
                       >
                         <PencilIcon className="h-4 w-4" />
                       </button>
-                      {stream.config_json.disabled ? (
+                      {!stream.blocked &&
+                        (stream.config_json.disabled ? (
                         <button
                           onClick={() => streamActions.start(stream.id)}
                           disabled={streamActions.busyId === stream.id}
@@ -504,6 +567,27 @@ function StreamsContent({ serverId }: { serverId: string }) {
                             />
                           </button>
                         </>
+                      ))}
+                      {stream.blocked ? (
+                        <button
+                          onClick={() => handleUnblock(stream)}
+                          disabled={blockingId === stream.id}
+                          className="rounded-md p-1.5 text-success transition-colors hover:bg-success-soft disabled:opacity-60"
+                          aria-label={`Unblock ${stream.config_json.name}`}
+                          title="Blocked — click to unblock"
+                        >
+                          <ShieldIcon className="h-4 w-4" />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleBlock(stream)}
+                          disabled={blockingId === stream.id}
+                          className="rounded-md p-1.5 text-muted-foreground/70 transition-colors hover:bg-danger-soft hover:text-danger disabled:opacity-60"
+                          aria-label={`Block ${stream.config_json.name}`}
+                          title="Block"
+                        >
+                          <BanIcon className="h-4 w-4" />
+                        </button>
                       )}
                       <button
                         onClick={() => setPendingDelete(stream)}

@@ -3,8 +3,6 @@ import { FlussonicServersService } from './flussonic-servers.service';
 import { FlussonicServerStatsService } from './flussonic-server-stats.service';
 import { FlussonicStreamsService } from './flussonic-streams.service';
 import type { SyncStreamsSummary } from './flussonic-streams.service';
-import { FlussonicStreamSessionsService } from './flussonic-stream-sessions.service';
-import type { SyncSessionsSummary } from './flussonic-stream-sessions.service';
 import { SyncScheduleGateService } from './sync-schedule-gate.service';
 import { SyncType } from '../settings/enums/sync-type.enum';
 
@@ -23,7 +21,6 @@ export interface SyncAllServersResult {
   name: string;
   stats: SyncOutcome;
   streams: SyncOutcome;
-  sessions: SyncOutcome;
 }
 
 export interface SyncAllServersSummary {
@@ -33,9 +30,10 @@ export interface SyncAllServersSummary {
 
 /**
  * Backs the servers page's single "Sync all" button: for every non-deleted
- * server, runs all three real-Flussonic sync calls (stats, streams,
- * sessions) rather than just stats. Each sync type is independent — one
- * failing (for one server, or one sync type) never blocks the others.
+ * server, runs the real-Flussonic sync calls (stats, streams). Sessions are no
+ * longer synced/stored — they're read live from Flussonic when viewed. Each
+ * sync type is independent — one failing (for one server, or one sync type)
+ * never blocks the others.
  */
 @Injectable()
 export class FlussonicSyncAllService {
@@ -43,7 +41,6 @@ export class FlussonicSyncAllService {
     private readonly serversService: FlussonicServersService,
     private readonly statsService: FlussonicServerStatsService,
     private readonly streamsService: FlussonicStreamsService,
-    private readonly sessionsService: FlussonicStreamSessionsService,
     private readonly syncGate: SyncScheduleGateService,
   ) {}
 
@@ -51,10 +48,9 @@ export class FlussonicSyncAllService {
     const servers = await this.serversService.findAllActive();
     // Checked once up front, not per server — a disabled type is skipped
     // for every server rather than failing server-by-server.
-    const [statsEnabled, streamsEnabled, sessionsEnabled] = await Promise.all([
+    const [statsEnabled, streamsEnabled] = await Promise.all([
       this.syncGate.isManualSyncEnabled(SyncType.SERVER_STATS),
       this.syncGate.isManualSyncEnabled(SyncType.STREAMS),
-      this.syncGate.isManualSyncEnabled(SyncType.SESSIONS),
     ]);
 
     const results: SyncAllServersResult[] = [];
@@ -67,11 +63,6 @@ export class FlussonicSyncAllService {
             this.streamsService.syncFromFlussonic(server.id),
           )
         : this.disabledOutcome<SyncStreamsSummary>();
-      const sessions = sessionsEnabled
-        ? await this.tryRun(() =>
-            this.sessionsService.syncFromFlussonic(server.id),
-          )
-        : this.disabledOutcome<SyncSessionsSummary>();
 
       results.push({
         serverId: server.id,
@@ -82,12 +73,6 @@ export class FlussonicSyncAllService {
           error: streams.error,
           created: streams.value?.created,
           updated: streams.value?.updated,
-        },
-        sessions: {
-          ok: sessions.ok,
-          error: sessions.error,
-          created: sessions.value?.created,
-          updated: sessions.value?.updated,
         },
       });
     }

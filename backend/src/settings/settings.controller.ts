@@ -27,7 +27,7 @@ export class SettingsController {
 
   @ApiOperation({
     summary:
-      'List the cron schedule for each sync type (server stats, streams, sessions)',
+      'List the cron schedule for each sync type (server stats, streams, order expiry)',
   })
   @Get()
   findAll() {

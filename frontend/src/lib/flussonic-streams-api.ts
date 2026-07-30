@@ -61,6 +61,30 @@ export function deleteStream(serverId: string, id: string) {
   });
 }
 
+/** Restart a stream server-side (disable + re-enable in one call) — sends a single restart notification. */
+export function restartStream(serverId: string, id: string) {
+  return apiFetch<FlussonicStream>(
+    `/flussonic-servers/${serverId}/streams/${id}/restart`,
+    { method: 'POST' },
+  );
+}
+
+/** Admin: block a stream — forces it disabled and locks out enable/start/restart until unblocked. */
+export function blockStream(serverId: string, id: string) {
+  return apiFetch<FlussonicStream>(
+    `/flussonic-servers/${serverId}/streams/${id}/block`,
+    { method: 'POST' },
+  );
+}
+
+/** Admin: unblock a stream (clears the lock; leaves it disabled). */
+export function unblockStream(serverId: string, id: string) {
+  return apiFetch<FlussonicStream>(
+    `/flussonic-servers/${serverId}/streams/${id}/unblock`,
+    { method: 'POST' },
+  );
+}
+
 export interface SyncStreamsSummary {
   total: number;
   created: number;

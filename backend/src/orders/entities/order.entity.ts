@@ -147,6 +147,19 @@ export class Order {
   @Column({ type: 'varchar', length: 255, nullable: true })
   remark: string | null;
 
+  /**
+   * Memory for the pre-expiry payment reminder — the unix timestamp of the last
+   * reminder sent for this order. Used to send at most one reminder per calendar
+   * day across the two days before `effective_to`. NULL until the first reminder.
+   */
+  @Column({
+    type: 'bigint',
+    unsigned: true,
+    nullable: true,
+    transformer: unixTimestampTransformer,
+  })
+  last_expiry_reminder_at: number | null;
+
   /** UTC unix timestamp (seconds). Set by the app, not MySQL — see @BeforeInsert/@BeforeUpdate below. */
   @Column({
     type: 'bigint',

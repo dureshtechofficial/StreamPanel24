@@ -28,7 +28,9 @@ export class SmtpSettingsController {
     return this.smtpSettingsService.update(dto);
   }
 
-  @ApiOperation({ summary: 'Send a test email using the stored SMTP configuration' })
+  @ApiOperation({
+    summary: 'Send a test email using the stored SMTP configuration',
+  })
   @Post('test')
   sendTest(@Body() dto: TestSmtpSettingDto) {
     return this.smtpSettingsService.sendTest(dto);

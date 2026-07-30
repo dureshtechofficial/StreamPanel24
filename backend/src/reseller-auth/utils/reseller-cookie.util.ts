@@ -1,8 +1,10 @@
 import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
 import ms from 'ms';
+import { refreshCookieSecurityOptions } from '../../common/utils/refresh-cookie-options.util';
 
 export const RESELLER_REFRESH_TOKEN_COOKIE = 'reseller_refresh_token';
+const RESELLER_REFRESH_COOKIE_PATH = '/api/v1/reseller-auth';
 
 export function setResellerRefreshTokenCookie(
   res: Response,
@@ -11,14 +13,10 @@ export function setResellerRefreshTokenCookie(
 ): void {
   const expiresIn = configService.get<string>('jwt.refreshExpiresIn')!;
   const maxAge = ms(expiresIn as ms.StringValue);
-  const isProduction = configService.get<string>('appEnv') === 'production';
 
   res.cookie(RESELLER_REFRESH_TOKEN_COOKIE, token, {
-    httpOnly: true,
-    secure: isProduction,
-    // See auth/utils/cookie.util.ts for why 'lax' rather than 'strict'.
-    sameSite: 'lax',
-    path: '/api/v1/reseller-auth',
+    ...refreshCookieSecurityOptions(configService),
+    path: RESELLER_REFRESH_COOKIE_PATH,
     maxAge,
   });
 }
@@ -27,13 +25,8 @@ export function clearResellerRefreshTokenCookie(
   res: Response,
   configService: ConfigService,
 ): void {
-  const isProduction = configService.get<string>('appEnv') === 'production';
-
   res.clearCookie(RESELLER_REFRESH_TOKEN_COOKIE, {
-    httpOnly: true,
-    secure: isProduction,
-    // See auth/utils/cookie.util.ts for why 'lax' rather than 'strict'.
-    sameSite: 'lax',
-    path: '/api/v1/reseller-auth',
+    ...refreshCookieSecurityOptions(configService),
+    path: RESELLER_REFRESH_COOKIE_PATH,
   });
 }
