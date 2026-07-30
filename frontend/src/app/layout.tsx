@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: APP_NAME,
-  description: "User registration, customer management, and Flussonic server monitoring",
+  description: "Stream management, live sessions, and billing for resellers and customers",
 };
 
 export default function RootLayout({

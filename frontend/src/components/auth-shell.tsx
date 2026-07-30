@@ -6,9 +6,9 @@ import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { BroadcastIcon, ShieldIcon, ActivityIcon, WalletIcon } from '@/components/icons';
 
 const HIGHLIGHTS = [
-  { icon: BroadcastIcon, title: 'Live streaming control', text: 'Manage Flussonic servers, streams, and sessions in one place.' },
-  { icon: ShieldIcon, title: 'Role-based access', text: 'Admins, resellers, and customers — each with the right scope.' },
-  { icon: ActivityIcon, title: 'Real-time insight', text: 'Live session monitoring and server health at a glance.' },
+  { icon: BroadcastIcon, title: 'Live streaming control', text: 'Manage your streams, sessions, and playback in one place.' },
+  { icon: ShieldIcon, title: 'Role-based access', text: 'Resellers and customers — each with the right access.' },
+  { icon: ActivityIcon, title: 'Real-time insight', text: 'Live session monitoring and stream health at a glance.' },
   { icon: WalletIcon, title: 'Billing built in', text: 'Plans, orders, and wallet top-ups without leaving the app.' },
 ];
 
@@ -48,7 +48,7 @@ export function AuthShell({
             The control room for your streaming business.
           </h2>
           <p className="mt-3 text-sm leading-relaxed text-white/70">
-            One dashboard for servers, streams, customers, and billing — fast, secure, and built for teams.
+            One place for your streams, customers, and billing — fast, secure, and simple.
           </p>
 
           <ul className="mt-8 space-y-4">

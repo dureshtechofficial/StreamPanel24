@@ -99,7 +99,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   async function handleLogout() {
     await logout();
-    router.push('/login');
+    router.push('/system/login');
   }
 
   return (

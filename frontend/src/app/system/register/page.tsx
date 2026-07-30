@@ -39,7 +39,7 @@ function validateClientSide(
   return errors;
 }
 
-export default function RegisterPage() {
+export default function SystemRegisterPage() {
   usePageTitle('Register');
   const { register } = useAuth();
   const router = useRouter();
@@ -68,7 +68,7 @@ export default function RegisterPage() {
     try {
       await register(name.trim(), email.trim(), password);
       setSuccess(true);
-      setTimeout(() => router.push('/login'), 1200);
+      setTimeout(() => router.push('/system/login'), 1200);
     } catch (err) {
       if (err instanceof ApiError) {
         setErrors(groupFieldErrors(err.messages, [...FIELDS]));
@@ -87,7 +87,7 @@ export default function RegisterPage() {
       footer={
         <>
           Already have an account?{' '}
-          <Link href="/login" className="font-semibold text-primary hover:underline">
+          <Link href="/system/login" className="font-semibold text-primary hover:underline">
             Log in
           </Link>
         </>

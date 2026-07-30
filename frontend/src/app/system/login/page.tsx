@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Field } from '@/components/ui/field';
 import { AlertIcon } from '@/components/icons';
 
-export default function LoginPage() {
+export default function SystemLoginPage() {
   usePageTitle('Log in');
   const { login } = useAuth();
   const router = useRouter();
@@ -53,7 +53,7 @@ export default function LoginPage() {
       footer={
         <>
           Don&apos;t have an account?{' '}
-          <Link href="/register" className="font-semibold text-primary hover:underline">
+          <Link href="/system/register" className="font-semibold text-primary hover:underline">
             Register
           </Link>
         </>
