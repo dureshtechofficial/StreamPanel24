@@ -1,4 +1,4 @@
-# Project 7
+# Stream Panel 24
 
 A full-stack demo app: user auth, customer management, and Flussonic media-server management/monitoring.
 
